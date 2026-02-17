@@ -86,18 +86,6 @@
           </div>
         </q-page-sticky>
 
-        <!-- Schedule Status (solo en tab catálogo) -->
-        <q-page-sticky
-          v-if="currentTab === 'menu'"
-          position="bottom-right"
-          :offset="[15, 10]"
-        >
-          <ScheduleStatus
-            :schedule="company?.company_config?.other?.menu?.schedule"
-            @update:isCurrentlyOpen="(val) => isCurrentlyOpen = val"
-          />
-        </q-page-sticky>
-
         <!-- ÚNICO MODAL: Product Detail -->
         <ProductDetailDialog
           v-model="showProductDetail"
@@ -119,13 +107,11 @@ import { useCart } from 'src/composables/useCart'
 import { formatNumber, notify } from 'src/const/mixins'
 import { Notify } from 'quasar'
 
-// Components
 import CatalogView from 'src/components/Catalog/CatalogView.vue'
 import CartView from 'src/components/Catalog/CartView.vue'
 import CheckoutView from 'src/components/Catalog/CheckoutView.vue'
 import OrdersView from 'src/components/Catalog/OrdersView.vue'
 import ProductDetailDialog from 'src/components/Product/ProductDetailDialog.vue'
-import ScheduleStatus from 'src/components/Command/ScheduleStatus.vue'
 
 // Router
 const route = useRoute()
@@ -136,7 +122,6 @@ const catalogStore = useCatalogStore()
 const authStore = authentication()
 const cart = useCart()
 
-const { company } = storeToRefs(catalogStore)
 const { userSession } = storeToRefs(authStore)
 
 // State
@@ -144,7 +129,6 @@ const currentTab = ref(route.query.tab || 'menu')
 const showProductDetail = ref(false)
 const selectedProduct = ref(null)
 const loadingPage = ref(false)
-const isCurrentlyOpen = ref(false)
 let savedScrollPosition = 0
 let scrollContainerEl = null
 

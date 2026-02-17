@@ -14,11 +14,31 @@
           <div class="text-h5 text-center text-white text-bold q-mt-md text-uppercase company-name">
             {{ company?.name }}
           </div>
-          <div
-            v-if="description"
-            class="text-subtitle2 text-white text-weight-light q-mt-xs description-text text-center"
-            v-html="description"
-          />
+          <!-- Schedule Status Button -->
+          <q-btn
+            v-if="scheduleData"
+            flat
+            rounded
+            no-caps
+            class="schedule-status-badge q-mt-sm"
+            :class="isCurrentlyOpen ? 'status-open' : 'status-closed'"
+            @click="showScheduleDialog = true"
+          >
+            <!-- button content -->
+            <div class="row items-center no-wrap">
+              <q-icon name="fiber_manual_record" size="12px" class="q-mr-xs dot-icon" />
+              <div class="text-weight-bold status-text">
+                {{ isCurrentlyOpen ? 'Abierto' : 'Cerrado' }}
+              </div>
+              <div v-if="isCurrentlyOpen && todaySchedule" class="schedule-times q-ml-xs">
+                ({{ todaySchedule.from }} - {{ todaySchedule.to }})
+              </div>
+              <q-icon name="expand_more" size="18px" class="q-ml-xs arrow-icon" />
+            </div>
+          </q-btn>
+          <div v-else-if="company" class="text-caption text-white opacity-70 q-mt-sm">
+            Horario no disponible
+          </div>
         </div>
       </div>
     </div>
@@ -46,7 +66,7 @@
           </template>
         </q-input>
 
-        <div class="category-scroll" v-if="categories.length">
+        <div class="category-scroll" v-show="categories.length">
           <div
             v-for="cat in categories"
             :key="cat.id"
@@ -58,21 +78,21 @@
             {{ cat.name }}
           </div>
         </div>
-        <q-skeleton type="text" height="60px" v-else />
+        <q-skeleton type="text" height="60px" v-show="!categories.length" />
       </div>
     </div>
 
     <!-- Products Grid -->
     <div class="products-container full-width q-pa-sm">
       <!-- Loading State -->
-      <div v-if="loading" class="row q-col-gutter-sm">
+      <div v-show="loading" class="row q-col-gutter-sm">
         <div class="col-12" v-for="i in 10" :key="i">
           <SkeletonCard class="full-width" />
         </div>
       </div>
 
       <!-- Products Grouped by Category -->
-      <div v-else>
+      <div v-show="!loading">
         <div
           v-for="cat in groupedProducts"
           :key="cat.id"
@@ -90,7 +110,6 @@
                 bordered
                 class="product-horizontal-card shadow-1"
                 :class="{ 'product-in-cart': isInCart(product.id) }"
-                :style="isInCart(product.id) ? 'border: solid 2px var(--primary);' : ''"
                 @click="$emit('open-product', product)"
               >
                 <q-card-section horizontal class="items-center">
@@ -137,6 +156,72 @@
       </div>
     </div>
   </div>
+
+  <!-- Schedule Dialog -->
+  <q-dialog
+    v-model="showScheduleDialog"
+    position="bottom"
+    transition-show="slide-up"
+    transition-hide="slide-down"
+  >
+    <q-card class="schedule-dialog-card">
+      <q-card-section class="row items-center q-pb-none">
+        <div class="text-h6">Horarios de atención</div>
+        <q-space />
+        <q-btn icon="close" flat round dense v-close-popup />
+      </q-card-section>
+
+      <q-card-section>
+        <q-list separator>
+          <q-item v-for="day in weekSchedule" :key="day.dayKey">
+            <q-item-section avatar>
+              <q-avatar :color="getDayColor(day)" text-color="white" size="md">
+                {{ day.dayName.charAt(0) }}
+              </q-avatar>
+            </q-item-section>
+
+            <q-item-section>
+              <q-item-label class="text-weight-medium" :class="{ 'text-primary': day.isToday }">
+                {{ day.dayName }}
+                <q-badge v-if="day.isToday" color="primary" class="q-ml-sm">Hoy</q-badge>
+              </q-item-label>
+
+              <q-item-label caption>
+                <template v-if="day.isOpen && !day.error">
+                  <q-icon name="schedule" size="xs" class="q-mr-xs" />
+                  <span>{{ day.openTime }} – {{ day.closeTime }}</span>
+                  <q-badge
+                    v-if="day.isToday && isCurrentlyOpen"
+                    color="positive"
+                    class="q-ml-sm"
+                  >
+                    Abierto
+                  </q-badge>
+                  <q-badge
+                    v-else-if="day.isToday && !isCurrentlyOpen"
+                    color="negative"
+                    class="q-ml-sm"
+                  >
+                    Cerrado
+                  </q-badge>
+                </template>
+
+                <template v-else-if="!day.isOpen && !day.error">
+                  <q-icon name="block" size="xs" class="q-mr-xs" />
+                  <span class="text-negative">Cerrado</span>
+                </template>
+
+                <template v-if="day.error">
+                  <q-icon name="warning" color="warning" size="xs" class="q-mr-xs" />
+                  <span class="text-warning">{{ day.errorMessage }}</span>
+                </template>
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+        </q-list>
+      </q-card-section>
+    </q-card>
+  </q-dialog>
 </template>
 
 <script setup>
@@ -146,6 +231,20 @@ import { useCatalogStore } from 'src/stores/catalog'
 import { useCart } from 'src/composables/useCart'
 import { formatNumber } from 'src/const/mixins'
 import SkeletonCard from 'src/components/SkeletonCard.vue'
+
+// Day translations for schedule
+const dayTranslations = {
+  monday: 'Lunes',
+  tuesday: 'Martes',
+  wednesday: 'Miércoles',
+  thursday: 'Jueves',
+  friday: 'Viernes',
+  saturday: 'Sábado',
+  sunday: 'Domingo'
+}
+
+const daysOfWeek = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 
 // Template refs
 const catalogViewRef = ref(null)
@@ -172,7 +271,10 @@ const { company, categories, products } = storeToRefs(catalogStore)
 const searchQuery = ref('')
 const selectedCategory = ref('all')
 const isFilterFixed = ref(false)
+const showScheduleDialog = ref(false)
+const currentTime = ref(new Date())
 let scrollContainer = null
+let timeUpdateInterval = null
 
 // Constantes
 const defaultImage = 'https://cdn.quasar.dev/img/image-src.png'
@@ -183,9 +285,78 @@ const bannerUrl = computed(() =>
   'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&q=80&w=800'
 )
 
-const description = computed(() =>
-  company.value?.company_config?.other?.menu?.description
+const scheduleData = computed(() =>
+  company.value?.company_config?.other?.menu?.schedule
 )
+
+// Get current day key
+const getCurrentDayKey = () => {
+  const currentDayIndex = currentTime.value.getDay()
+  const currentDayName = daysOfWeek[currentDayIndex]
+  return Object.keys(dayTranslations).find(
+    key => dayTranslations[key] === currentDayName
+  )
+}
+
+// Check if currently open
+const isCurrentlyOpen = computed(() => {
+  try {
+    const currentDayKey = getCurrentDayKey()
+    if (!currentDayKey || !scheduleData.value || !scheduleData.value[currentDayKey]) {
+      return false
+    }
+
+    const today = scheduleData.value[currentDayKey]
+    if (!today || !today.isOpen || today.hasError || !today.from || !today.to) {
+      return false
+    }
+
+    const currentHours = currentTime.value.getHours()
+    const currentMinutes = currentTime.value.getMinutes()
+    const currentTimeInMinutes = currentHours * 60 + currentMinutes
+
+    const [openHours, openMinutes] = today.from.split(':').map(Number)
+    const [closeHours, closeMinutes] = today.to.split(':').map(Number)
+
+    const openTimeInMinutes = openHours * 60 + openMinutes
+    const closeTimeInMinutes = closeHours * 60 + closeMinutes
+
+    return currentTimeInMinutes >= openTimeInMinutes && currentTimeInMinutes < closeTimeInMinutes
+  } catch (error) {
+    console.error('Error in isCurrentlyOpen:', error)
+    return false
+  }
+})
+
+// Get today's schedule
+const todaySchedule = computed(() => {
+  const currentDayKey = getCurrentDayKey()
+  if (!currentDayKey || !scheduleData.value || !scheduleData.value[currentDayKey]) {
+    return null
+  }
+  return scheduleData.value[currentDayKey]
+})
+
+// Get full week schedule for dialog
+const weekSchedule = computed(() => {
+  if (!scheduleData.value) return []
+
+  return dayOrder.map(day => {
+    const dayData = scheduleData.value[day]
+    const currentDayKey = getCurrentDayKey()
+
+    return {
+      dayName: dayTranslations[day],
+      dayKey: day,
+      isOpen: dayData?.isOpen || false,
+      openTime: dayData?.from || '',
+      closeTime: dayData?.to || '',
+      error: dayData?.hasError || false,
+      errorMessage: dayData?.errorMessage || '',
+      isToday: day === currentDayKey
+    }
+  })
+})
 
 // Placeholder para cuando el filtro se fija (evita el "salto" de contenido)
 const anchorStyle = computed(() => {
@@ -223,6 +394,10 @@ const groupedProducts = computed(() => {
  * En Quasar Layout, puede ser .q-page, .q-panel, o el document/window.
  */
 const findScrollContainer = () => {
+  if (!catalogViewRef.value) {
+    return document.scrollingElement || document.documentElement
+  }
+
   let el = catalogViewRef.value
   while (el) {
     const style = window.getComputedStyle(el)
@@ -240,7 +415,7 @@ const findScrollContainer = () => {
 }
 
 const onScroll = () => {
-  if (!stickyAnchorRef.value || !stickyFilterRef.value) return
+  if (!stickyAnchorRef.value || !stickyFilterRef.value || !scrollContainer) return
 
   // Comprobar si el anchor ha pasado el top del viewport/contenedor
   const anchorRect = stickyAnchorRef.value.getBoundingClientRect()
@@ -256,6 +431,8 @@ const onScroll = () => {
 }
 
 const setScrollTop = (value, smooth = true) => {
+  if (!scrollContainer) return
+
   if (scrollContainer === document.scrollingElement || scrollContainer === document.documentElement) {
     window.scrollTo({ top: value, behavior: smooth ? 'smooth' : 'instant' })
   } else {
@@ -270,15 +447,24 @@ const setScrollTop = (value, smooth = true) => {
 onMounted(() => {
   // Esperar un tick para que el DOM esté completamente renderizado
   nextTick(() => {
+    if (!catalogViewRef.value) return
+
     scrollContainer = findScrollContainer()
 
     // Registrar evento de scroll
+    if (!scrollContainer) return
+
     if (scrollContainer === document.scrollingElement || scrollContainer === document.documentElement) {
       window.addEventListener('scroll', onScroll, { passive: true })
     } else {
       scrollContainer.addEventListener('scroll', onScroll, { passive: true })
     }
   })
+
+  // Update time every minute for schedule
+  timeUpdateInterval = setInterval(() => {
+    currentTime.value = new Date()
+  }, 60000)
 })
 
 onBeforeUnmount(() => {
@@ -286,6 +472,10 @@ onBeforeUnmount(() => {
     window.removeEventListener('scroll', onScroll)
   } else if (scrollContainer) {
     scrollContainer.removeEventListener('scroll', onScroll)
+  }
+
+  if (timeUpdateInterval) {
+    clearInterval(timeUpdateInterval)
   }
 })
 
@@ -332,6 +522,13 @@ const scrollToCategory = async (categoryId) => {
     const targetPosition = currentScroll + (elRect.top - containerRect.top) - stickyHeight - 12
     setScrollTop(targetPosition)
   }
+}
+
+const getDayColor = (day) => {
+  if (day.isToday) return 'primary'
+  if (!day.isOpen) return 'grey-7'
+  if (day.error) return 'warning'
+  return 'grey-5'
 }
 </script>
 
@@ -459,6 +656,7 @@ const scrollToCategory = async (categoryId) => {
   justify-self: center;
   max-width: 600px;
   margin: 0 auto;
+  padding-bottom: 100px;
 }
 
 .category-title {
@@ -523,5 +721,64 @@ const scrollToCategory = async (categoryId) => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+
+/* Schedule Status Button */
+.schedule-status-badge {
+  padding: 4px 16px;
+  min-height: 36px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(4px);
+}
+
+.status-open {
+  background: #e8f5e9 !important;
+  color: #2e7d32 !important;
+}
+
+.status-open .dot-icon {
+  color: #4caf50;
+}
+
+.status-closed {
+  background: #ffebee !important;
+  color: #c62828 !important;
+}
+
+.status-closed .dot-icon {
+  color: #f44336;
+}
+
+.schedule-times {
+  font-size: 0.75rem;
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.arrow-icon {
+  opacity: 0.7;
+}
+
+.schedule-status-badge:hover {
+  filter: brightness(1.05);
+}
+
+.schedule-status-badge:active {
+  transform: scale(0.97);
+}
+
+/* Schedule Dialog */
+.schedule-dialog-card {
+  width: 100%;
+  max-width: 500px;
+  border-radius: 16px 16px 0 0;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+@media (max-width: 599px) {
+  .schedule-dialog-card {
+    max-width: 100%;
+  }
 }
 </style>
