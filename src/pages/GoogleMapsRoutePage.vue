@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page class="google-maps-route-page overflow-hidden">
     <!-- Google Map Background -->
     <div ref="mapContainer" class="full-screen-map"></div>
@@ -261,8 +261,15 @@
           no-caps
           :class="activeTab === 'details' ? 'active-premium-tab' : 'inactive-premium-tab'"
           label="Detalles"
-          class="col border-radius-14"
           @click="activeTab = 'details'; sheetExpanded = true"
+        />
+        <q-btn
+          flat
+          no-caps
+          :class="activeTab === 'monitor' ? 'active-premium-tab' : 'inactive-premium-tab'"
+          label="Monitor"
+          class="col border-radius-14"
+          @click="activeTab = 'monitor'; loadActiveRuns(); sheetExpanded = true"
         />
         <q-btn
           flat
@@ -272,14 +279,7 @@
           class="col border-radius-14"
           @click="activeTab = 'clients'; loadAllClients(); sheetExpanded = true"
         />
-        <q-btn
-          flat
-          no-caps
-          :class="activeTab === 'deliveries' ? 'active-premium-tab' : 'inactive-premium-tab'"
-          label="Entregas"
-          class="col border-radius-14"
-          @click="activeTab = 'deliveries'; loadHistoryRuns(); sheetExpanded = true"
-        />
+
         <q-btn
           flat
           no-caps
@@ -292,6 +292,7 @@
 
       <div class="sheet-content q-px-md q-pb-xl hide-scrollbar">
         <!-- Tab: ROUTE DETAILS -->
+
         <div v-if="activeTab === 'details'">
           <div class="row items-center q-px-md justify-between q-mb-lg q-pa-sm rounded-borders-16 bg-white-translucent">
             <div class="column full-width">
@@ -466,6 +467,7 @@
               v-for="client in filteredAllClients"
               :key="client.id"
               class="stop-card-premium rounded-borders-28"
+              :class="{ 'opacity-50': isClientInSelectedRoute(client) }"
             >
               <q-item-section avatar>
                 <q-avatar color="primary-light" text-color="primary" icon="person" class="shadow-1" />
@@ -475,70 +477,246 @@
                 <q-item-label caption class="ellipsis-2-lines">
                   {{ getClientAddress(client) }}
                 </q-item-label>
+                <q-item-label v-if="isClientInSelectedRoute(client)" caption class="text-orange text-weight-bold">
+                  <q-icon name="warning" size="xs" /> Ya está en la ruta
+                </q-item-label>
               </q-item-section>
               <q-item-section side>
-                <q-btn unelevated round color="primary" icon="add" @click="addClientToRoute(client)" />
+                <q-btn
+                  unelevated
+                  round
+                  :color="isClientInSelectedRoute(client) ? 'grey' : 'primary'"
+                  :icon="isClientInSelectedRoute(client) ? 'check' : 'add'"
+                  :disable="isClientInSelectedRoute(client)"
+                  @click="addClientToRoute(client)"
+                />
               </q-item-section>
             </q-item>
           </q-list>
+        </div>
+
+        <!-- Tab: MONITOR (Live Tracking) -->
+        <div v-else-if="activeTab === 'monitor'" class="column full-height">
+            <!-- List Mode: Active Runs -->
+            <div v-if="!monitorSelectedRun" class="column full-height">
+              <div class="row items-center justify-between q-mb-md q-px-sm">
+                <div class="text-subtitle1 text-weight-bold text-grey-9">
+                  Monitor de Entregas
+                </div>
+                <q-btn-group unelevated class="rounded-borders-12 border-light">
+                  <q-btn :color="monitorMode === 'live' ? 'primary' : 'white'" :text-color="monitorMode === 'live' ? 'white' : 'grey-8'" label="En Curso" no-caps dense class="q-px-md" @click="monitorMode = 'live'; loadActiveRuns()" />
+                  <q-btn :color="monitorMode === 'history' ? 'primary' : 'white'" :text-color="monitorMode === 'history' ? 'white' : 'grey-8'" label="Historial" no-caps dense class="q-px-md" @click="monitorMode = 'history'; loadHistoryRuns()" />
+                </q-btn-group>
+            </div>
+
+            <!-- Sub-tab: LIVE -->
+            <div v-if="monitorMode === 'live'" class="col column">
+                <!-- Refresh Button (Floating or inline?) -> Inline above -->
+
+                <div v-if="liveActiveRuns.length === 0" class="col column items-center justify-center flex-center q-pa-xl text-grey-5">
+                    <q-icon name="podcasts" size="64px" class="q-mb-md opacity-20" color="grey-4" />
+                    <div class="text-subtitle1 text-weight-bold text-grey-6">Sin actividad reciente</div>
+                    <div class="text-caption text-center text-grey-5">No hay rutas activas en este momento</div>
+                    <q-btn flat color="primary" label="Actualizar" no-caps @click="loadActiveRuns" class="q-mt-sm" />
+                </div>
+
+                <q-list v-else class="col scroll q-gutter-y-sm">
+                    <q-item
+                      v-for="run in liveActiveRuns"
+                      :key="run.id"
+                      clickable
+                      v-ripple
+                      class="rounded-borders-16 stop-card-premium q-py-md"
+                      @click="openMonitorDialog(run)"
+                    >
+                      <q-item-section avatar>
+                          <q-avatar size="48px" :color="isRunReturningToOrigin(run) ? 'info' : 'primary'" text-color="white" class="shadow-1">
+                              <q-icon :name="isRunReturningToOrigin(run) ? 'home' : 'local_shipping'" />
+                              <q-badge
+                                floating
+                                :color="isRunReturningToOrigin(run) ? 'blue-9' : 'green-6'"
+                                rounded
+                                class="shadow-1"
+                                style="top: -2px; right: -2px;"
+                              >
+                                <q-icon name="rss_feed" size="10px" />
+                              </q-badge>
+                          </q-avatar>
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label class="text-weight-bold text-subtitle1">{{ run.delivery_person?.name || 'Repartidor' }}</q-item-label>
+                        <q-item-label caption class="row items-center">
+                            <q-icon name="map" size="12px" class="q-mr-xs" />
+                            Ruta #{{ run.id }}
+                            <span class="q-mx-xs">•</span>
+                              {{ run.items?.filter(i => i.delivery_status === 'delivered').length }}/{{ run.items?.length }} entregas
+                        </q-item-label>
+                        <q-linear-progress
+                            :value="(run.items?.filter(i => i.delivery_status === 'delivered').length || 0) / (run.items?.length || 1)"
+                            size="6px"
+                            :color="isRunReturningToOrigin(run) ? 'info' : 'positive'"
+                            class="q-mt-sm rounded-borders"
+                        />
+                      </q-item-section>
+                      <q-item-section side>
+                        <q-icon name="chevron_right" color="grey-5" />
+                      </q-item-section>
+                    </q-item>
+                </q-list>
+            </div>
+
+              <!-- Sub-tab: HISTORY -->
+            <div v-else-if="monitorMode === 'history'" class="col column">
+                <!-- Stats Ribbon -->
+                <div v-if="historyRuns.length > 0" class="row  justify-around full-width q-mb-sm q-py-sm bg-white rounded-borders-12 border-light shadow-1">
+                  <div class="column items-center">
+                    <span class="text-caption text-grey-7 text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Rutas</span>
+                    <span class="text-subtitle2 text-weight-bolder text-indigo-9">{{ historyRuns.length }}</span>
+                  </div>
+                  <div class="column items-center border-left-sep q-pl-md" style="border-left: 1px solid #eee;">
+                    <span class="text-caption text-grey-7 text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Entregas</span>
+                    <span class="text-subtitle2 text-weight-bolder text-indigo-9">{{ historyTotalDeliveries }}</span>
+                  </div>
+                  <div class="column items-center border-left-sep q-pl-md" style="border-left: 1px solid #eee;">
+                    <span class="text-caption text-grey-7 text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Pagos</span>
+                    <span class="text-subtitle2 text-weight-bolder text-positive">{{ formatCurrency(historyTotalPayments) }}</span>
+                  </div>
+                </div>
+
+                <q-list class="scroll col q-pa-none hide-scrollbar" style="padding-bottom: 80px;">
+                    <q-item
+                      v-for="run in historyRuns"
+                      :key="run.id"
+                      class="stop-card-premium rounded-borders-28 q-mb-sm"
+                      clickable
+                      v-ripple
+                      @click="openClonePreview(run)"
+                    >
+                      <q-item-section avatar>
+                        <q-avatar color="indigo-1" text-color="indigo-7" icon="history" size="42px" />
+                      </q-item-section>
+
+                      <q-item-section>
+                        <q-item-label class="text-weight-bolder text-grey-9 text-subtitle1">
+                          #{{ run.id }} • {{ run.courier?.name || run.delivery_person?.name || 'Sin repartidor' }}
+                        </q-item-label>
+                        <q-item-label caption class="row items-center q-gutter-x-sm">
+                          <q-icon name="today" size="14px" />
+                          <span>{{ formatDate(run.started_at || run.created_at) }}</span>
+                        </q-item-label>
+                        <q-item-label caption class="row items-center q-gutter-x-xs text-positive q-mt-xs">
+                          <q-icon name="payments" size="14px" />
+                          <span class="text-weight-bold">{{ formatCurrency(calculateRunPayments(run)) }}</span>
+                        </q-item-label>
+                      </q-item-section>
+
+                      <q-item-section side>
+                        <div class="column items-end">
+                          <q-badge color="primary" :label="`${run.items?.length || run.stops?.length || 0} paradas`" rounded class="q-px-sm" />
+                          <q-btn flat round color="primary" icon="content_copy" size="sm" class="q-mt-xs" @click.stop="openClonePreview(run)">
+                            <q-tooltip>Clonar</q-tooltip>
+                          </q-btn>
+                        </div>
+                      </q-item-section>
+                    </q-item>
+
+                    <!-- Empty State -->
+                    <div v-if="historyRuns.length === 0 && !historyLoading" class="text-center q-pa-xl">
+                      <q-icon name="history" size="64px" color="grey-3" />
+                      <div class="text-grey-6 q-mt-md">No se encontraron rutas anteriores</div>
+                    </div>
+
+                      <div v-if="historyLoading" class="row justify-center q-my-md">
+                        <q-spinner-dots size="40px" color="primary" />
+                      </div>
+                  </q-list>
+            </div>
+            </div>
+
+            <!-- Detail Mode: Selected Run -->
+            <div v-else class="column full-height">
+              <div class="row items-center q-mb-md">
+                <q-btn flat round dense icon="arrow_back" color="grey-8" @click="monitorSelectedRun = null; updateMapRoute()" class="q-mr-sm" />
+                <div class="column">
+                  <div class="text-subtitle1 text-weight-bold text-grey-9">{{ monitorSelectedRun.delivery_person?.name }}</div>
+                  <div class="text-caption text-grey-6 text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                    Monitoreo en Vivo
+                  </div>
+                </div>
+              </div>
+
+                 <!-- Stats Ribbon -->
+                <div class="row justify-between bg-white shadow-1 rounded-borders-16 q-pa-md q-mb-md">
+                     <div class="column items-center">
+                        <span class="text-caption text-grey-7 uppercase-label" style="font-size: 0.7rem;">Progreso</span>
+                        <span class="text-subtitle1 text-weight-bolder text-grey-9">
+                            {{ monitorSelectedRunDeliveredCount }}/{{ monitorSelectedRunTotalCount }}
+                        </span>
+                    </div>
+                    <div class="column items-center border-left-sep q-pl-md" style="border-left: 1px solid #eee;">
+                        <span class="text-caption text-grey-7 uppercase-label" style="font-size: 0.7rem;">Estimado</span>
+                        <span class="text-subtitle1 text-weight-bolder" :class="isRunReturningToOrigin(monitorSelectedRun) ? 'text-info' : 'text-primary'">
+                        {{ isRunReturningToOrigin(monitorSelectedRun) ? 'En Retorno' : monitorEstimatedTime }}
+                        </span>
+                    </div>
+                    <div class="column items-center border-left-sep q-pl-md" style="border-left: 1px solid #eee;">
+                        <span class="text-caption text-grey-7 uppercase-label" style="font-size: 0.7rem;">Recaudado</span>
+                        <span class="text-subtitle1 text-weight-bolder text-positive">{{ formatCurrency(monitorRunPaymentsTotal) }}</span>
+                    </div>
+                </div>
+
+                <!-- Timeline -->
+                <div class="text-overline text-grey-8 q-mb-sm q-px-xs">Cronología de Ruta</div>
+                <q-scroll-area class="col q-pr-sm">
+                    <div class="column q-gutter-y-sm q-pb-md">
+                      <div
+                        v-for="(item, index) in monitorSelectedRun.items"
+                        :key="item.id"
+                        class="row no-wrap items-start relative-position"
+                      >
+                         <div class="column items-center q-mr-md" style="width: 24px;">
+                            <div class="text-caption text-weight-bold text-grey-6">{{ formatTimeShort(item.delivered_at || item.estimated_arrival) }}</div>
+                            <!-- Connector Line -->
+                             <div
+                                v-if="index < monitorSelectedRun.items.length - 1"
+                                class="q-my-xs"
+                                style="width: 2px; height: 100%; background: #eee; min-height: 40px;"
+                                :class="{'bg-positive': item.delivery_status === 'delivered', 'bg-warning': item.delivery_status === 'arrived'}"
+                             ></div>
+                         </div>
+
+                         <q-card
+                            flat
+                            bordered
+                            class="col rounded-borders-12 shadow-sm transition-generic"
+                            :class="item.delivery_status === 'delivered' ? 'bg-green-1 border-green-2' : 'bg-white'"
+                         >
+                            <q-card-section class="q-pa-sm row items-center no-wrap">
+                                <div class="col">
+                                    <div class="row items-center justify-between">
+                                        <div class="text-subtitle2 text-weight-bold ellipsis">{{ item.invoice?.client?.name }}</div>
+                                        <q-badge :color="getDeliveryStatusColor(item.delivery_status)" rounded class="q-px-sm shadow-1">
+                                            {{ getDeliveryStatusLabel(item.delivery_status) }}
+                                        </q-badge>
+                                    </div>
+                                    <div class="text-caption text-grey-7 ellipsis q-mt-xs">
+                                        <q-icon name="place" size="11px" class="q-mr-xs text-grey-5" />
+                                        {{ item.invoice?.client?.address?.street || 'Sin dirección' }}
+                                    </div>
+                                    <div v-if="getItemPayment(item) > 0" class="row items-center q-mt-xs text-positive text-weight-bold text-caption bg-green-1 q-pa-xs rounded-borders" style="width: fit-content;">
+                                        <q-icon name="payments" size="12px" class="q-mr-xs" />
+                                        {{ formatCurrency(getItemPayment(item)) }}
+                                    </div>
+                                </div>
+                            </q-card-section>
+                         </q-card>
+                      </div>
+                    </div>
+                </q-scroll-area>
+            </div>
         </div>
 
         <!-- Tab: HISTORIAL (Entregas) -->
-        <div v-else-if="activeTab === 'deliveries'" class="column full-height">
-          <div class="row items-center justify-between q-mb-sm q-px-sm">
-            <div class="row items-center justify-between full-width">
-              <div class="text-subtitle1 text-weight-bold text-grey-8">
-                Historial de Recorridos
-              </div>
-              <q-btn flat round color="primary" icon="refresh" @click="loadHistoryRuns" :loading="historyLoading" />
-            </div>
-          </div>
-
-          <q-list class="scroll col q-pa-none" style="max-height: 60vh;">
-            <q-item
-              v-for="run in historyRuns"
-              :key="run.id"
-              class="stop-card-premium rounded-borders-28"
-              clickable
-              v-ripple
-              @click="openHistoryClonePreview(run)"
-            >
-              <q-item-section avatar>
-                <q-avatar color="indigo-1" text-color="indigo-7" icon="history" size="42px" />
-              </q-item-section>
-
-              <q-item-section>
-                <q-item-label class="text-weight-bolder text-grey-9 text-subtitle1">
-                  #{{ run.id }} • {{ run.courier?.name || run.delivery_person?.name || 'Sin repartidor' }}
-                </q-item-label>
-                <q-item-label caption class="row items-center q-gutter-x-sm">
-                  <q-icon name="today" size="14px" />
-                  <span>{{ formatDate(run.started_at || run.created_at) }}</span>
-                </q-item-label>
-              </q-item-section>
-
-              <q-item-section side>
-                <div class="column items-end">
-                  <q-badge color="primary" :label="`${run.items?.length || run.stops?.length || 0} paradas`" rounded class="q-px-sm" />
-                  <q-btn flat round color="primary" icon="content_copy" size="sm" class="q-mt-xs" @click.stop="openClonePreview(run)">
-                    <q-tooltip>Clonar</q-tooltip>
-                  </q-btn>
-                </div>
-              </q-item-section>
-            </q-item>
-
-            <!-- Empty State -->
-            <div v-if="historyRuns.length === 0 && !historyLoading" class="text-center q-pa-xl">
-              <q-icon name="history" size="64px" color="grey-3" />
-              <div class="text-grey-6 q-mt-md">No se encontraron rutas anteriores</div>
-            </div>
-          </q-list>
-
-          <q-inner-loading :showing="historyLoading">
-            <q-spinner-dots size="40px" color="primary" />
-          </q-inner-loading>
-        </div>
-
         <!-- Tab: ROUTES LIST -->
         <div v-else-if="activeTab === 'routes'">
           <div class="row items-center justify-between q-mb-lg">
@@ -734,6 +912,159 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+
+    <!-- Cloning Preview Dialog -->
+    <q-dialog v-model="showCloneDialog" persistent transition-show="scale" transition-hide="scale" :maximized="$q.screen.lt.sm">
+      <q-card :style="$q.screen.lt.sm ? '' : 'width: 1000px; max-width: 95vw;'" :class="$q.screen.lt.sm ? 'column full-height' : ''" class="rounded-borders-20 overflow-hidden shadow-24">
+        <!-- Compact Header -->
+        <q-card-section class="bg-white border-bottom-subtle">
+          <div class="row items-center justify-between no-wrap">
+            <div class="column">
+              <div class="text-h6 text-weight-bolder text-grey-9">Clonar Recorrido</div>
+              <div class="text-caption text-grey-6">Selecciona las facturas de la ruta #{{ runToClone?.id }}</div>
+            </div>
+            <q-btn flat round dense icon="close" color="grey-7" v-close-popup class="bg-grey-1" />
+          </div>
+        </q-card-section>
+
+        <!-- Compact Search & Selection Area -->
+        <q-card-section class="q-pa-none bg-grey-1">
+          <div class="row items-center justify-between no-wrap q-gutter-md">
+            <div class="row items-center q-gutter-sm">
+              <q-badge color="primary" rounded class="q-px-sm q-py-xs shadow-1">
+                {{ selectedCloneCount }} seleccionadas
+              </q-badge>
+              <q-btn flat rounded dense size="sm" color="primary" :label="selectedCloneCount === cloneItems.length ? 'Deseleccionar todo' : 'Seleccionar todo'"
+                @click="cloneItems.forEach(i => i.selected = selectedCloneCount !== cloneItems.length)" class="text-weight-bold" />
+            </div>
+
+            <!-- Date Picker for Clone -->
+            <div class="row items-center q-gutter-sm">
+              <span class="text-caption text-grey-7 text-weight-bold">FECHA DE ENTREGA:</span>
+              <q-input v-model="cloneDeliveryDate" dense outlined rounded bg-color="white" mask="####-##-##" class="q-ml-sm" style="width: 150px;">
+                <template v-slot:append>
+                  <q-icon name="event" class="cursor-pointer">
+                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                      <q-date v-model="cloneDeliveryDate" mask="YYYY-MM-DD">
+                        <div class="row items-center justify-end">
+                          <q-btn v-close-popup label="Cerrar" color="primary" flat />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+              </q-input>
+            </div>
+          </div>
+        </q-card-section>
+
+        <!-- Content Area -->
+        <q-card-section :class="$q.screen.lt.sm ? 'col scroll' : 'scroll q-pa-lg half-height-scroll'" style="height: calc(100vh - 320px);">
+          <div class="row q-col-gutter-md">
+            <div v-for="(item, index) in cloneItems" :key="index" class="col-12 col-sm-6">
+              <div
+                class="minimal-invoice-card"
+                :class="{ 'is-selected': item.selected }"
+                @click="item.selected = !item.selected"
+              >
+                <!-- Card Header -->
+                <div class="row items-start justify-between q-mb-sm">
+                  <div class="column col">
+                    <span class="text-caption text-weight-bold text-primary text-uppercase letter-spacing-1" style="font-size: 0.65rem;">Factura #{{ item.invoice?.id }}</span>
+                    <span class="text-subtitle2 text-weight-bold text-grey-9 ellipsis">{{ item.invoice?.client?.name }}</span>
+                  </div>
+                  <q-checkbox v-model="item.selected" color="primary" dense @click.stop />
+                </div>
+
+                <!-- Products Mini-list -->
+                <div class="bg-grey-1 rounded-borders-12 q-pa-sm q-mb-sm border-subtle">
+                  <div v-for="product in item.invoice?.products || []" :key="product.id" class="row items-center q-py-xs q-px-sm border-bottom-subtle last-no-border">
+                    <div class="col text-caption text-grey-7 ellipsis">{{ product.name }}</div>
+                    <div class="col-auto row items-center no-wrap bg-white rounded-borders-20 q-px-xs border-subtle">
+                      <q-btn
+                        flat
+                        round
+                        dense
+                        icon="remove"
+                        size="xs"
+                        color="grey-6"
+                        @click.stop="product.pivot.amount = Math.max(0, (product.pivot.amount || 0) - 1)"
+                        class="q-mr-xs"
+                      />
+                      <q-input
+                        v-model.number="product.pivot.amount"
+                        type="number"
+                        step="1"
+                        dense
+                        borderless
+                        input-class="text-center text-weight-bolder text-grey-9 q-pa-none"
+                        style="width: 32px; font-size: 0.85rem;"
+                        @click.stop
+                      />
+                      <q-btn
+                        flat
+                        round
+                        dense
+                        icon="add"
+                        size="xs"
+                        color="grey-6"
+                        @click.stop="product.pivot.amount = (product.pivot.amount || 0) + 1"
+                        class="q-ml-xs"
+                      />
+                      <span class="text-caption text-grey-4 q-ml-xs" style="font-size: 0.7rem;">ud.</span>
+                    </div>
+                  </div>
+                </div>
+
+                <q-input
+                  v-model="item.invoice.description"
+                  dense
+                  outlined
+                  label="Observación / Descripción"
+                  bg-color="white"
+                  class="q-mb-sm rounded-borders-12 overflow-hidden"
+                  style="font-size: 0.8rem;"
+                  rows="1"
+                  type="textarea"
+                  autogrow
+                  @click.stop
+                />
+
+                <!-- Card Footer Info -->
+                <div class="row items-center justify-between mt-auto">
+                  <span class="text-caption text-grey-5">Total</span>
+                  <span class="text-subtitle2 text-weight-bolder text-grey-9">
+                    {{ formatCurrency(calculateInvoiceTotal(item.invoice)) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </q-card-section>
+
+        <!-- Action Footer -->
+        <q-card-section class="q-px-lg q-py-md bg-white border-top-subtle">
+          <div class="row items-center justify-between bg-grey-1 q-pa-md rounded-borders-20 border-subtle">
+            <div class="column">
+              <span class="text-caption text-grey-6">Total a clonar</span>
+              <span class="text-h6 text-weight-bolder text-primary">
+                {{ formatCurrency(calculateSelectedCloneTotal) }}
+              </span>
+            </div>
+            <q-btn
+              unelevated
+              rounded
+              color="primary"
+              label="Clonar"
+              class="text-weight-bold text-uppercase letter-spacing-1 shadow-2 q-px-xl"
+              :loading="cloningInProgress"
+              :disable="selectedCloneCount === 0"
+              @click="confirmCloning"
+            />
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -754,13 +1085,11 @@ const $q = useQuasar()
  */
 const map = ref(null)
 const mapContainer = ref(null)
-const searchQuery = ref('')
 const allClientsSearch = ref('')
 const showResults = ref(false)
 const sheetExpanded = ref(false)
 const activeTab = ref('details')
 const activeRoutes = ref([])
-const allClients = ref([])
 const partners = ref([])
 const clients = ref([]) // Search results
 const selectedRoute = ref(null)
@@ -771,11 +1100,16 @@ const branches = ref([])
 const markers = new Map() // Use plain Map for Markers (no Proxy)
 const courierMarkers = new Map()
 const routeRenderer = ref(null)
+
+// Monitor State
+const monitorActiveRuns = ref([])
+
+let echo = null
+
+const completedRenderer = ref(null)
+const pendingRenderer = ref(null)
 const infoWindow = ref(null)
-const touchState = { startY: 0, currentY: 0 }
 const saving = ref(false)
-const optimizing = ref(false)
-let echoInstance = null
 
 // History State
 const historyRuns = ref([])
@@ -784,6 +1118,11 @@ const historyFilters = ref({
   startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
   endDate: new Date().toISOString().split('T')[0]
 })
+
+// Monitoring State
+
+const monitorSelectedRun = ref(null)
+const monitorMode = ref('live') // 'live' or 'history'
 
 // Clone Detailed State
 const showCloneDialog = ref(false)
@@ -795,7 +1134,6 @@ const cloneDeliveryDate = ref(new Date().toISOString().split('T')[0])
 // Address Modal State
 const showAddressModal = ref(false)
 const clientWithoutAddress = ref(null)
-const fixedAddress = ref(null)
 
 // Create Route Modal State
 const showCreateRouteModal = ref(false)
@@ -806,119 +1144,59 @@ const newRouteForm = ref({
   partner: null
 })
 
-/**
- * Format currency using company settings
- */
-function formatCurrency (val) {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    maximumFractionDigits: 0
-  }).format(val || 0)
-}
+// Search & Filter State
+const searchQuery = ref('')
+const allClients = ref([])
+const partnersLoading = ref(false)
 
-/**
- * Format date to readable string
- */
-function formatDate (dateString) {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
-  return date.toLocaleString('es-PY', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
+// State for address fixing
+const fixedAddress = ref(null)
 
-/**
- * Loads history runs with filters
- */
-async function loadHistoryRuns () {
-  historyLoading.value = true
-  try {
-    const response = await api.get('/invoice-delivery-runs/history', {
-      params: {
-        start_date: historyFilters.value.startDate,
-        end_date: historyFilters.value.endDate
-      }
-    })
-    historyRuns.value = response.data.delivery_runs || []
-  } catch (error) {
-    console.error('Error loading history runs:', error)
-    $q.notify({ type: 'negative', message: 'Error al cargar historial' })
-  } finally {
-    historyLoading.value = false
-  }
-}
+// Computed Properties
+const totalDistanceLabel = computed(() => {
+  if (!selectedRouteStops.value?.length) return '0 km'
+  const total = selectedRouteStops.value.reduce((acc, stop) => acc + (stop.distance_value || 0), 0)
+  return (total / 1000).toFixed(1) + ' km'
+})
 
-/**
- * Open history clone preview (import clients from past run)
- */
-function openHistoryClonePreview (run) {
-  if (!selectedRoute.value) {
-    return $q.notify({ message: 'Primero selecciona o crea una ruta para importar los clientes', color: 'warning', icon: 'info' })
-  }
+const totalDurationLabel = computed(() => {
+  if (!selectedRouteStops.value?.length) return '0 min'
+  const total = selectedRouteStops.value.reduce((acc, stop) => acc + (stop.duration_value || 0), 0)
+  const hours = Math.floor(total / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  return hours > 0 ? `${hours}h ${minutes}min` : `${minutes} min`
+})
 
-  $q.dialog({
-    title: 'Importar Clientes',
-    message: `¿Deseas importar los clientes de la ruta #${run.id} a la ruta actual "${selectedRoute.value.name}"?`,
-    cancel: true,
-    persistent: true,
-    ok: { label: 'Importar', color: 'primary', unelevated: true }
-  }).onOk(async () => {
-    $q.loading.show({ message: 'Importando clientes...' })
-    try {
-      const stops = run.items || run.stops || []
-      const clientsToImport = stops
-        .map(s => s.invoice?.client || s.client)
-        .filter(c => !!c)
+const liveActiveRuns = computed(() => {
+  return monitorActiveRuns.value
+})
 
-      if (clientsToImport.length === 0) {
-        $q.notify({ message: 'Esta ruta no tiene clientes válidos para importar', color: 'warning' })
-        return
-      }
+const filteredAllClients = computed(() => {
+  if (!allClientsSearch.value) return allClients.value
+  const term = allClientsSearch.value.toLowerCase()
+  return allClients.value.filter(c =>
+    c.name.toLowerCase().includes(term) ||
+    (c.document_number && c.document_number.includes(term))
+  )
+})
 
-      // Add each client to the route
-      for (const client of clientsToImport) {
-        const coords = getClientCoords(client)
-        if (coords) {
-          await api.post(`/delivery-routes/${selectedRoute.value.id}/add-client`, {
-            client_id: client.id,
-            latitude: coords.lat,
-            longitude: coords.lng
-          })
-        }
-      }
-
-      $q.notify({ message: `${clientsToImport.length} paradas importadas correctamente`, color: 'positive' })
-      await loadActiveRuns()
-      activeTab.value = 'details'
-    } catch (e) {
-      console.error(e)
-      $q.notify({ message: 'Error al importar clientes', color: 'negative' })
-    } finally {
-      $q.loading.hide()
-    }
-  })
-}
-
-/**
- * Open detail clone preview (ported from Admin Monitor)
- */
-function openClonePreview (run) {
+const openClonePreview = (run) => {
   runToClone.value = run
+  // Set default delivery date to tomorrow
   const tomorrow = new Date()
   tomorrow.setDate(tomorrow.getDate() + 1)
   cloneDeliveryDate.value = tomorrow.toISOString().split('T')[0]
 
-  const clonedItems = JSON.parse(JSON.stringify(run.items || run.stops || []))
+  // Deep clone items to allow local editing without affecting the original run
+  const clonedItems = JSON.parse(JSON.stringify(run.items || []))
 
+  // Format items: select by default and round amounts to avoid excess decimals
   cloneItems.value = clonedItems.map(item => {
     if (item.invoice && item.invoice.products) {
       item.invoice.products = item.invoice.products.map(p => {
-        if (p.pivot && p.pivot.amount) p.pivot.amount = parseFloat(parseFloat(p.pivot.amount).toFixed(2))
+        if (p.pivot && p.pivot.amount) {
+          p.pivot.amount = parseFloat(parseFloat(p.pivot.amount).toFixed(2))
+        }
         return p
       })
     }
@@ -931,22 +1209,7 @@ function openClonePreview (run) {
   showCloneDialog.value = true
 }
 
-/**
- * Calculate invoice total (ported from Admin Monitor)
- */
-function calculateInvoiceTotal (invoice) {
-  if (!invoice) return 0
-  const productsTotal = (invoice.products || []).reduce((sum, p) =>
-    sum + (parseFloat(p.pivot?.price || 0) * parseFloat(p.pivot?.amount || 0)), 0)
-  const promotionsTotal = (invoice.promotions || []).reduce((sum, p) =>
-    sum + (parseFloat(p.pivot?.price || 0) * parseFloat(p.pivot?.quantity || 0)), 0)
-  return productsTotal + promotionsTotal
-}
-
-/**
- * Confirm and execute cloning (ported from Admin Monitor)
- */
-async function confirmCloning () {
+const confirmCloning = async () => {
   if (selectedCloneCount.value === 0) return
 
   cloningInProgress.value = true
@@ -977,22 +1240,393 @@ async function confirmCloning () {
       type: 'positive',
       message: response.data.message || 'Recorrido clonado exitosamente',
       icon: 'auto_awesome',
-      position: 'top'
+      position: 'top',
+      classes: 'premium-toast shadow-10',
+      actions: [{ icon: 'close', color: 'white' }]
     })
 
     showCloneDialog.value = false
+    // Refresh history
     loadHistoryRuns()
-    loadActiveRuns()
   } catch (error) {
     console.error('Error cloning run:', error)
     $q.notify({
       type: 'negative',
       message: error.response?.data?.message || 'Error al clonar el recorrido',
-      icon: 'error'
+      icon: 'error',
+      position: 'top'
     })
   } finally {
     cloningInProgress.value = false
   }
+}
+
+const calculateSelectedCloneTotal = computed(() => {
+  return cloneItems.value.filter(i => i.selected).reduce((sum, item) => sum + calculateInvoiceTotal(item.invoice), 0)
+})
+
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('es-PY', { style: 'currency', currency: 'PYG' }).format(value)
+}
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+}
+
+const onSearchInput = debounce(async (val) => {
+  if (!val) {
+    clients.value = []
+    showResults.value = false
+    return
+  }
+  try {
+    const { data } = await api.get('clients', { params: { search: val, limit: 10 } })
+    clients.value = Array.isArray(data) ? data : (data.data || [])
+    showResults.value = true
+  } catch (e) {
+    console.error(e)
+  }
+}, 300)
+
+const isClientInSelectedRoute = (client) => {
+  if (!selectedRouteStops.value) return false
+  return selectedRouteStops.value.some(s => s.client_id === client.id || (s.client && s.client.id === client.id))
+}
+
+const loadAllClients = async () => {
+  $q.loading.show()
+  try {
+    const { data } = await api.get('clients', { params: { limit: 1000 } })
+    allClients.value = Array.isArray(data) ? data : (data.data || [])
+  } catch (e) {
+    console.error(e)
+  } finally {
+    $q.loading.hide()
+  }
+}
+
+// Monitoring Helpers
+const openMonitorDialog = (run) => {
+  monitorSelectedRun.value = run
+  activeTab.value = 'monitor'
+  // Reuse selectRoute to populate map and stops
+  selectRoute(run)
+}
+
+const isRunReturningToOrigin = (run) => {
+  // Logic from AdminDeliveryMonitorPage depends on 'status' or logic
+  if (run?.status === 'returning') return true
+  // Or check if all items delivered
+  const items = run?.items || []
+  if (items.length > 0 && items.every(i => i.delivery_status === 'delivered')) return true
+  return false
+}
+
+const formatTimeShort = (dateStr) => {
+  if (!dateStr) return '--:--'
+  return new Date(dateStr).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })
+}
+
+const getDeliveryStatusColor = (status) => {
+  switch (status) {
+    case 'delivered': return 'positive'
+    case 'arrived': return 'warning' // or orange
+    case 'cancelled': return 'negative'
+    case 'pending': default: return 'grey'
+  }
+}
+
+const getDeliveryStatusLabel = (status) => {
+  switch (status) {
+    case 'delivered': return 'Entregado'
+    case 'arrived': return 'En sitio'
+    case 'cancelled': return 'Cancelado'
+    case 'pending': default: return 'Pendiente'
+  }
+}
+
+const monitorSelectedRunDeliveredCount = computed(() => {
+  if (!monitorSelectedRun.value) return 0
+  return monitorSelectedRun.value.items?.filter(i => i.delivery_status === 'delivered').length || 0
+})
+
+const monitorSelectedRunTotalCount = computed(() => {
+  if (!monitorSelectedRun.value) return 0
+  return monitorSelectedRun.value.items?.length || 0
+})
+
+const monitorRunPaymentsTotal = computed(() => {
+  if (!monitorSelectedRun.value) return 0
+  return calculateRunPayments(monitorSelectedRun.value)
+})
+
+const monitorEstimatedTime = computed(() => {
+  if (!monitorSelectedRun.value) return '-'
+  // Simple estimation: 15 mins per pending item
+  const pending = monitorSelectedRun.value.items?.filter(i => i.delivery_status !== 'delivered').length || 0
+  if (pending === 0) return '0 min'
+  const totalMins = pending * 15
+  const h = Math.floor(totalMins / 60)
+  const m = totalMins % 60
+  return h > 0 ? `${h}h ${m}m` : `${m} min`
+})
+
+const loadPartners = async () => {
+  if (partners.value.length) return
+  partnersLoading.value = true
+  try {
+    const { data } = await api.get('partners')
+    partners.value = Array.isArray(data) ? data : (data.data || [])
+  } catch (e) { console.error(e) } finally { partnersLoading.value = false }
+}
+
+const createNewRoute = () => {
+  newRouteForm.value = {
+    name: '',
+    origin_branch: branches.value[0] || null,
+    courier: null,
+    partner: null
+  }
+  showCreateRouteModal.value = true
+}
+
+const submitNewRoute = async () => {
+  saving.value = true
+  try {
+    const payload = {
+      name: newRouteForm.value.name,
+      origin_branch_id: newRouteForm.value.origin_branch?.id,
+      courier_id: newRouteForm.value.courier?.id,
+      partner_id: newRouteForm.value.partner?.id,
+      status: 'draft'
+    }
+    const { data } = await api.post('delivery-routes', payload)
+    showCreateRouteModal.value = false
+    $q.notify({ message: 'Ruta creada', color: 'positive' })
+    await loadActiveRuns()
+    selectRoute(data.data || data)
+    activeTab.value = 'details'
+    sheetExpanded.value = true
+  } catch (e) {
+    console.error(e)
+    $q.notify({ message: 'Error al crear ruta', color: 'negative' })
+  } finally {
+    saving.value = false
+  }
+}
+
+const saveRouteChanges = async () => {
+  if (!selectedRoute.value) return
+  saving.value = true
+  try {
+    await api.put(`delivery-routes/${selectedRoute.value.id}`, {
+      name: routeForm.value.name,
+      courier_id: routeForm.value.courier?.id,
+      partner_id: routeForm.value.partner?.id,
+      origin_branch_id: routeForm.value.origin_branch?.id
+    })
+    $q.notify({ message: 'Ruta guardada', color: 'positive' })
+  } catch (e) {
+    $q.notify({ message: 'Error al guardar', color: 'negative' })
+  } finally {
+    saving.value = false
+  }
+}
+
+const deleteFullRoute = async (route) => {
+  $q.dialog({
+    title: 'Confirmar',
+    message: '¿Estás seguro de eliminar esta ruta?',
+    cancel: true,
+    persistent: true
+  }).onOk(async () => {
+    try {
+      await api.delete(`delivery-routes/${route.id}`)
+      $q.notify({ message: 'Ruta eliminada', color: 'positive' })
+      await loadActiveRuns()
+      if (activeRoutes.value.length > 0) {
+        selectRoute(activeRoutes.value[0])
+      } else {
+        selectedRoute.value = null
+        selectedRouteStops.value = []
+        cleanupMarkers()
+      }
+    } catch (e) {
+      $q.notify({ message: 'Error al eliminar', color: 'negative' })
+    }
+  })
+}
+
+const addClientToRoute = (client) => {
+  if (!selectedRoute.value) return $q.notify({ message: 'Primero selecciona una ruta', color: 'warning' })
+  if (isClientInSelectedRoute(client)) return $q.notify({ message: 'El cliente ya está en la ruta', color: 'warning' })
+
+  const coords = getClientCoords(client)
+  if (!coords) {
+    clientWithoutAddress.value = client
+    showAddressModal.value = true
+    return
+  }
+  performAddClient(client, coords)
+}
+
+const performAddClient = async (client, coords) => {
+  $q.loading.show({ message: 'Agregando parada...' })
+  try {
+    await api.post(`/delivery-routes/${selectedRoute.value.id}/add-client`, {
+      client_id: client.id,
+      stop_order: selectedRouteStops.value.length + 1,
+      latitude: coords.lat,
+      longitude: coords.lng
+    })
+    $q.notify({ message: 'Parada agregada', color: 'positive' })
+
+    // Refresh route
+    const { data } = await api.get(`delivery-routes/${selectedRoute.value.id}`)
+    console.log(data)
+    selectRoute(data?.data?.route || data?.route)
+
+    activeTab.value = 'details'
+  } catch (e) {
+    $q.notify({ message: 'Error al agregar cliente', color: 'negative' })
+    console.error(e)
+  } finally {
+    $q.loading.hide()
+    showResults.value = false
+  }
+}
+
+const onAddressFixed = (address) => {
+  fixedAddress.value = address
+}
+
+const saveFixedAddress = async () => {
+  try {
+    if (!clientWithoutAddress.value || !fixedAddress.value) return
+
+    await api.put(`clients/${clientWithoutAddress.value.id}`, {
+      ...clientWithoutAddress.value,
+      address: fixedAddress.value
+    })
+
+    clientWithoutAddress.value.address = fixedAddress.value
+    const coords = getClientCoords(clientWithoutAddress.value)
+
+    if (coords) {
+      await performAddClient(clientWithoutAddress.value, coords)
+      $q.notify({ message: 'Dirección actualizada y cliente agregado', color: 'positive' })
+    } else {
+      $q.notify({ message: 'Dirección actualizada', color: 'positive' })
+    }
+
+    showAddressModal.value = false
+    clientWithoutAddress.value = null
+    fixedAddress.value = null
+  } catch (error) {
+    console.error('Error al guardar la dirección:', error)
+    $q.notify({ message: 'Error al actualizar dirección', color: 'negative' })
+  }
+}
+
+const removeStop = async (stop) => {
+  $q.dialog({
+    title: 'Confirmar',
+    message: '¿Eliminar parada?',
+    cancel: true
+  }).onOk(async () => {
+    try {
+      await api.delete(`delivery-routes/${selectedRoute.value.id}/stops/${stop.id}`)
+      $q.notify({ message: 'Parada eliminada', color: 'positive' })
+      // Refresh route
+      const { data } = await api.get(`delivery-routes/${selectedRoute.value.id}`)
+      selectRoute(data?.data?.route || data?.route)
+    } catch (e) {
+      $q.notify({ message: 'Error al eliminar', color: 'negative' })
+    }
+  })
+}
+
+const editStopAddress = (stop) => {
+  clientWithoutAddress.value = stop.client || { name: 'Punto manual' }
+  showAddressModal.value = true
+}
+
+const moveStopUp = (index) => {
+  if (index <= 0) return
+  const newStops = [...selectedRouteStops.value]
+  const temp = newStops[index]
+  newStops[index] = newStops[index - 1]
+  newStops[index - 1] = temp
+  selectedRouteStops.value = newStops
+  onStopsDragged()
+}
+
+const moveStopDown = (index) => {
+  if (index >= selectedRouteStops.value.length - 1) return
+  const newStops = [...selectedRouteStops.value]
+  const temp = newStops[index]
+  newStops[index] = newStops[index + 1]
+  newStops[index + 1] = temp
+  selectedRouteStops.value = newStops
+  onStopsDragged()
+}
+
+const historyTotalDeliveries = computed(() => {
+  return historyRuns.value.reduce((sum, run) => sum + (run.items?.length || run.stops?.length || 0), 0)
+})
+
+const historyTotalPayments = computed(() => {
+  return historyRuns.value.reduce((sum, run) => sum + calculateRunPayments(run), 0)
+})
+
+const calculateRunPayments = (run) => {
+  if (!run) return 0
+  const items = run.items || run.stops || []
+  return items.reduce((sum, item) => sum + getItemPayment(item), 0)
+}
+
+const getItemPayment = (item) => {
+  if (item.invoice) {
+    // Stop object with invoice
+    const payments = item.invoice.invoice_payments || item.invoice.invoicePayments || []
+    return payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
+  } else if (item.invoice_payments || item.invoicePayments) {
+    // Item IS the invoice
+    const payments = item.invoice_payments || item.invoicePayments || []
+    return payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
+  }
+  return 0
+}
+
+async function loadHistoryRuns () {
+  historyLoading.value = true
+  try {
+    const response = await api.get('/invoice-delivery-runs/history', {
+      params: {
+        start_date: historyFilters.value.startDate,
+        end_date: historyFilters.value.endDate
+      }
+    })
+    historyRuns.value = response.data.delivery_runs || []
+  } catch (error) {
+    console.error('Error loading history runs:', error)
+    $q.notify({ type: 'negative', message: 'Error al cargar historial' })
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+/**
+ * Calculate invoice total (ported from Admin Monitor)
+ */
+function calculateInvoiceTotal (invoice) {
+  if (!invoice) return 0
+  const productsTotal = (invoice.products || []).reduce((sum, p) =>
+    sum + (parseFloat(p.pivot?.price || 0) * parseFloat(p.pivot?.amount || 0)), 0)
+  const promotionsTotal = (invoice.promotions || []).reduce((sum, p) =>
+    sum + (parseFloat(p.pivot?.price || 0) * parseFloat(p.pivot?.quantity || 0)), 0)
+  return productsTotal + promotionsTotal
 }
 
 /**
@@ -1000,32 +1634,6 @@ async function confirmCloning () {
  */
 const selectedCloneCount = computed(() => {
   return cloneItems.value.filter(item => item.selected).length
-})
-
-const calculateSelectedCloneTotal = computed(() => {
-  return cloneItems.value
-    .filter(item => item.selected)
-    .reduce((sum, item) => sum + calculateInvoiceTotal(item.invoice), 0)
-})
-
-const filteredAllClients = computed(() => {
-  if (!allClientsSearch.value) return allClients.value
-  const q = allClientsSearch.value.toLowerCase()
-  return allClients.value.filter(c => c.name.toLowerCase().includes(q))
-})
-
-const totalDistanceLabel = computed(() => {
-  if (!selectedRouteStops.value) return '0 km'
-  const val = selectedRouteStops.value.reduce((s, st) => s + (st.distance_value || 0), 0)
-  return val >= 1000 ? `${(val / 1000).toFixed(1)} km` : `${val} m`
-})
-
-const totalDurationLabel = computed(() => {
-  if (!selectedRouteStops.value) return '0 min'
-  const val = selectedRouteStops.value.reduce((s, st) => s + (st.duration_value || 0), 0)
-  const h = Math.floor(val / 3600)
-  const m = Math.floor((val % 3600) / 60)
-  return h > 0 ? `${h}h ${m}m` : `${m} min`
 })
 
 /**
@@ -1051,6 +1659,101 @@ const getClientAddress = (client) => {
   return addr?.formattedAddress || addr?.street || 'Sin dirección'
 }
 
+/**
+ * Initializes WebSocket connection for real-time updates
+ */
+function initializeWebSocket () {
+  try {
+    const instance = getCurrentInstance()
+    echo = instance.appContext.config.globalProperties.$echo
+
+    if (!echo) {
+      console.error('❌ Echo instance not found. Make sure pusher.js boot file is loaded.')
+      return
+    }
+
+    console.log('echo configurado')
+
+    echo.channel('delivery-tracking')
+      .listen('.DeliveryLocationUpdated', (event) => {
+        console.log('📍 Location updated:', event)
+        updateCourierLocation(event.delivery_run_id, event.latitude, event.longitude)
+      })
+      .listen('.DeliveryRunStatusUpdated', (event) => {
+        console.log('📦 Delivery run status updated:', event)
+        const runId = event.delivery_run?.id
+        const newStatus = event.new_status || event.delivery_run?.status
+
+        if (newStatus === 'completed' && runId) {
+          monitorActiveRuns.value = monitorActiveRuns.value.filter(run => run.id !== runId)
+          if (monitorSelectedRun.value?.id === runId) {
+            monitorSelectedRun.value = null
+          }
+        } else if (runId) {
+          loadHistoryRuns() // Refresh logic could be optimized
+        }
+      })
+      .listen('.DeliveryRunStarted', (event) => {
+        console.log('🚀 Delivery run started:', event)
+        loadHistoryRuns()
+        $q.notify({
+          type: 'positive',
+          message: `Nueva ruta iniciada por ${event.delivery_run?.delivery_person?.name || 'repartidor'}`,
+          position: 'top',
+          icon: 'local_shipping',
+          timeout: 3000
+        })
+      })
+      .listen('.DeliveryRunCompleted', (event) => {
+        console.log('✅ Delivery run completed:', event)
+        loadHistoryRuns()
+      })
+
+    console.log('✅ WebSocket initialized - Real-time updates active')
+  } catch (error) {
+    console.error('❌ Error initializing WebSocket:', error)
+  }
+}
+
+function updateCourierLocation (runId, latitude, longitude) {
+  // Update in monitorActiveRuns
+  const run = monitorActiveRuns.value.find(r => r.id === runId)
+  if (run) {
+    if (!run.locations) run.locations = []
+    run.locations.unshift({
+      latitude,
+      longitude,
+      recorded_at: new Date().toISOString()
+    })
+  }
+
+  // Update Map Marker
+  const p = { lat: parseFloat(latitude), lng: parseFloat(longitude) }
+  let m = courierMarkers.get(runId)
+
+  if (!m) {
+    if (!map.value) return
+    // Only create marker if this run is being monitored or we want to show all
+    if (run || monitorSelectedRun.value?.id === runId) {
+      m = new google.maps.Marker({
+        position: p,
+        map: map.value,
+        icon: {
+          path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+          scale: 4,
+          fillColor: '#2196F3',
+          fillOpacity: 1,
+          strokeColor: '#fff',
+          strokeWeight: 2
+        }
+      })
+      courierMarkers.set(runId, m)
+    }
+  } else {
+    m.setPosition(p)
+  }
+}
+
 const cleanupMarkers = () => {
   // Clear stop markers
   markers.forEach(m => {
@@ -1069,16 +1772,19 @@ const cleanupMarkers = () => {
     infoWindow.value.close()
   }
 
-  // Deep reset of the route renderer
+  // Deep reset of the route renderers
   if (routeRenderer.value) {
     routeRenderer.value.setDirections({ routes: [] })
     routeRenderer.value.setMap(null)
   }
-}
-
-const editStopAddress = (stop) => {
-  clientWithoutAddress.value = stop.client
-  showAddressModal.value = true
+  if (completedRenderer.value) {
+    completedRenderer.value.setDirections({ routes: [] })
+    completedRenderer.value.setMap(null)
+  }
+  if (pendingRenderer.value) {
+    pendingRenderer.value.setDirections({ routes: [] })
+    pendingRenderer.value.setMap(null)
+  }
 }
 
 /**
@@ -1098,6 +1804,7 @@ onMounted(async () => {
 
     // 3. Load routes (this handles the first route selection)
     await loadActiveRuns()
+    await loadHistoryRuns()
 
     // 4. Post-initialization
     initializeWebSocket()
@@ -1110,7 +1817,10 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   cleanupMarkers()
-  if (echoInstance) echoInstance.leave('delivery-tracking')
+  // Leave channel (don't disconnect global echo)
+  if (echo) {
+    echo.leave('delivery-tracking')
+  }
 })
 
 const initializeMap = () => {
@@ -1165,69 +1875,11 @@ async function loadActiveRuns () {
   }
 }
 
-async function loadAllClients () {
-  if (allClients.value.length) return
-  try {
-    const { data } = await api.get('clients', { params: { onlyClients: true } })
-    allClients.value = data.data || data
-  } catch (e) { console.error(e) }
-}
-
-async function loadPartners () {
-  if (partners.value.length) return
-  try {
-    const { data } = await api.get('partners')
-    partners.value = data || []
-  } catch (e) { console.error(e) }
-}
-
-async function loadPartnerClients (partner) {
-  $q.loading.show({ message: `Cargando clientes de ${partner.name}...` })
-  try {
-    const { data } = await api.get('clients', { params: { partner_id: partner.id, onlyClients: true } })
-    const partnerClients = data.data || data || []
-    if (partnerClients.length === 0) {
-      $q.notify({ message: 'Este afiliado no tiene clientes asociados', color: 'warning' })
-      return
-    }
-
-    // Filter out already added
-    const existingIds = selectedRouteStops.value.map(s => s.client_id)
-    const newOnes = partnerClients.filter(c => !existingIds.includes(c.id))
-
-    if (newOnes.length === 0) {
-      $q.notify({ message: 'Todos los clientes ya están en la ruta', color: 'info' })
-      return
-    }
-
-    $q.loading.show({ message: `Agregando ${newOnes.length} paradas...` })
-    for (const client of newOnes) {
-      const coords = getClientCoords(client)
-      if (coords) {
-        await api.post(`delivery-routes/${selectedRoute.value.id}/add-client`, {
-          client_id: client.id,
-          stop_order: selectedRouteStops.value.length + 1,
-          latitude: coords.lat,
-          longitude: coords.lng
-        })
-      }
-    }
-    await loadActiveRuns()
-    activeTab.value = 'details'
-    $q.notify({ message: `${newOnes.length} paradas agregadas correctamente`, color: 'positive' })
-  } catch (e) {
-    console.error(e)
-    $q.notify({ message: 'Error al cargar clientes del afiliado', color: 'negative' })
-  } finally {
-    $q.loading.hide()
-  }
-}
-
 const selectRoute = (route) => {
   // Immediate UI cleanup to avoid ghost data while debouncing
   cleanupMarkers()
   if (routeRenderer.value) routeRenderer.value.setMap(null)
-  
+
   selectedRoute.value = route
   const rawStops = route.route_clients || route.stops || route.items || []
   selectedRouteStops.value = rawStops.map(s => {
@@ -1252,121 +1904,6 @@ const selectRoute = (route) => {
   updateMapRoute()
 }
 
-/**
- * Route Actions
- */
-const addClientToRoute = (client) => {
-  if (!selectedRoute.value) return $q.notify({ message: 'Primero selecciona una ruta', color: 'warning' })
-
-  const coords = getClientCoords(client)
-  if (!coords) {
-    clientWithoutAddress.value = client
-    fixedAddress.value = null
-    showAddressModal.value = true
-    return
-  }
-
-  performAddClient(client, coords)
-}
-
-async function performAddClient (client, coords) {
-  $q.loading.show({ message: 'Agregando parada...' })
-  try {
-    await api.post(`/delivery-routes/${selectedRoute.value.id}/add-client`, {
-      client_id: client.id,
-      stop_order: selectedRouteStops.value.length + 1,
-      latitude: coords.lat,
-      longitude: coords.lng
-    })
-    $q.notify({ message: 'Parada agregada', color: 'positive' })
-    await loadActiveRuns()
-    activeTab.value = 'details'
-  } finally {
-    $q.loading.hide()
-    showResults.value = false
-  }
-}
-
-async function saveRouteChanges () {
-  if (!selectedRoute.value) return
-  saving.value = true
-  try {
-    const payload = {
-      ...routeForm.value,
-      courier_id: routeForm.value.courier?.id,
-      origin_branch_id: routeForm.value.origin_branch?.id,
-      partner_id: routeForm.value.partner?.id,
-      clients: selectedRouteStops.value.map((s, i) => ({
-        client_id: s.client_id,
-        stop_order: i + 1,
-        latitude: s.latitude,
-        longitude: s.longitude
-      }))
-    }
-    await api.patch(`/delivery-routes/${selectedRoute.value.id}`, payload)
-    $q.notify({ message: 'Cambios guardados', color: 'positive' })
-    await loadActiveRuns()
-  } finally { saving.value = false }
-}
-
-async function createNewRoute () {
-  newRouteForm.value = {
-    name: 'Ruta #' + (activeRoutes.value.length + 1),
-    origin_branch: branches.value[0] || null,
-    courier: null,
-    partner: null
-  }
-  showCreateRouteModal.value = true
-}
-
-async function submitNewRoute () {
-  $q.loading.show({ message: 'Creando ruta...' })
-  saving.value = true
-  try {
-    const payload = {
-      name: newRouteForm.value.name,
-      origin_branch_id: newRouteForm.value.origin_branch?.id,
-      courier_id: newRouteForm.value.courier?.id,
-      partner_id: newRouteForm.value.partner?.id
-    }
-    const { data } = await api.post('delivery-routes', payload)
-    await loadActiveRuns()
-
-    // Find the newly created route in the list to select it
-    const tr = activeRoutes.value.find(r => r.id === data.id) || data
-    selectRoute(tr)
-
-    showCreateRouteModal.value = false
-    activeTab.value = 'details'
-    sheetExpanded.value = true
-
-    $q.notify({ message: 'Ruta creada exitosamente', color: 'positive', icon: 'check' })
-  } catch (e) {
-    console.error(e)
-    $q.notify({ message: 'Error al crear la ruta', color: 'negative' })
-  } finally {
-    saving.value = false
-    $q.loading.hide()
-  }
-}
-
-async function deleteFullRoute (route) {
-  $q.dialog({ title: 'Confirmar', message: '¿Eliminar esta ruta por completo?', cancel: true, color: 'negative' })
-    .onOk(async () => {
-      await api.delete(`/delivery-routes/${route.id}`)
-      if (selectedRoute.value?.id === route.id) selectedRoute.value = null
-      await loadActiveRuns()
-    })
-}
-
-async function removeStop (stop) {
-  $q.loading.show()
-  try {
-    await api.delete(`/delivery-routes/${selectedRoute.value.id}/remove-stop/${stop.id}`)
-    await loadActiveRuns()
-  } finally { $q.loading.hide() }
-}
-
 const onStopsDragged = async () => {
   updateMapRoute()
   try {
@@ -1377,38 +1914,6 @@ const onStopsDragged = async () => {
   } catch (e) { console.error(e) }
 }
 
-async function optimizeRoute () {
-  if (!selectedRoute.value || selectedRouteStops.value.length < 2) return
-  optimizing.value = true
-  try {
-    await api.post(`/delivery-routes/${selectedRoute.value.id}/optimize`)
-    $q.notify({ message: 'Ruta optimizada exitosamente', color: 'positive' })
-    await loadActiveRuns()
-  } catch (e) {
-    console.error(e)
-    $q.notify({ message: 'Error al optimizar ruta', color: 'negative' })
-  } finally {
-    optimizing.value = false
-  }
-}
-
-/**
- * Reordering manual buttons
- */
-const moveStopUp = (index) => {
-  if (index === 0) return
-  const item = selectedRouteStops.value.splice(index, 1)[0]
-  selectedRouteStops.value.splice(index - 1, 0, item)
-  onStopsDragged()
-}
-
-const moveStopDown = (index) => {
-  if (index === selectedRouteStops.value.length - 1) return
-  const item = selectedRouteStops.value.splice(index, 1)[0]
-  selectedRouteStops.value.splice(index + 1, 0, item)
-  onStopsDragged()
-}
-
 /**
  * Map Route Drawing (Optimized)
  */
@@ -1417,19 +1922,6 @@ const updateMapRoute = debounce(async () => {
 
   const routeIdAtStart = selectedRoute.value?.id
   cleanupMarkers()
-  
-  if (!routeRenderer.value && typeof google !== 'undefined') {
-    routeRenderer.value = new google.maps.DirectionsRenderer({
-      map: map.value,
-      suppressMarkers: true,
-      preserveViewport: true,
-      polylineOptions: { strokeColor: '#2196F3', strokeWeight: 5, strokeOpacity: 0.7 }
-    })
-  }
-  
-  if (routeRenderer.value) {
-    routeRenderer.value.setMap(null) // Hide old route
-  }
 
   if (!selectedRouteStops.value?.length) return
 
@@ -1444,15 +1936,26 @@ const updateMapRoute = debounce(async () => {
   const origin = getBranchCoords(routeForm.value.origin_branch) || { lat: -25.26, lng: -57.57 }
   bounds.extend(origin)
 
-  // Create Markers
+  // Markers
   selectedRouteStops.value.forEach((stop, i) => {
     const pos = { lat: parseFloat(stop.latitude), lng: parseFloat(stop.longitude) }
     if (pos.lat && pos.lng) {
+      let markerColor = '#64748b' // pending (grey)
+      if (stop.delivery_status === 'delivered') markerColor = '#10b981' // delivered (green)
+      else if (stop.delivery_status === 'arrived') markerColor = '#f59e0b' // arrived (yellow)
+
       const marker = new google.maps.Marker({
         position: pos,
         map: map.value,
         label: { text: String(i + 1), color: 'white', fontWeight: 'bold' },
-        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 12, fillColor: '#2196F3', fillOpacity: 1, strokeWeight: 2, strokeColor: '#fff' }
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 12,
+          fillColor: markerColor,
+          fillOpacity: 1,
+          strokeWeight: 2,
+          strokeColor: '#fff'
+        }
       })
 
       marker.addListener('click', () => {
@@ -1481,45 +1984,120 @@ const updateMapRoute = debounce(async () => {
     }
   })
 
-  // Draw Polyline
-  // Filter valid stops for routing
+  // Route Drawing logic
   const validStops = selectedRouteStops.value.filter(s => {
     const lat = parseFloat(s.latitude)
     const lng = parseFloat(s.longitude)
     return !isNaN(lat) && !isNaN(lng)
   })
 
-  if (validStops.length === 0) return
-
-  const waypoints = validStops.slice(0, -1).map(s => ({
-    location: { lat: parseFloat(s.latitude), lng: parseFloat(s.longitude) },
-    stopover: true
-  }))
-
-  const dest = validStops[validStops.length - 1]
+  if (validStops.length === 0) {
+    map.value.fitBounds(bounds)
+    return
+  }
 
   try {
-    const result = await directionsService.route({
-      origin,
-      destination: { lat: parseFloat(dest.latitude), lng: parseFloat(dest.longitude) },
-      waypoints,
-      travelMode: google.maps.TravelMode.DRIVING
-    })
+    const deliveredStops = validStops.filter(s => s.delivery_status === 'delivered')
+    const pendingStops = validStops.filter(s => s.delivery_status !== 'delivered')
 
-    // RACE CONDITION CHECK: If route changed during async call, abort drawing
-    if (selectedRoute.value?.id !== routeIdAtStart) return
+    const isProgressView = deliveredStops.length > 0 && pendingStops.length > 0
 
-    routeRenderer.value.setMap(map.value)
-    routeRenderer.value.setDirections(result)
+    if (isProgressView) {
+      // 1. Draw Completed (Red)
+      const completedWaypoints = deliveredStops.slice(0, -1).map(s => ({ location: { lat: parseFloat(s.latitude), lng: parseFloat(s.longitude) }, stopover: true }))
+      const lastCompleted = deliveredStops[deliveredStops.length - 1]
 
-    // Update individual stop distances/durations from result
-    result.routes[0].legs.forEach((leg, i) => {
-      if (validStops[i]) {
-        validStops[i].distance_text = leg.distance.text
-        validStops[i].distance_value = leg.distance.value
-        validStops[i].duration_value = leg.duration.value
+      const completedReq = {
+        origin,
+        destination: { lat: parseFloat(lastCompleted.latitude), lng: parseFloat(lastCompleted.longitude) },
+        waypoints: completedWaypoints,
+        travelMode: google.maps.TravelMode.DRIVING
       }
-    })
+
+      const completedRes = await directionsService.route(completedReq)
+
+      if (!completedRenderer.value) {
+        completedRenderer.value = new google.maps.DirectionsRenderer({
+          map: map.value,
+          suppressMarkers: true,
+          preserveViewport: true,
+          polylineOptions: { strokeColor: '#EF4444', strokeWeight: 5, strokeOpacity: 0.8 } // Red
+        })
+      }
+      completedRenderer.value.setMap(map.value)
+      completedRenderer.value.setDirections(completedRes)
+
+      // 2. Draw Pending (Grey/Blue)
+      // Start from last completed
+      const startPending = { lat: parseFloat(lastCompleted.latitude), lng: parseFloat(lastCompleted.longitude) }
+      const pendingDest = pendingStops[pendingStops.length - 1]
+      const pendingWaypoints = pendingStops.slice(0, -1).map(s => ({ location: { lat: parseFloat(s.latitude), lng: parseFloat(s.longitude) }, stopover: true }))
+
+      const pendingReq = {
+        origin: startPending,
+        destination: { lat: parseFloat(pendingDest.latitude), lng: parseFloat(pendingDest.longitude) },
+        waypoints: pendingWaypoints,
+        travelMode: google.maps.TravelMode.DRIVING
+      }
+
+      const pendingRes = await directionsService.route(pendingReq)
+
+      if (!pendingRenderer.value) {
+        pendingRenderer.value = new google.maps.DirectionsRenderer({
+          map: map.value,
+          suppressMarkers: true,
+          preserveViewport: true,
+          polylineOptions: { strokeColor: '#94A3B8', strokeWeight: 5, strokeOpacity: 0.7, strokeDashOpacity: 0 } // Greyish
+        })
+      }
+      pendingRenderer.value.setMap(map.value)
+      pendingRenderer.value.setDirections(pendingRes)
+
+      // Update distances from pending leg
+      pendingRes.routes[0].legs.forEach((leg, i) => {
+        if (pendingStops[i]) {
+          pendingStops[i].distance_text = leg.distance.text
+          pendingStops[i].distance_value = leg.distance.value
+          pendingStops[i].duration_value = leg.duration.value
+        }
+      })
+    } else {
+      // Standard Single Route
+      const waypoints = validStops.slice(0, -1).map(s => ({
+        location: { lat: parseFloat(s.latitude), lng: parseFloat(s.longitude) },
+        stopover: true
+      }))
+      const dest = validStops[validStops.length - 1]
+
+      const result = await directionsService.route({
+        origin,
+        destination: { lat: parseFloat(dest.latitude), lng: parseFloat(dest.longitude) },
+        waypoints,
+        travelMode: google.maps.TravelMode.DRIVING
+      })
+
+      if (selectedRoute.value?.id !== routeIdAtStart) return
+
+      if (!routeRenderer.value) {
+        routeRenderer.value = new google.maps.DirectionsRenderer({
+          map: map.value,
+          suppressMarkers: true,
+          preserveViewport: true,
+          polylineOptions: { strokeColor: '#2196F3', strokeWeight: 5, strokeOpacity: 0.7 }
+        })
+      }
+      routeRenderer.value.setMap(map.value)
+      routeRenderer.value.setDirections(result)
+
+      // Update distances
+      result.routes[0].legs.forEach((leg, i) => {
+        if (validStops[i]) {
+          validStops[i].distance_text = leg.distance.text
+          validStops[i].distance_value = leg.distance.value
+          validStops[i].duration_value = leg.duration.value
+        }
+      })
+    }
   } catch (e) {
     console.warn('Polyline error:', e)
   }
@@ -1527,88 +2105,6 @@ const updateMapRoute = debounce(async () => {
   map.value.fitBounds(bounds)
 }, 500)
 
-/**
- * Address Fix Handlers
- */
-const onAddressFixed = (addr) => { fixedAddress.value = addr }
-
-const saveFixedAddress = async () => {
-  try {
-    if (!clientWithoutAddress.value || !fixedAddress.value) return
-    await api.put(`clients/${clientWithoutAddress.value.id}`, {
-      ...clientWithoutAddress.value,
-      address: fixedAddress.value
-    })
-    showAddressModal.value = false
-  } catch (error) {
-    console.error('Error al guardar la dirección:', error)
-    showAddressModal.value = false
-  }
-}
-
-/**
- * UI Handlers
- */
-const onSearchInput = async (v) => {
-  try {
-    const { data } = await api.get('clients', {
-      params: {
-        dataSearch: {
-          name: v,
-          document_number: v
-        },
-        onlyClients: true,
-        paginated: true,
-        perPage: 10,
-        page: 1
-      }
-    })
-    clients.value = data.data
-    showResults.value = true
-  } catch (error) {
-    console.log(error)
-  }
-}
-
-const onTouchStart = (e) => { touchState.startY = e.touches[0].clientY }
-
-const onTouchMove = (e) => {
-  touchState.currentY = e.touches[0].clientY
-  const d = touchState.startY - touchState.currentY
-  if (d > 60 && !sheetExpanded.value) sheetExpanded.value = true
-  else if (d < -60 && sheetExpanded.value) sheetExpanded.value = false
-}
-const onTouchEnd = () => {}
-
-const toggleSheet = () => sheetExpanded.value = !sheetExpanded.value
-
-const initializeWebSocket = () => {
-  const inst = getCurrentInstance()
-  echoInstance = inst?.appContext.config.globalProperties.$echo
-  if (!echoInstance) return
-  echoInstance.channel('delivery-tracking').listen('.DeliveryLocationUpdated', (e) => {
-    if (!selectedRoute.value || e.delivery_run_id !== selectedRoute.value.id) return
-    
-    let m = courierMarkers.get(e.delivery_run_id)
-    const p = { lat: parseFloat(e.latitude), lng: parseFloat(e.longitude) }
-    if (!m) {
-      if (!map.value) return
-      m = new google.maps.Marker({ 
-        position: p, 
-        map: map.value, 
-        icon: { 
-          path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, 
-          scale: 4, 
-          fillColor: '#2196F3', 
-          fillOpacity: 1, 
-          strokeColor: '#fff', 
-          strokeWeight: 2 
-        } 
-      })
-      courierMarkers.set(e.delivery_run_id, m)
-    } else m.setPosition(p)
-  })
-}
 </script>
 
 <style scoped>

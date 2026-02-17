@@ -1,49 +1,6 @@
 <template>
   <q-page padding>
     <div class="q-gutter-sm">
-      <!-- <div class="full-width text-right q-gutter-sm">
-        <q-btn
-          class="text-right"
-          icon="download"
-          color="teal"
-          round
-        >
-          <q-popup-proxy>
-            <q-banner>
-              <q-list>
-                <q-item
-                  style="border-radius: 10px;"
-                  v-ripple
-                  clickable
-                  @click="downloadPurchaseExcel"
-                >
-                  <q-item-section thumbnail>
-                    <q-icon name="archive" class="q-ml-sm"/>
-                  </q-item-section>
-                  <q-item-section>
-                    Excel de facturas
-                  </q-item-section>
-                </q-item>
-                <q-item v-ripple style="border-radius: 10px;" clickable>
-                  <q-item-section thumbnail>
-                    <q-icon name="archive" class="q-ml-sm"/>
-                  </q-item-section>
-                  <q-item-section>
-                    Facturas electrónicas
-                  </q-item-section>
-                </q-item>
-              </q-list>
-            </q-banner>
-          </q-popup-proxy>
-        </q-btn>
-        <q-btn
-          class="text-right"
-          icon="filter_alt"
-          color="primary"
-          round
-          @click="dialogFilter = true"
-        />
-      </div> -->
       <div class="row justify-between items-center">
         <span class="text-h6">
           Lista de compras
