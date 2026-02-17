@@ -572,7 +572,7 @@ const submitOrder = async () => {
 
 <style scoped>
 .checkout-view {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--background);
   display: flex;
   flex-direction: column;

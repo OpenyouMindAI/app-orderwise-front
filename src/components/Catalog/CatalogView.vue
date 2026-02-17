@@ -11,7 +11,7 @@
           <q-avatar size="80px" class="profile-avatar shadow-5">
             <q-img :src="company?.url || 'https://cdn.quasar.dev/img/avatar.png'" />
           </q-avatar>
-          <div class="text-h5 text-white text-bold q-mt-md text-uppercase company-name">
+          <div class="text-h5 text-center text-white text-bold q-mt-md text-uppercase company-name">
             {{ company?.name }}
           </div>
           <div

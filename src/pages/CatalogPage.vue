@@ -54,28 +54,36 @@
         </q-tab-panels>
 
         <!-- Floating Action Button (solo en tab catálogo con productos en carrito) -->
+        <!-- Floating Bottom Button (similar to ProductDetailDialog / CartView) -->
         <q-page-sticky
           v-if="currentTab === 'menu' && cart.total.value > 0"
-          position="bottom-right"
-          :offset="[15, 80]"
+          position="bottom"
+          :offset="[0, 0]"
+          class="floating-cart-container"
         >
-          <q-btn
-            fab
-            color="primary"
-            icon="shopping_cart"
-            @click="currentTab = 'cart'"
-            class="cart-fab shadow-5"
-          >
-            <q-badge
-              v-if="cart.itemCount.value"
-              color="negative"
-              floating
-              :label="cart.itemCount.value"
-            />
-            <q-tooltip anchor="center left" self="center right" :offset="[10, 10]">
-              Ver Carrito ($ {{ formatNumber(cart.total.value) }})
-            </q-tooltip>
-          </q-btn>
+          <div class="floating-cart-footer">
+            <q-btn
+              unelevated
+              rounded
+              no-caps
+              class="continuar-btn full-width shadow-4"
+              @click="currentTab = 'cart'"
+            >
+              <div class="row full-width justify-between items-center q-px-sm">
+                <div class="row items-center">
+                  <q-badge
+                    color="white"
+                    text-color="dark"
+                    :label="cart.itemCount.value"
+                    class="q-mr-sm text-weight-bold"
+                    style="padding: 4px 8px"
+                  />
+                  <span class="text-weight-bold">Ver mi pedido</span>
+                </div>
+                <span class="text-weight-bold">$ {{ formatNumber(cart.total.value) }}</span>
+              </div>
+            </q-btn>
+          </div>
         </q-page-sticky>
 
         <!-- Schedule Status (solo en tab catálogo) -->
@@ -292,29 +300,31 @@ onMounted(async () => {
   overflow-anchor: none;
 }
 
-/* Floating Action Button */
-.cart-fab {
-  width: 56px;
+/* Floating Cart Button */
+.floating-cart-container {
+  width: 100%;
+  z-index: 2000;
+}
+
+.floating-cart-footer {
+  width: 100vw;
+  padding: 16px 20px;
+  background: transparent; /* Or a subtle gradient if needed, but transparent for "floating" look */
+}
+
+.continuar-btn {
   height: 56px;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff4d00 100%);
-  animation: pulse 2s infinite ease-in-out;
+  font-size: 17px;
+  font-weight: 600;
+  background: var(--text);
+  color: var(--surface);
+  border-radius: var(--border-radius-md);
+  letter-spacing: 0.3px;
+  transition: var(--transition-transform);
 }
 
-@keyframes pulse {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(255, 77, 0, 0.7);
-  }
-  50% {
-    box-shadow: 0 0 0 15px rgba(255, 77, 0, 0);
-  }
-}
-
-.cart-fab:hover {
-  transform: scale(1.1);
-}
-
-.cart-fab:active {
-  transform: scale(0.95);
+.continuar-btn:active {
+  transform: translateY(2px);
 }
 
 /* Badge en tabs */
@@ -329,9 +339,8 @@ onMounted(async () => {
     font-size: 0.7rem;
   }
 
-  .cart-fab {
-    width: 48px;
-    height: 48px;
+  .continuar-btn {
+    font-size: 16px;
   }
 }
 </style>

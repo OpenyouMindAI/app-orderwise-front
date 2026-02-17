@@ -38,7 +38,7 @@
 
       <!-- Content Section -->
       <div class="q-pa-lg">
-        <div class="row justify-between items-start no-wrap q-mb-sm">
+        <div class="row justify-between items-center no-wrap q-mb-sm">
           <div class="text-h6 text-bold text-dark product-name">{{ product?.name }}</div>
           <div class="text-h6 text-bold product-price">
             $ {{ formatNumber(product?.price) }}
@@ -52,7 +52,7 @@
         />
 
         <!-- Quantity Selector -->
-        <div class="quantity-container q-mb-xl">
+        <div class="quantity-container q-mb-lg">
           <div class="quantity-selector row no-wrap items-center">
             <q-btn
               flat
@@ -76,8 +76,6 @@
             />
           </div>
         </div>
-
-        <q-separator class="q-my-lg opacity-2" />
 
         <!-- Comments Section -->
         <div class="comments-section q-mb-xl">
@@ -192,9 +190,9 @@ export default {
 
 <style scoped>
 .product-detail-card {
+  height: 100dvh;
   width: 100%;
   max-width: 500px;
-  height: 90vh; /* Fixed height for consistent layout */
   border-radius: 24px;
   background: var(--surface);
   display: flex;
@@ -205,7 +203,7 @@ export default {
 /* Override for maximized state on mobile */
 .q-dialog__inner--maximized .product-detail-card {
   max-width: 100%;
-  height: 100vh;
+  height: 100dvh;
   border-radius: 0;
 }
 
@@ -226,7 +224,7 @@ export default {
 }
 
 .back-button-overlay {
-  position: absolute;
+  position: fixed;
   top: 16px;
   left: 16px;
   z-index: 10;
@@ -247,13 +245,12 @@ export default {
   line-height: 1.2;
   font-size: 20px;
   color: var(--text);
-  margin-top: 8px;
+  margin: 0 !important;
 }
 
 .product-price {
   font-size: 20px;
   color: var(--text);
-  margin-top: 8px;
 }
 
 .description-text {
