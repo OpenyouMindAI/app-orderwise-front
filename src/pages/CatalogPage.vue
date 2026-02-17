@@ -40,23 +40,17 @@
                 <q-icon name="search" />
               </template>
             </q-input>
-            <q-tabs
-              v-model="category"
-              class="text-teal catalog-tabs"
-              dense
-              v-if="categories.length"
-              no-caps
-              align="left"
-            >
-              <q-tab
-                :name="cat.id"
-                :label="cat.name"
-                :key="cat.id"
+            <div class="category-scroll" v-if="categories.length">
+              <div
                 v-for="cat in categories"
-                class="q-pa-md"
-                @click="scrollToCategory(cat.id)"
-              />
-            </q-tabs>
+                :key="cat.id"
+                class="category-chip"
+                :class="{ 'category-chip--active': category === cat.id }"
+                @click="selectCategory(cat.id)"
+              >
+                {{ cat.name }}
+              </div>
+            </div>
             <q-skeleton type="text" height="60px" v-else/>
           </div>
         </div>
@@ -107,6 +101,7 @@
                         class="product-horizontal-card shadow-1"
                         :class="findProduct(command.products, row) && 'shadow-20'"
                         :style="`${findProduct(command.products, row) && 'border: solid 2px green;'}`"
+                        tabindex="-1"
                         @click="openProductDetails(row)"
                       >
                         <q-card-section horizontal class="items-center">
@@ -330,134 +325,12 @@
               />
             </div>
           </q-page-sticky>
-          <q-dialog v-model="detailProduct">
-            <q-card
-              :class="$q.screen.lt.sm ? 'full-height column': ''"
-              :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 400px; max-width: 80vw;'}`"
-            >
-              <SlideComponent :slides="product.images" styles="height: 200px;"/>
-              <q-card-section class="scroll q-pa-none col" style="max-height: calc(100vh - 300px);">
-                <q-card-section class="column q-pb-none">
-                  <div class="flex justify-between full-width">
-                    <span class="text-body2 text-uppercase text-bold">
-                      {{ product?.name }}
-                    </span>
-                    <span class="text-body2 q-mt-sm">
-                      $ {{ formatNumber(product?.price) }}
-                    </span>
-                  </div>
-                  <div v-if="product.description">
-                    <q-input
-                      type="textarea"
-                      v-model="product.description"
-                      readonly
-                      autogrow
-                    />
-                  </div>
-                  <div class="flex justify-between items-center q-mt-sm">
-                    <q-btn
-                      icon="remove"
-                      color="primary"
-                      round
-                      flat
-                      size="lg"
-                      @click="addTemporalProducts(product, product.amount -= 1)"
-                    />
-                    <q-input
-                      borderless
-                      dense
-                      type="number"
-                      style="width: 40px;"
-                      input-class="text-center"
-                      v-model.number="product.amount"
-                      @update:model-value="(value) => addTemporalProducts(product, value)"
-                    />
-                    <q-btn
-                      icon="add"
-                      color="primary"
-                      round
-                      flat
-                      size="lg"
-                      @click="addTemporalProducts(product, product.amount += 1)"
-                    />
-                  </div>
-                </q-card-section>
-                <q-card-section class="q-px-none col" v-if="product.product_addons?.length > 0">
-                  <div class="col-12 bg-grey-2 q-pa-sm text-dark">
-                    <span class="text-subtitle2">+ Adicionales</span>
-                  </div>
-                </q-card-section>
-                <q-card-section class="q-pt-none">
-                  <div
-                    class="flex justify-between full-width items-center"
-                    v-for="addon in product.product_addons" :key="addon.id"
-                  >
-                    <div class="column">
-                      <span class="text-body2 text-uppercase text-bold">
-                        {{ addon.name }}
-                      </span>
-                      <span class="text-subtitle2 text-grey">
-                        {{ formatNumber(addon.price) }}$
-                      </span>
-                    </div>
-                    <div class="flex justify-between items-center q-gutter-xs">
-                      <q-btn
-                        icon="remove"
-                        color="primary"
-                        round
-                        flat
-                        size="sm"
-                        @click="addTemporalProducts(addon, addon.amount -= 1)"
-                      />
-                      <q-input
-                        borderless
-                        dense
-                        type="number"
-                        style="width: 30px;"
-                        input-class="text-center"
-                        v-model.number="addon.amount"
-                        @update:model-value="(value) => addTemporalProducts(product, value)"
-                      />
-                      <q-btn
-                        icon="add"
-                        color="primary"
-                        round
-                        flat
-                        size="sm"
-                        @click="addTemporalProducts(addon, addon.amount += 1)"
-                      />
-                    </div>
-                  </div>
-                  <q-separator class="q-mt-md"/>
-                </q-card-section>
-                <q-card-section class="q-pt-none">
-                  <q-input
-                    type="textarea"
-                    label="Observación"
-                    filled
-                    v-model="observation"
-                  />
-                </q-card-section>
-              </q-card-section>
-              <q-card-actions align="right">
-                <q-btn
-                  color="negative"
-                  label="Cerrar"
-                  icon="close"
-                  @click="() => {
-                    detailProduct = false
-                    product = null
-                  }"
-                />
-                <q-btn
-                  color="primary"
-                  label="Agregar"
-                  icon="add_shopping_cart"
-                  @click="addCar"
-                />
-              </q-card-actions>
-            </q-card>
-          </q-dialog>
+          <ProductDetailDialog
+            v-model="detailProduct"
+            :product="product"
+            v-if="product"
+            @add-to-cart="addCarFromDetail"
+          />
           <q-dialog v-model="openAddClient" persistent :maximized="$q.screen.lt.sm">
             <q-card :style="$q.screen.lt.sm ? '' : 'width: 700px; max-width: 80vw;'">
               <q-form @submit="saveClient" class="column full-height">
@@ -718,20 +591,20 @@ const { getScrollTarget, setVerticalScrollPosition } = scroll
 import { formatDate, formatNumber, loading, notify, setFiles } from '../const/mixins'
 import { useCommandStore } from '../stores/command'
 import SkeletonCard from '../components/SkeletonCard.vue'
-import SlideComponent from '../components/SlideComponent.vue'
 import { mapActions, mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import FileButtonComponent from 'src/components/FileButtonComponent.vue'
 import { status } from 'src/const/invoice'
 import ScheduleStatus from 'src/components/Command/ScheduleStatus.vue'
+import ProductDetailDialog from 'src/components/Product/ProductDetailDialog.vue'
 import { useCatalogStore } from 'src/stores/catalog'
 export default {
   name: 'CatalogPage',
   components: {
     SkeletonCard,
-    SlideComponent,
     ScheduleStatus,
-    FileButtonComponent
+    FileButtonComponent,
+    ProductDetailDialog
   },
   data () {
     return {
@@ -765,6 +638,7 @@ export default {
        * @type {Boolean}
        */
       detailProduct: false,
+      savedScrollPosition: 0,
       /**
        * Loading table
        * @type {Boolean}
@@ -866,20 +740,22 @@ export default {
     }
   },
   watch: {
-    category (data) {
-      console.log('CatalogPage: category watcher triggered', data)
+    category (data, oldData) {
+      if (data === oldData || String(data) === String(oldData)) return
       this.$router.push({
         path: this.$route.path,
         query: {
-          tab: this.tab,
+          ...this.$route.query,
           category: data || 'all'
         }
       })
-      if (data && data !== 'all') {
-        this.scrollToCategory(data)
-      } else if (data === 'all') {
-        const target = getScrollTarget(document.querySelector('.header-container'))
-        setVerticalScrollPosition(target, 0, 500)
+    },
+    detailProduct (val) {
+      if (!val) {
+        // Modal closed - restore scroll position
+        this.$nextTick(() => {
+          window.scrollTo({ top: this.savedScrollPosition, behavior: 'instant' })
+        })
       }
     },
     observation (data) {
@@ -939,19 +815,42 @@ export default {
   methods: {
     /**
      * Open product details
-     * @param {Object} product
+     * @param {Object} product product
      */
     openProductDetails (product) {
-      this.detailProduct = true
-      this.product = product
-      this.product.amount = 1
-      this.addTemporalProducts(product, product.amount)
-      if (product.product_addons && product.product_addons.length > 0) {
-        this.product.product_addons = product.product_addons.map(addon => {
-          addon.amount = 0
-          return addon
-        })
+      // Blur any focused element to prevent scroll-on-refocus when modal closes
+      if (document.activeElement) {
+        document.activeElement.blur()
       }
+      // Capture current scroll position before opening modal
+      this.savedScrollPosition = window.scrollY || window.pageYOffset
+      this.product = JSON.parse(JSON.stringify(product))
+      this.detailProduct = true
+    },
+    /**
+     * Add car from detail
+     * @param {Object} cartProduct product from detail dialog
+     */
+    addCarFromDetail (cartProduct) {
+      const index = this.products.findIndex(p => p.id === cartProduct.id)
+      if (index > -1) {
+        // If product already in cart, update it
+        const existingProduct = this.products[index]
+        existingProduct.amount += cartProduct.amount
+        existingProduct.observation = cartProduct.observation
+        this.calculate(existingProduct)
+        // Trigger reactivity for the watcher
+        this.products = [...this.products]
+      } else {
+        // Add new product to cart
+        cartProduct.product_id = cartProduct.id
+        this.products = [
+          ...this.products,
+          cartProduct
+        ]
+        this.calculateTotal()
+      }
+      this.notifyProductCar()
     },
     addCar () {
       this.temporalProducts.forEach(product => this.validateProduct(product))
@@ -1300,12 +1199,20 @@ export default {
      * Scroll to category
      * @param {String} categoryId
      */
+    /**
+     * Select category and scroll to it
+     * @param {String|Number} categoryId
+     */
+    selectCategory (categoryId) {
+      this.category = categoryId
+      this.scrollToCategory(categoryId)
+    },
     scrollToCategory (categoryId) {
       const el = document.getElementById(`category-${categoryId}`)
       if (el) {
         const target = getScrollTarget(el)
-        const offset = el.offsetTop - 140 // Increased offset to prevent titles from being covered
-        const duration = 500
+        const offset = el.offsetTop - 140
+        const duration = 150
         setVerticalScrollPosition(target, offset, duration)
       }
     },
@@ -1426,26 +1333,44 @@ export default {
   top: 0;
   z-index: 1000;
   background: #f8f8f8;
-  padding: 1rem 0;
 }
 
-.catalog-tabs {
-  border-bottom: 1px solid var(--border);
-}
-
-/* Hide scrollbar and arrows for a clean invisible scroll experience */
-.catalog-tabs :deep(.q-tabs__content) {
-  overflow-x: auto !important;
-  flex-wrap: nowrap !important;
+.category-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 8px 8px;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE 10+ */
 }
 
-.catalog-tabs :deep(.q-tabs__content)::-webkit-scrollbar {
+.category-scroll::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Opera */
 }
 
-.catalog-tabs :deep(.q-tabs__arrow) {
-  display: none !important;
+.category-chip {
+  flex-shrink: 0;
+  padding: 8px 18px;
+  border-radius: 24px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  background: var(--surface, #f0f0f0);
+  color: var(--text, #333);
+  border: 1.5px solid var(--border, #e0e0e0);
+  transition: all 0.2s ease;
+}
+
+.category-chip:active {
+  transform: scale(0.96);
+}
+
+.category-chip--active {
+  background: var(--primary, #ff4d00);
+  color: white;
+  border-color: var(--primary, #ff4d00);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 </style>
