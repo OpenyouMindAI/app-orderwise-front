@@ -456,6 +456,7 @@ const scrollToCategory = async (categoryId) => {
 
 /* Products Section */
 .products-container {
+  justify-self: center;
   max-width: 600px;
   margin: 0 auto;
 }

@@ -137,7 +137,15 @@ const showProductDetail = ref(false)
 const selectedProduct = ref(null)
 const loadingPage = ref(false)
 const isCurrentlyOpen = ref(false)
-const savedScrollPosition = ref(0)
+let savedScrollPosition = 0
+let scrollContainerEl = null
+
+// Find the real scrollable container (Quasar panels use .q-panel)
+const findScrollContainer = () => {
+  const panel = document.querySelector('.q-tab-panels .q-panel.scroll')
+  if (panel && panel.scrollHeight > panel.clientHeight) return panel
+  return document.scrollingElement || document.documentElement
+}
 
 // Computed
 const isAuthenticated = computed(() => !!userSession.value)
@@ -162,11 +170,15 @@ watch(() => route.query.tab, (newTab) => {
 
 // Watch product detail dialog to restore scroll position
 watch(showProductDetail, (isOpen) => {
-  if (!isOpen) {
-    // Modal closed - restore scroll position
-    setTimeout(() => {
-      window.scrollTo({ top: savedScrollPosition.value, behavior: 'instant' })
-    }, 50)
+  if (!isOpen && scrollContainerEl) {
+    // Modal closed - restore scroll position on the correct container
+    requestAnimationFrame(() => {
+      if (scrollContainerEl === document.scrollingElement || scrollContainerEl === document.documentElement) {
+        window.scrollTo({ top: savedScrollPosition, behavior: 'instant' })
+      } else {
+        scrollContainerEl.scrollTop = savedScrollPosition
+      }
+    })
   }
 })
 
@@ -176,8 +188,13 @@ const openProductDetail = (product) => {
   if (document.activeElement) {
     document.activeElement.blur()
   }
-  // Capture current scroll position before opening modal
-  savedScrollPosition.value = window.scrollY || window.pageYOffset
+  // Find and capture scroll position from the real scroll container
+  scrollContainerEl = findScrollContainer()
+  if (scrollContainerEl === document.scrollingElement || scrollContainerEl === document.documentElement) {
+    savedScrollPosition = window.scrollY || window.pageYOffset
+  } else {
+    savedScrollPosition = scrollContainerEl.scrollTop
+  }
   selectedProduct.value = { ...product }
   showProductDetail.value = true
 }
@@ -272,6 +289,7 @@ onMounted(async () => {
 
 .catalog-panels :deep(.q-panel) {
   overflow-y: auto;
+  overflow-anchor: none;
 }
 
 /* Floating Action Button */
