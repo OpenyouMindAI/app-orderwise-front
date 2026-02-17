@@ -30,9 +30,14 @@ const hasValidToken = (store) => {
     return false
   }
 
-  // Si tiene token y sesión de usuario, está autenticado.
-  // La validación de si tiene empresa o no se maneja en el flujo de cada página/layout,
-  // no debemos expulsarlo al login solo por no tener empresa aún (ej. durante el onboarding).
+  // Validación proactiva del tiempo de expiración
+  if (store.setTimeOut && store.setTimeOut > 0) {
+    const now = Date.now()
+    if (now >= store.setTimeOut) {
+      return false
+    }
+  }
+
   return true
 }
 
@@ -92,20 +97,8 @@ const validateModuleAccess = (store, to) => {
   return null
 }
 
-/**
- * Maneja el cierre de sesión por expiración
- */
-const handleSessionExpiration = async (store, router) => {
-  notifySession('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.')
-
-  try {
-    await store.forceLogout()
-  } catch (error) {
-    console.error('Error durante logout:', error)
-  }
-
-  router.push('/login')
-}
+// La lógica de redirección ahora se maneja directamente en el interceptor de la API
+// para garantizar que cualquier error 401 dispare el cierre de sesión inmediato.
 
 export default boot(async ({ router, store }) => {
   let pendingSessionExpiration = null
@@ -113,17 +106,26 @@ export default boot(async ({ router, store }) => {
   // Interceptor de respuestas API
   api.interceptors.response.use(null, async (error) => {
     const $store = authentication()
-    const status = error.response?.status
+    const status = error.response?.status || error.status
 
     // Validar si la URL está excluida del manejo de 401
     const isExcludedUrl = CONFIG.EXCLUDED_URLS.some(url =>
-      error.config?.url?.includes(url)
+      error.config?.url?.includes?.(url) || (typeof error.url === 'string' && error.url.includes(url))
     )
 
     if (status === 401 && !isExcludedUrl) {
-      // Prevenir múltiples logouts simultáneos usando debounce
       if (!pendingSessionExpiration) {
-        pendingSessionExpiration = handleSessionExpiration($store, router)
+        pendingSessionExpiration = (async () => {
+          notifySession('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.')
+          await $store.forceLogout()
+
+          // Intentar navegación suave, si falla, forzar recarga al login
+          try {
+            await router.push('/login')
+          } catch (e) {
+            window.location.href = '#/login'
+          }
+        })()
 
         setTimeout(() => {
           pendingSessionExpiration = null
