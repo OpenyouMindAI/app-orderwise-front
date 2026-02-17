@@ -35,11 +35,7 @@
         </div>
         <q-img
           v-else
-          :ref="
-            (el) => {
-              thumbRef[index] = el
-            }
-          "
+          :ref="el => { if (el) thumbRef[index] = el }"
           style="width: 120px; height: 120px; margin-top: 10px"
           class="q-ml-xs image-gallery__image"
           :style="imageStyle"
@@ -300,8 +296,8 @@ export default {
           })
 
           cancel = morph({
-            from: thumbRef.value[index].$el,
-            to: fullRef.value.$el,
+            from: thumbRef.value[index]?.$el || thumbRef.value[index],
+            to: () => fullRef.value?.$el || fullRef.value,
             onToggle: () => {
               indexZoomed.value = index
             },
@@ -319,8 +315,8 @@ export default {
 
       if (indexZoomedState !== void 0 && (cancel === void 0 || cancel() === false)) {
         morph({
-          from: fullRef.value.$el,
-          to: thumbRef.value[indexZoomedState].$el,
+          from: () => fullRef.value?.$el || fullRef.value,
+          to: thumbRef.value[indexZoomedState]?.$el || thumbRef.value[indexZoomedState],
           onToggle: () => {
             indexZoomed.value = void 0
           },

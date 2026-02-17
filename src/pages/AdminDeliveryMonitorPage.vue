@@ -408,7 +408,6 @@
       </q-btn-group>
     </div>
     <!-- Cloning Preview Dialog -->
-    <!-- Cloning Preview Dialog -->
     <q-dialog v-model="showCloneDialog" persistent transition-show="scale" transition-hide="scale" :maximized="$q.screen.lt.sm">
       <q-card :style="$q.screen.lt.sm ? '' : 'width: 1000px; max-width: 95vw;'" :class="$q.screen.lt.sm ? 'column full-height' : ''" class="rounded-borders-20 overflow-hidden shadow-24">
         <!-- Compact Header -->
