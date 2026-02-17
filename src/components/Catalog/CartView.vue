@@ -32,64 +32,65 @@
     </div>
 
     <!-- Cart Items -->
-    <div v-else class="cart-content">
-      <!-- Items List -->
-      <div class="cart-items">
-        <div
-          v-for="item in cart.items.value"
-          :key="item.id"
-          class="cart-item"
-        >
-          <!-- Product Name and Quantity Controls -->
-          <div class="item-header">
-            <div class="item-info">
-              <div class="item-name">{{ item.name }}</div>
-              <div class="item-price">$ {{ formatNumber(item.subtotal) }}</div>
-            </div>
-            <div class="quantity-controls-cart">
-              <q-btn
-                icon="remove"
-                flat
-                round
-                size="sm"
-                class="quantity-btn-cart"
-                @click="decrementQuantity(item)"
-                :disable="item.amount <= 1"
-              />
-              <span class="quantity-display-cart">{{ item.amount }}</span>
-              <q-btn
-                icon="add"
-                flat
-                round
-                size="sm"
-                class="quantity-btn-cart"
-                @click="incrementQuantity(item)"
-              />
+    <template v-else>
+      <div class="cart-content">
+        <!-- Items List -->
+        <div class="cart-items">
+          <div
+            v-for="item in cart.items.value"
+            :key="item.id"
+            class="cart-item"
+          >
+            <!-- Product Name and Quantity Controls -->
+            <div class="item-header">
+              <div class="item-info">
+                <div class="item-name">{{ item.name }}</div>
+                <div class="item-price">$ {{ formatNumber(item.subtotal) }}</div>
+              </div>
+              <div class="quantity-controls-cart">
+                <q-btn
+                  icon="remove"
+                  flat
+                  round
+                  size="sm"
+                  class="quantity-btn-cart"
+                  @click="decrementQuantity(item)"
+                  :disable="item.amount <= 1"
+                />
+                <span class="quantity-display-cart">{{ item.amount }}</span>
+                <q-btn
+                  icon="add"
+                  flat
+                  round
+                  size="sm"
+                  class="quantity-btn-cart"
+                  @click="incrementQuantity(item)"
+                />
+              </div>
             </div>
           </div>
+        </div>
 
+        <!-- Dashed Separator -->
+        <div class="separator"></div>
+
+        <!-- Summary Section -->
+        <div class="cart-summary">
+          <div class="summary-title">Resumen</div>
+
+          <div class="summary-row">
+            <span class="summary-label">Subtotal</span>
+            <span class="summary-value">$ {{ formatNumber(cart.total.value) }}</span>
+          </div>
+
+          <div class="summary-total">
+            <span class="total-label">Total</span>
+            <span class="total-value">$ {{ formatNumber(cart.total.value) }}</span>
+          </div>
         </div>
       </div>
 
-      <!-- Dashed Separator -->
-      <div class="separator"></div>
-
-      <!-- Summary Section -->
-      <div class="cart-summary">
-        <div class="summary-title">Resumen</div>
-
-        <div class="summary-row">
-          <span class="summary-label">Subtotal</span>
-          <span class="summary-value">$ {{ formatNumber(cart.total.value) }}</span>
-        </div>
-
-        <div class="summary-total">
-          <span class="total-label">Total</span>
-          <span class="total-value">$ {{ formatNumber(cart.total.value) }}</span>
-        </div>
-      </div>
-
-      <!-- Continue Button -->
+      <!-- Continue Button - Moved outside for better sticky behavior and to avoid horizontal scroll -->
       <div class="cart-footer">
         <q-btn
           label="Continuar"
@@ -99,7 +100,7 @@
           @click="$emit('checkout')"
         />
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
@@ -132,6 +133,8 @@ const decrementQuantity = (item) => {
   background: var(--background);
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 /* Header */
@@ -180,6 +183,7 @@ const decrementQuantity = (item) => {
   flex-direction: column;
   padding: 20px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Cart Items */
@@ -208,6 +212,7 @@ const decrementQuantity = (item) => {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0; /* Critical for preventing flex items from pushing parent width */
 }
 
 .item-name {
@@ -215,6 +220,12 @@ const decrementQuantity = (item) => {
   font-weight: 600;
   color: var(--text);
   line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .item-price {
@@ -332,13 +343,11 @@ const decrementQuantity = (item) => {
 
 /* Footer */
 .cart-footer {
-  position: sticky;
-  bottom: 0;
   background: var(--surface);
-  padding: 16px 0;
-  margin: 0 -20px;
-  padding-left: 20px;
-  padding-right: 20px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  position: relative;
+  z-index: 10;
 }
 
 .continuar-btn {

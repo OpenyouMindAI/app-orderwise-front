@@ -1,19 +1,19 @@
 <template>
   <div class="checkout-view">
     <!-- Header with Back Button -->
-    <header class="checkout-header safe-area-top">
+    <div class="checkout-header">
       <q-btn
+        icon="arrow_back_ios_new"
         flat
         round
         dense
-        icon="chevron_left"
+        color="dark"
+        class="back-btn bg-white shadow-2"
+        size="sm"
         @click="goBack"
-        class="back-button"
-        size="md"
       />
-      <h1 class="checkout-title">Finalizar Pedido</h1>
-      <div class="header-spacer"></div>
-    </header>
+      <div class="header-title">Finalizar Pedido</div>
+    </div>
 
     <!-- Dynamic Stepper -->
     <q-stepper
@@ -173,16 +173,8 @@
 
         <div v-else class="authenticated-step q-pa-xl text-center">
           <q-icon name="check_circle" color="positive" size="80px" />
-          <div class="text-h6 q-mt-md">¡Holi, {{ userSession?.name }}!</div>
+          <div class="text-h6 q-mt-md">¡Hola, {{ userSession?.name }}!</div>
           <div class="text-subtitle1 text-grey-7">Tu sesión está activa</div>
-          <q-btn
-            color="primary"
-            label="Continuar Pedido"
-            rounded
-            unelevated
-            class="q-mt-lg"
-            @click="currentStep = 2"
-          />
         </div>
       </q-step>
 
@@ -334,17 +326,15 @@
     </q-stepper>
 
     <!-- Smart Sticky Bottom Button -->
-    <div class="sticky-button-container safe-area-bottom">
+    <div class="checkout-footer">
       <q-btn
         :label="buttonText"
         :loading="submitting"
         :disable="!canProceed || submitting"
-        @click="handleNext"
-        color="primary"
         unelevated
         no-caps
-        class="sticky-cta-button"
-        size="lg"
+        class="finalizar-btn full-width"
+        @click="handleNext"
       />
     </div>
   </div>
@@ -583,49 +573,51 @@ const submitOrder = async () => {
 <style scoped>
 .checkout-view {
   min-height: 100vh;
-  background: #f8f8f8;
-  padding-bottom: 80px; /* Space for sticky button */
+  background: var(--background);
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
 }
 
-/* Header with Back Button */
+/* Header */
 .checkout-header {
+  gap: 1rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: white;
+  padding: 16px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 100;
 }
 
-.back-button {
-  color: var(--primary);
-  min-width: 40px;
+.back-btn {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
 }
 
-.checkout-title {
-  font-size: 18px;
+.back-btn :deep(.q-icon) {
+  font-size: 16px;
+  margin-right: -2px; /* Center adjustment for arrow_back_ios_new */
+}
+
+.header-title {
+  font-size: 20px;
   font-weight: 600;
-  margin: 0;
   color: var(--text);
 }
 
-.header-spacer {
-  min-width: 40px; /* Balance the back button */
-}
-
 .checkout-stepper {
+  flex: 1;
   background: transparent;
 }
 
 .checkout-stepper :deep(.q-stepper__header) {
-  background: white;
-  border-bottom: 1px solid #e0e0e0;
   padding: 0 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
   position: sticky;
-  top: 56px; /* Height of checkout-header roughly */
+  top: 73px; /* Height of checkout-header (16*2 + 20 + 21ish) */
   z-index: 99;
 }
 
@@ -680,9 +672,9 @@ const submitOrder = async () => {
 }
 
 .payment-method-item {
-  background: white;
-  border-radius: 12px;
-  border: 2px solid #e0e0e0;
+  background: var(--surface);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--border);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
@@ -715,8 +707,8 @@ const submitOrder = async () => {
 }
 
 .file-upload-area {
-  border: 2px dashed #e0e0e0;
-  border-radius: 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--border-radius-md);
   padding: 3rem;
   text-align: center;
   cursor: pointer;
@@ -724,7 +716,7 @@ const submitOrder = async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: white;
+  background: var(--surface);
 }
 
 .file-upload-area:hover {
@@ -763,49 +755,50 @@ const submitOrder = async () => {
 /* Stepper Navigation */
 .checkout-stepper :deep(.q-stepper__nav) {
   padding: 1rem;
-  background: white;
-  border-top: 1px solid #e0e0e0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
 }
 
-/* Sticky Bottom Button */
-.sticky-button-container {
-  position: fixed;
+/* Footer */
+.checkout-footer {
+  position: sticky;
   bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 16px;
-  background: white;
-  border-top: 1px solid #e0e0e0;
+  background: var(--surface);
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  margin-top: auto;
   z-index: 1000;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.sticky-cta-button {
-  width: 100%;
-  min-height: var(--touch-large, 56px);
-  font-size: 16px;
+.finalizar-btn {
+  height: 56px;
+  font-size: 17px;
   font-weight: 600;
-  border-radius: 12px;
-  transition: all var(--transition-fast) var(--ease-standard);
+  background: var(--text);
+  color: var(--surface);
+  border-radius: var(--border-radius-md);
+  letter-spacing: 0.3px;
+  transition: var(--transition-transform);
 }
 
-.sticky-cta-button:not(:disabled) {
-  background: var(--primary-gradient);
+.finalizar-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
 }
 
-.sticky-cta-button:disabled {
-  background: #e0e0e0 !important;
-  color: #999 !important;
+.finalizar-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.finalizar-btn:disabled {
+  background: var(--border) !important;
+  color: var(--text-light) !important;
   cursor: not-allowed;
-}
-
-.sticky-cta-button:active:not(:disabled) {
-  transform: scale(0.98);
+  opacity: 0.7;
 }
 
 /* Safe area support */
 @supports (padding: max(0px)) {
-  .safe-area-bottom {
+  .checkout-footer {
     padding-bottom: max(16px, env(safe-area-inset-bottom));
   }
 }

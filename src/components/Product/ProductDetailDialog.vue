@@ -7,15 +7,17 @@
     transition-show="fade"
     transition-hide="fade"
   >
-    <q-card class="product-detail-card">
-      <!-- Hero Image Selection -->
-      <div class="hero-section relative-position">
-        <q-img
-          :src="heroImage"
-          class="hero-image"
-          height="350px"
-          fit="cover"
-        >
+    <q-card class="product-detail-card" flat>
+      <!-- Scrollable Content -->
+      <div class="product-content-scroll">
+        <!-- Hero Image Selection -->
+        <div class="hero-section relative-position">
+          <q-img
+            :src="heroImage"
+            class="hero-image"
+            height="350px"
+            fit="cover"
+          >
           <template v-slot:loading>
             <q-skeleton height="350px" square />
           </template>
@@ -27,7 +29,7 @@
             round
             dense
             color="dark"
-            class="bg-white shadow-2"
+            class="back-btn bg-white shadow-2"
             size="sm"
             @click="close"
           />
@@ -35,10 +37,10 @@
       </div>
 
       <!-- Content Section -->
-      <q-card-section class="q-pa-lg">
+      <div class="q-pa-lg">
         <div class="row justify-between items-start no-wrap q-mb-sm">
           <div class="text-h6 text-bold text-dark product-name">{{ product?.name }}</div>
-          <div class="text-h6 text-bold text-primary price-tag">
+          <div class="text-h6 text-bold product-price">
             $ {{ formatNumber(product?.price) }}
           </div>
         </div>
@@ -56,22 +58,20 @@
               flat
               round
               icon="remove"
-              color="grey-7"
-              size="md"
+              class="quantity-btn"
+              size="sm"
               @click="decrement"
               :disable="quantity <= 1"
             />
-            <q-separator vertical inset class="q-mx-sm" />
             <div class="col text-center text-h6 text-weight-bold quantity-value">
               {{ quantity }}
             </div>
-            <q-separator vertical inset class="q-mx-sm" />
             <q-btn
               flat
               round
               icon="add"
-              color="grey-7"
-              size="md"
+              class="quantity-btn"
+              size="sm"
               @click="increment"
             />
           </div>
@@ -86,21 +86,24 @@
             v-model="localObservation"
             placeholder="Agrega comentarios"
             filled
-            bg-color="grey-2"
+            bg-color="grey-1"
             borderless
             type="textarea"
             rows="3"
             class="comment-input"
           />
         </div>
-      </q-card-section>
+      </div>
+      </div>
 
       <!-- Fixed Bottom Button -->
-      <div class="action-footer q-pa-md bg-white border-top">
+      <div class="action-footer">
         <q-btn
           unelevated
           rounded
-          color="primary"
+          no-caps
+          color="dark"
+          text-color="white"
           class="full-width add-to-order-btn"
           @click="addToOrder"
         >
@@ -191,9 +194,9 @@ export default {
 .product-detail-card {
   width: 100%;
   max-width: 500px;
-  max-height: 90vh;
+  height: 90vh; /* Fixed height for consistent layout */
   border-radius: 24px;
-  background: white;
+  background: var(--surface);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -202,8 +205,15 @@ export default {
 /* Override for maximized state on mobile */
 .q-dialog__inner--maximized .product-detail-card {
   max-width: 100%;
-  max-height: 100vh;
+  height: 100vh;
   border-radius: 0;
+}
+
+.product-content-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--background);
 }
 
 .hero-section {
@@ -222,27 +232,34 @@ export default {
   z-index: 10;
 }
 
-.back-button-overlay :deep(.q-btn) {
+.back-btn {
   width: 36px;
   height: 36px;
   min-height: 36px;
 }
 
-.back-button-overlay :deep(.q-btn .q-icon) {
+.back-btn :deep(.q-icon) {
   font-size: 16px;
-  margin-right: -2px; /* Center adjustment for arrow_back_ios_new */
+  margin-right: -2px;
 }
 
 .product-name {
   line-height: 1.2;
+  font-size: 20px;
+  color: var(--text);
+  margin-top: 8px;
 }
 
-.price-tag {
-  color: #ff4d00 !important; /* Matches prominent orange in image */
+.product-price {
+  font-size: 20px;
+  color: var(--text);
+  margin-top: 8px;
 }
 
 .description-text {
   line-height: 1.5;
+  color: var(--text-light);
+  font-size: 14px;
 }
 
 .quantity-container {
@@ -251,52 +268,58 @@ export default {
 }
 
 .quantity-selector {
-  border: 1px solid #e0e0e0;
-  border-radius: 16px;
-  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-md);
+  padding: 4px 8px;
   width: 100%;
-  max-width: 400px;
+  max-width: 300px;
   height: 56px;
-  background: white;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  background: var(--surface);
+  gap: 12px;
+}
+
+.quantity-btn {
+  color: var(--text);
 }
 
 .quantity-value {
-  font-size: 1.2rem;
+  font-size: 18px;
+  color: var(--text);
 }
 
 .comment-input :deep(.q-field__control) {
-  border-radius: 12px;
+  border-radius: var(--border-radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.comment-input :deep(.q-field__native) {
+  color: var(--text);
 }
 
 .action-footer {
-  position: sticky;
-  bottom: 0;
-  z-index: 100;
-  border-top: 1px solid #f0f0f0;
-  background: rgba(255, 255, 255, 0.8) !important;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: var(--surface);
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  z-index: 10;
 }
 
 .add-to-order-btn {
   height: 56px;
-  font-size: 1.1rem;
-  background-color: #ff4d00 !important; /* Premium orange */
+  font-size: 17px;
+  font-weight: 600;
+  background: var(--text) !important;
+  color: var(--surface) !important;
+  border-radius: var(--border-radius-md);
+  letter-spacing: 0.3px;
+  transition: transform 0.1s;
+}
+
+.add-to-order-btn:active {
+  transform: translateY(2px);
 }
 
 .opacity-2 {
   opacity: 0.2;
-}
-
-/* Scroll adjustments */
-.product-detail-card {
-  display: flex;
-  flex-direction: column;
-}
-
-.q-card-section {
-  flex: 1;
-  overflow-y: auto;
 }
 </style>
