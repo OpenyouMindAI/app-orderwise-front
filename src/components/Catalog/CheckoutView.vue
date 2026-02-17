@@ -1,39 +1,40 @@
 <template>
   <div class="checkout-view">
-    <!-- Progress Indicator -->
-    <div class="progress-header q-pa-md bg-white">
-      <div class="text-h6 text-bold q-mb-sm">Finalizar Pedido</div>
-      <q-linear-progress
-        :value="stepProgress"
-        color="primary"
-        size="8px"
-        rounded
-        class="q-mt-sm"
+    <!-- Header with Back Button -->
+    <header class="checkout-header safe-area-top">
+      <q-btn
+        flat
+        round
+        dense
+        icon="chevron_left"
+        @click="goBack"
+        class="back-button"
+        size="md"
       />
-      <div class="text-caption text-grey-7 q-mt-xs">
-        Paso {{ currentStep }} de {{ totalSteps }}
-      </div>
-    </div>
+      <h1 class="checkout-title">Finalizar Pedido</h1>
+      <div class="header-spacer"></div>
+    </header>
 
-    <!-- Stepper -->
+    <!-- Dynamic Stepper -->
     <q-stepper
       v-model="currentStep"
       ref="stepper"
       color="primary"
       animated
       flat
+      alternative-labels
       class="checkout-stepper"
     >
-      <!-- Step 1: Autenticación -->
+      <!-- Step 1: Cuenta -->
       <q-step
         :name="1"
-        title="Inicio de Sesión"
+        title="Cuenta"
         icon="person"
         :done="currentStep > 1"
       >
         <div v-if="!isAuthenticated" class="auth-step q-pa-md">
-          <div class="text-h6 q-mb-md text-center">Inicia sesión o regístrate</div>
-          <p class="text-body2 text-grey-7 text-center q-mb-lg">
+          <div class="section-heading q-mb-md text-center">Inicia sesión o regístrate</div>
+          <p class="text-body2 text-grey-7 text-center q-mb-md">
             Necesitamos tus datos para procesar tu pedido
           </p>
 
@@ -42,9 +43,9 @@
             <q-tab name="register" label="Registrarse" />
           </q-tabs>
 
-          <q-tab-panels v-model="authTab" animated>
+          <q-tab-panels v-model="authTab" animated class="bg-transparent">
             <!-- Login Panel -->
-            <q-tab-panel name="login">
+            <q-tab-panel name="login" class="q-pa-none">
               <q-form @submit="handleLogin">
                 <q-input
                   v-model="loginForm.username"
@@ -55,7 +56,7 @@
                   :rules="[val => !!val || 'El usuario es requerido']"
                 >
                   <template v-slot:prepend>
-                    <q-icon name="person" />
+                    <q-icon name="person" color="primary" />
                   </template>
                 </q-input>
 
@@ -69,7 +70,7 @@
                   :rules="[val => !!val || 'La contraseña es requerida']"
                 >
                   <template v-slot:prepend>
-                    <q-icon name="lock" />
+                    <q-icon name="lock" color="primary" />
                   </template>
                 </q-input>
 
@@ -87,7 +88,7 @@
             </q-tab-panel>
 
             <!-- Register Panel -->
-            <q-tab-panel name="register">
+            <q-tab-panel name="register" class="q-pa-none">
               <q-form @submit="handleRegister">
                 <q-input
                   v-model="registerForm.name"
@@ -98,7 +99,7 @@
                   :rules="[val => !!val || 'El nombre es requerido']"
                 >
                   <template v-slot:prepend>
-                    <q-icon name="badge" />
+                    <q-icon name="badge" color="primary" />
                   </template>
                 </q-input>
 
@@ -111,7 +112,7 @@
                   :rules="[val => !!val || 'El teléfono es requerido']"
                 >
                   <template v-slot:prepend>
-                    <q-icon name="phone" />
+                    <q-icon name="phone" color="primary" />
                   </template>
                 </q-input>
 
@@ -124,7 +125,7 @@
                   :rules="[val => !!val || 'El usuario es requerido']"
                 >
                   <template v-slot:prepend>
-                    <q-icon name="person" />
+                    <q-icon name="person" color="primary" />
                   </template>
                 </q-input>
 
@@ -138,7 +139,7 @@
                   :rules="[val => !!val || 'La contraseña es requerida']"
                 >
                   <template v-slot:prepend>
-                    <q-icon name="lock" />
+                    <q-icon name="lock" color="primary" />
                   </template>
                 </q-input>
 
@@ -151,7 +152,7 @@
                   class="q-mb-md"
                 >
                   <template v-slot:prepend>
-                    <q-icon name="location_on" />
+                    <q-icon name="location_on" color="primary" />
                   </template>
                 </q-input>
 
@@ -172,36 +173,28 @@
 
         <div v-else class="authenticated-step q-pa-xl text-center">
           <q-icon name="check_circle" color="positive" size="80px" />
-          <div class="text-h6 q-mt-md">¡Bienvenido!</div>
-          <div class="text-subtitle1 text-grey-7">{{ userSession?.name }}</div>
+          <div class="text-h6 q-mt-md">¡Holi, {{ userSession?.name }}!</div>
+          <div class="text-subtitle1 text-grey-7">Tu sesión está activa</div>
           <q-btn
             color="primary"
-            label="Continuar"
+            label="Continuar Pedido"
             rounded
             unelevated
             class="q-mt-lg"
             @click="currentStep = 2"
           />
         </div>
-
-        <q-stepper-navigation v-if="isAuthenticated">
-          <q-btn
-            color="primary"
-            label="Siguiente"
-            @click="currentStep = 2"
-          />
-        </q-stepper-navigation>
       </q-step>
 
-      <!-- Step 2: Método de Pago -->
+      <!-- Step 2: Pago -->
       <q-step
         :name="2"
-        title="Método de Pago"
+        title="Pago"
         icon="payment"
         :done="currentStep > 2"
       >
         <div class="payment-step q-pa-md">
-          <div class="text-h6 q-mb-md">Selecciona el método de pago</div>
+          <div class="section-heading q-mb-md">Método de pago</div>
 
           <q-list class="payment-methods-list">
             <q-item
@@ -211,7 +204,7 @@
               v-ripple
               class="payment-method-item q-mb-sm"
               :class="{ 'selected': selectedPaymentMethod === method.id }"
-              @click="selectedPaymentMethod = method.id"
+              @click="handlePaymentSelect(method.id)"
             >
               <q-item-section>
                 <q-item-label>
@@ -242,15 +235,6 @@
           </q-list>
         </div>
 
-        <q-stepper-navigation>
-          <q-btn flat @click="currentStep = 1" label="Atrás" class="q-mr-sm" />
-          <q-btn
-            color="primary"
-            label="Siguiente"
-            @click="currentStep = 3"
-            :disable="!selectedPaymentMethod"
-          />
-        </q-stepper-navigation>
       </q-step>
 
       <!-- Step 3: Comprobante -->
@@ -261,8 +245,8 @@
         :done="currentStep > 3"
       >
         <div class="voucher-step q-pa-md">
-          <div class="text-h6 q-mb-md">Comprobante de Pago (Opcional)</div>
-          <p class="text-body2 text-grey-7 q-mb-lg">
+          <div class="section-heading q-mb-md">Comprobante de Pago (Opcional)</div>
+          <p class="text-body2 text-grey-7 q-mb-md">
             Si no subes el comprobante, nos contactaremos contigo vía WhatsApp o teléfono
             para la confirmación del pago.
           </p>
@@ -300,39 +284,31 @@
           </q-card>
         </div>
 
-        <q-stepper-navigation>
-          <q-btn flat @click="currentStep = 2" label="Atrás" class="q-mr-sm" />
-          <q-btn color="primary" label="Siguiente" @click="currentStep = 4" />
-        </q-stepper-navigation>
       </q-step>
 
-      <!-- Step 4: Dirección -->
+      <!-- Step 4: Confirmación -->
       <q-step
         :name="4"
-        title="Dirección"
-        icon="location_on"
+        title="Entrega"
+        icon="local_shipping"
       >
         <div class="address-step q-pa-md">
-          <div class="text-h6 q-mb-md">Confirma tu dirección de entrega</div>
+          <div class="section-heading q-mb-md">Confirma tu dirección de entrega</div>
 
-          <q-input
-            v-model="deliveryAddress"
-            type="textarea"
-            filled
-            label="Dirección"
-            rows="4"
+          <AddressComponent
+            :initial-address="deliveryAddress"
+            @address-selected="handleAddressSelected"
+            label="Dirección de entrega"
             class="q-mb-md"
-            :rules="[val => !!val || 'La dirección es requerida']"
-          >
-            <template v-slot:prepend>
-              <q-icon name="home" />
-            </template>
-          </q-input>
+          />
 
           <!-- Order Summary -->
           <q-card flat bordered class="order-summary q-mb-md">
-            <q-card-section class="bg-grey-2">
-              <div class="text-subtitle1 text-bold">Resumen del Pedido</div>
+            <q-card-section class="q-py-md">
+              <div class="text-subtitle1 text-bold flex items-center">
+                <q-icon name="shopping_cart" color="primary" class="q-mr-sm" size="20px" />
+                Resumen del Pedido
+              </div>
             </q-card-section>
             <q-card-section>
               <div class="row justify-between q-mb-sm">
@@ -354,22 +330,23 @@
           </q-card>
         </div>
 
-        <q-stepper-navigation>
-          <q-btn flat @click="currentStep = 3" label="Atrás" class="q-mr-sm" />
-          <q-btn
-            color="primary"
-            label="Confirmar Pedido"
-            icon-right="check_circle"
-            :loading="submitting"
-            :disable="!deliveryAddress"
-            @click="submitOrder"
-            unelevated
-            rounded
-            size="lg"
-          />
-        </q-stepper-navigation>
       </q-step>
     </q-stepper>
+
+    <!-- Smart Sticky Bottom Button -->
+    <div class="sticky-button-container safe-area-bottom">
+      <q-btn
+        :label="buttonText"
+        :loading="submitting"
+        :disable="!canProceed || submitting"
+        @click="handleNext"
+        color="primary"
+        unelevated
+        no-caps
+        class="sticky-cta-button"
+        size="lg"
+      />
+    </div>
   </div>
 </template>
 
@@ -382,6 +359,7 @@ import { useCatalogStore } from 'src/stores/catalog'
 import { authentication } from 'src/stores/module-authentication'
 import { formatNumber, loading, notify, setFiles } from 'src/const/mixins'
 import FileButtonComponent from 'src/components/FileButtonComponent.vue'
+import AddressComponent from 'src/components/Billing/AddressComponent.vue'
 import { api } from 'boot/axios'
 
 // Emits
@@ -399,7 +377,6 @@ const { paymentMethods, company } = storeToRefs(catalogStore)
 
 // Estado del stepper
 const currentStep = ref(1)
-const totalSteps = 4
 
 // Auth state
 const authTab = ref('login')
@@ -429,11 +406,42 @@ const submitting = ref(false)
 // Computed
 const isAuthenticated = computed(() => !!userSession.value)
 
-const stepProgress = computed(() => (currentStep.value / totalSteps))
-
 const selectedPaymentMethodName = computed(() => {
   const method = paymentMethods.value.find(m => m.id === selectedPaymentMethod.value)
   return method?.name || '-'
+})
+
+// Sticky button computed properties
+const buttonText = computed(() => {
+  switch (currentStep.value) {
+    case 1:
+      return isAuthenticated.value ? 'Siguiente' : 'Iniciar sesión para continuar'
+    case 2:
+      return selectedPaymentMethod.value
+        ? `Continuar con ${selectedPaymentMethodName.value}`
+        : 'Selecciona un método de pago'
+    case 3:
+      return 'Continuar'
+    case 4:
+      return 'Confirmar Pedido'
+    default:
+      return 'Siguiente'
+  }
+})
+
+const canProceed = computed(() => {
+  switch (currentStep.value) {
+    case 1:
+      return isAuthenticated.value
+    case 2:
+      return !!selectedPaymentMethod.value
+    case 3:
+      return true // Voucher is optional
+    case 4:
+      return !!deliveryAddress.value
+    default:
+      return false
+  }
 })
 
 // Lifecycle
@@ -444,7 +452,40 @@ onMounted(() => {
   }
 })
 
+// Stepper Methods
+const goBack = () => {
+  if (currentStep.value > 1) {
+    currentStep.value--
+  } else {
+    emit('cancel')
+  }
+}
+
+const handleNext = () => {
+  if (!canProceed.value) return
+
+  // Haptic feedback
+  if (window.navigator?.vibrate) {
+    window.navigator.vibrate(10)
+  }
+
+  // Step-specific actions
+  if (currentStep.value === 4) {
+    submitOrder()
+  } else {
+    currentStep.value++
+  }
+}
+
 // Methods
+const handlePaymentSelect = (methodId) => {
+  // Haptic feedback
+  if (window.navigator?.vibrate) {
+    window.navigator.vibrate(10)
+  }
+  selectedPaymentMethod.value = methodId
+}
+
 const handleLogin = async () => {
   try {
     loginLoading.value = true
@@ -487,6 +528,14 @@ const handleFileUpload = async (files) => {
   }
 }
 
+const handleAddressSelected = (addressData) => {
+  if (addressData) {
+    deliveryAddress.value = addressData.formattedAddress
+  } else {
+    deliveryAddress.value = ''
+  }
+}
+
 const submitOrder = async () => {
   try {
     submitting.value = true
@@ -522,7 +571,6 @@ const submitOrder = async () => {
     cart.clearCart()
     notify('¡Pedido creado exitosamente!', 'positive', 'check_circle')
     emit('success', data)
-
   } catch (error) {
     notify(error.message || 'Error al crear el pedido', 'negative', 'warning')
   } finally {
@@ -536,18 +584,78 @@ const submitOrder = async () => {
 .checkout-view {
   min-height: 100vh;
   background: #f8f8f8;
+  padding-bottom: 80px; /* Space for sticky button */
 }
 
-.progress-header {
-  border-bottom: 1px solid #e0e0e0;
+/* Header with Back Button */
+.checkout-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: white;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.back-button {
+  color: var(--primary);
+  min-width: 40px;
+}
+
+.checkout-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text);
+}
+
+.header-spacer {
+  min-width: 40px; /* Balance the back button */
 }
 
 .checkout-stepper {
   background: transparent;
 }
 
+.checkout-stepper :deep(.q-stepper__header) {
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  position: sticky;
+  top: 56px; /* Height of checkout-header roughly */
+  z-index: 99;
+}
+
+.checkout-stepper :deep(.q-stepper__tab) {
+  padding: 8px 4px;
+  transition: all 0.3s ease;
+}
+
+.checkout-stepper :deep(.q-stepper__dot) {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+}
+
+.checkout-stepper :deep(.q-stepper__label) {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  margin-top: 8px;
+}
+
 .checkout-stepper :deep(.q-stepper__step-inner) {
-  padding: 0;
+  padding: 16px 0;
+}
+
+.section-heading {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.02em;
 }
 
 /* Auth Step */
@@ -575,17 +683,29 @@ const submitOrder = async () => {
   background: white;
   border-radius: 12px;
   border: 2px solid #e0e0e0;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
 }
 
-.payment-method-item:hover {
-  border-color: var(--primary, #ff4d00);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+.payment-method-item:active {
+  transform: scale(0.97);
 }
 
 .payment-method-item.selected {
   border-color: var(--primary, #ff4d00);
   background: rgba(255, 77, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(var(--primary), 0.2);
+  animation: pulse-border 2s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(var(--primary), 0.2);
+  }
+  50% {
+    box-shadow: 0 4px 16px rgba(var(--primary), 0.35);
+  }
 }
 
 /* Voucher Step */
@@ -626,6 +746,16 @@ const submitOrder = async () => {
   margin: 0 auto;
 }
 
+/* Mobile-friendly inputs */
+.q-field :deep(input),
+.q-field :deep(textarea) {
+  font-size: max(16px, 1rem); /* Prevent iOS zoom */
+}
+
+.q-field :deep(.q-field__control) {
+  min-height: 48px; /* Touch-friendly */
+}
+
 .order-summary {
   border-radius: 12px;
 }
@@ -635,5 +765,48 @@ const submitOrder = async () => {
   padding: 1rem;
   background: white;
   border-top: 1px solid #e0e0e0;
+}
+
+/* Sticky Bottom Button */
+.sticky-button-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+  z-index: 1000;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.sticky-cta-button {
+  width: 100%;
+  min-height: var(--touch-large, 56px);
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 12px;
+  transition: all var(--transition-fast) var(--ease-standard);
+}
+
+.sticky-cta-button:not(:disabled) {
+  background: var(--primary-gradient);
+}
+
+.sticky-cta-button:disabled {
+  background: #e0e0e0 !important;
+  color: #999 !important;
+  cursor: not-allowed;
+}
+
+.sticky-cta-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Safe area support */
+@supports (padding: max(0px)) {
+  .safe-area-bottom {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
 }
 </style>
