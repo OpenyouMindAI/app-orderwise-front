@@ -111,9 +111,8 @@ const getUser = async () => {
       user: data
     })
 
-    router.push({ name: route.params.redirect })
+    router.push({ name: route?.params?.redirect || 'Home' })
   } catch (err) {
-    console.log(err)
     error.value = true
     notify(err?.response?.data?.message || err.message, 'negative', 'warning')
   }
