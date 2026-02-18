@@ -103,9 +103,9 @@
                 type="button"
                 class="social-btn google-btn"
                 @click="handleGoogleLogin"
-                :disabled="googleLoading || loginLoading"
+                :disabled="loadingGoogle || loginLoading"
               >
-                <q-spinner v-if="googleLoading" color="grey-8" size="18px"/>
+                <q-spinner v-if="loadingGoogle" color="grey-8" size="18px"/>
                 <template v-else>
                   <svg class="social-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -320,9 +320,9 @@
                 type="button"
                 class="social-btn google-btn"
                 @click="handleGoogleRegister"
-                :disabled="googleLoading || registerLoading"
+                :disabled="loadingGoogle || registerLoading"
               >
-                <q-spinner v-if="googleLoading" color="grey-8" size="18px"/>
+                <q-spinner v-if="loadingGoogle" color="grey-8" size="18px"/>
                 <template v-else>
                   <svg class="social-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -505,6 +505,7 @@ import { useCart } from 'src/composables/useCart'
 import { useRegistration } from 'src/composables/useRegistration'
 import { useCatalogStore } from 'src/stores/catalog'
 import { authentication } from 'src/stores/module-authentication'
+import { useOrderStore } from 'src/stores/order'
 import { formatNumber, loading, notify, setFiles } from 'src/const/mixins'
 import FileButtonComponent from 'src/components/FileButtonComponent.vue'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
@@ -520,14 +521,18 @@ const route = useRoute()
 const cart = useCart()
 const catalogStore = useCatalogStore()
 const authStore = authentication()
+const orderStore = useOrderStore()
 const { userSession } = storeToRefs(authStore)
 const { paymentMethods, company } = storeToRefs(catalogStore)
 
-// Registration composable for country selection
+// Registration composable for country selection + Google Auth
 const {
   selectedCountry,
   countryOptions,
-  phoneRule
+  phoneRule,
+  loadingGoogle,
+  registerWithGoogle,
+  initializeGoogleAuthMobile
 } = useRegistration()
 
 // Estado del stepper
@@ -546,7 +551,7 @@ const registerForm = ref({
 })
 const loginLoading = ref(false)
 const registerLoading = ref(false)
-const googleLoading = ref(false)
+// googleLoading viene del composable useRegistration como loadingGoogle
 const showLoginPassword = ref(false)
 const showRegisterPassword = ref(false)
 const showPasswordConfirm = ref(false)
@@ -605,11 +610,13 @@ const canProceed = computed(() => {
 })
 
 // Lifecycle
-onMounted(() => {
+onMounted(async () => {
   if (isAuthenticated.value) {
     currentStep.value = 1 // Start at payment for authenticated users
     deliveryAddress.value = userSession.value?.address || ''
   }
+  // Inicializar Google Auth (necesario para móvil con Capacitor)
+  await initializeGoogleAuthMobile()
 })
 
 // Stepper Methods
@@ -642,6 +649,7 @@ const handleLogin = async () => {
     await authStore.login(loginForm.value)
     deliveryAddress.value = userSession.value?.address || ''
     notify('Sesión iniciada correctamente', 'positive', 'check_circle')
+    orderStore.fetchOrderCount()
   } catch (error) {
     notify(error.message || 'Error al iniciar sesión', 'negative', 'warning')
   } finally {
@@ -668,6 +676,7 @@ const handleRegister = async () => {
     authStore.setSessionData(data)
     deliveryAddress.value = data.address || ''
     notify('Registro exitoso', 'positive', 'check_circle')
+    orderStore.fetchOrderCount()
   } catch (error) {
     notify(error.message || 'Error al registrarse', 'negative', 'warning')
   } finally {
@@ -675,75 +684,30 @@ const handleRegister = async () => {
   }
 }
 
-const handleGoogleLogin = async () => {
-  googleLoading.value = true
-  try {
-    await authenticateWithGoogle()
-  } catch (error) {
-    console.error('Google login error:', error)
-    notify('Error al iniciar sesión con Google', 'negative', 'warning')
-  } finally {
-    googleLoading.value = false
+// Callbacks compartidos para el flujo de Google Auth
+const googleAuthCallbacks = {
+  onSuccess: (data, userInfo) => {
+    authStore.setSessionData(data)
+    // Save Google profile photo explicitly so it always persists
+    if (userInfo?.picture) {
+      authStore.setProfilePhoto(userInfo.picture)
+    }
+    deliveryAddress.value = data.user?.address || data.address || ''
+    notify('Sesión iniciada con Google', 'positive', 'check_circle')
+    orderStore.fetchOrderCount()
+  },
+  onError: (error) => {
+    console.error('Google auth error:', error)
+    notify('Error al autenticarse con Google', 'negative', 'warning')
   }
+}
+
+const handleGoogleLogin = async () => {
+  await registerWithGoogle(googleAuthCallbacks)
 }
 
 const handleGoogleRegister = async () => {
-  googleLoading.value = true
-  try {
-    await authenticateWithGoogle()
-  } catch (error) {
-    console.error('Google register error:', error)
-    notify('Error al registrarse con Google', 'negative', 'warning')
-  } finally {
-    googleLoading.value = false
-  }
-}
-
-const authenticateWithGoogle = async () => {
-  let userInfo = null
-
-  // Check if mobile (Capacitor)
-  if (window.Capacitor) {
-    const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth')
-    const result = await GoogleAuth.signIn()
-
-    if (result && result.email) {
-      userInfo = {
-        email: result.email,
-        name: result.name || result.displayName,
-        sub: result.id,
-        picture: result.imageUrl
-      }
-    }
-  } else if (window.google && window.google.accounts) {
-    // Web flow - simplified for now
-    throw new Error('Google Web Auth not fully initialized. Please use email/password.')
-  } else {
-    throw new Error('Google Sign-In no está disponible')
-  }
-
-  if (!userInfo) {
-    throw new Error('No se pudo obtener información de Google')
-  }
-
-  // Create credential
-  const credential = btoa(JSON.stringify({
-    email: userInfo.email,
-    name: userInfo.name,
-    google_id: userInfo.sub,
-    picture: userInfo.picture
-  }))
-
-  // Authenticate with backend
-  const { data } = await api.post('/authentication/google', {
-    credential
-  })
-
-  if (data.access_token) {
-    authStore.setSessionData(data)
-    deliveryAddress.value = data.user?.address || ''
-    notify('Sesión iniciada con Google', 'positive', 'check_circle')
-  }
+  await registerWithGoogle(googleAuthCallbacks)
 }
 
 const handleFileUpload = async (files) => {
@@ -798,6 +762,7 @@ const submitOrder = async () => {
     // Limpiar carrito y notificar éxito
     cart.clearCart()
     notify('¡Pedido creado exitosamente!', 'positive', 'check_circle')
+    orderStore.fetchOrderCount()
     emit('success', data)
   } catch (error) {
     notify(error.message || 'Error al crear el pedido', 'negative', 'warning')

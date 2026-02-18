@@ -1,5 +1,73 @@
 <template>
   <div class="catalog-view" ref="catalogViewRef">
+    <!-- Navbar con perfil de usuario -->
+    <div class="catalog-navbar text-white">
+      <q-toolbar class="items-center">
+        <q-space />
+        <div v-if="userSession" class="row items-center no-wrap">
+          <q-btn
+            flat
+            round
+            dense
+            class="q-mr-sm"
+            @click="$emit('change-tab', 'orders')"
+          >
+            <q-icon name="shopping_basket" size="24px" />
+            <q-badge
+              v-if="orderCount > 0"
+              color="red"
+              floating
+              rounded
+              class="order-badge"
+            >
+              {{ orderCount }}
+            </q-badge>
+          </q-btn>
+
+          <q-btn flat round dense>
+            <q-avatar size="40px" color="primary" text-color="white">
+              <template v-if="profilePhoto || userSession.avatar || userSession.picture || userSession.photo">
+                <q-img
+                  :src="profilePhoto || userSession.avatar || userSession.picture || userSession.photo"
+                  spinner-color="white"
+                  style="width:40px;height:40px;border-radius:50%"
+                >
+                  <template v-slot:error>
+                    <span class="absolute-full flex flex-center text-white text-weight-bold">{{ userInitials }}</span>
+                  </template>
+                </q-img>
+              </template>
+              <span v-else>{{ userInitials }}</span>
+            </q-avatar>
+            <q-menu>
+              <q-list style="min-width: 200px">
+                <q-item clickable v-close-popup @click="logout">
+                  <q-item-section avatar>
+                    <q-icon name="logout" />
+                  </q-item-section>
+                  <q-item-section>Cerrar sesión</q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
+          </q-btn>
+        </div>
+
+        <q-btn
+          v-else
+          flat
+          rounded
+          dense
+          no-caps
+          color="white"
+          class="login-button q-px-md"
+          @click="showAuthDialog = true"
+        >
+          <q-icon name="person_outline" size="20px" class="q-mr-xs" />
+          <span class="text-weight-bold">Iniciar Sesión</span>
+        </q-btn>
+      </q-toolbar>
+    </div>
+
     <!-- Header del Negocio -->
     <div class="header-container full-width">
       <div
@@ -8,8 +76,8 @@
       >
         <div class="banner-overlay"></div>
         <div class="header-content column items-center full-width q-pa-md">
-          <q-avatar size="80px" class="profile-avatar shadow-5">
-            <q-img :src="company?.url || 'https://cdn.quasar.dev/img/avatar.png'" />
+          <q-avatar v-if="company?.url" size="80px" class="profile-avatar shadow-5">
+            <q-img :src="company.url" />
           </q-avatar>
           <div class="text-h5 text-center text-white text-bold q-mt-md text-uppercase company-name">
             {{ company?.name }}
@@ -36,9 +104,6 @@
               <q-icon name="expand_more" size="18px" class="q-ml-xs arrow-icon" />
             </div>
           </q-btn>
-          <div v-else-if="company" class="text-caption text-white opacity-70 q-mt-sm">
-            Horario no disponible
-          </div>
         </div>
       </div>
     </div>
@@ -222,15 +287,21 @@
       </q-card-section>
     </q-card>
   </q-dialog>
+
+  <!-- Auth Dialog -->
+  <AuthDialog v-model="showAuthDialog" />
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch, onActivated } from 'vue'
 import { storeToRefs } from 'pinia'
+import { authentication } from 'src/stores/module-authentication'
 import { useCatalogStore } from 'src/stores/catalog'
+import { useOrderStore } from 'src/stores/order'
 import { useCart } from 'src/composables/useCart'
-import { formatNumber } from 'src/const/mixins'
+import { formatNumber, notify } from 'src/const/mixins'
 import SkeletonCard from 'src/components/SkeletonCard.vue'
+import AuthDialog from 'src/components/Auth/AuthDialog.vue'
 
 // Day translations for schedule
 const dayTranslations = {
@@ -260,18 +331,23 @@ defineProps({
 })
 
 // Emits
-defineEmits(['open-product'])
+defineEmits(['open-product', 'change-tab'])
 
 // Stores y composables
 const catalogStore = useCatalogStore()
+const authStore = authentication()
+const orderStore = useOrderStore()
 const cart = useCart()
 const { company, categories, products } = storeToRefs(catalogStore)
+const { userSession, profilePhoto } = storeToRefs(authStore)
+const { orderCount } = storeToRefs(orderStore)
 
 // Estado local
 const searchQuery = ref('')
 const selectedCategory = ref('all')
 const isFilterFixed = ref(false)
 const showScheduleDialog = ref(false)
+const showAuthDialog = ref(false)
 const currentTime = ref(new Date())
 let scrollContainer = null
 let timeUpdateInterval = null
@@ -280,9 +356,13 @@ let timeUpdateInterval = null
 const defaultImage = 'https://cdn.quasar.dev/img/image-src.png'
 
 // Computed
+const userInitials = computed(() => {
+  if (!userSession.value) return 'U'
+  const name = userSession.value.name || userSession.value.first_name || 'Usuario'
+  return name.charAt(0).toUpperCase()
+})
 const bannerUrl = computed(() =>
-  company.value?.company_config?.other?.menu?.banner_url ||
-  'https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&q=80&w=800'
+  company.value?.company_config?.other?.menu?.banner_url || ''
 )
 
 const scheduleData = computed(() =>
@@ -465,7 +545,26 @@ onMounted(() => {
   timeUpdateInterval = setInterval(() => {
     currentTime.value = new Date()
   }, 60000)
+
+  // Fetch order count if logged in
+  if (userSession.value) {
+    orderStore.fetchOrderCount()
+  }
 })
+
+// Refrescar al activar la pestaña (ej: al volver de otra pestaña)
+onActivated(() => {
+  if (userSession.value) {
+    orderStore.fetchOrderCount()
+  }
+})
+
+// Observar la sesión para cargar datos cuando se restaure (ej: al refrescar la página)
+watch(userSession, (newSession) => {
+  if (newSession) {
+    orderStore.fetchOrderCount()
+  }
+}, { immediate: true })
 
 onBeforeUnmount(() => {
   if (scrollContainer === document.scrollingElement || scrollContainer === document.documentElement) {
@@ -530,12 +629,33 @@ const getDayColor = (day) => {
   if (day.error) return 'warning'
   return 'grey-5'
 }
+
+const logout = async () => {
+  try {
+    await authStore.logout()
+    notify('Has cerrado sesión correctamente', 'positive', 'check_circle')
+  } catch (error) {
+    console.error('Error logging out:', error)
+    // Fallback in case backend call fails
+    authStore.forceLogout()
+  }
+}
 </script>
 
 <style scoped>
 .catalog-view {
   min-height: 100vh;
   background: #f8f8f8;
+}
+
+/* Navbar Styles */
+.catalog-navbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 100%) !important;
 }
 
 /* Header Styles */
@@ -569,7 +689,7 @@ const getDayColor = (day) => {
 }
 
 .profile-avatar {
-  background: white;
+  box-shadow: 0 0 0 0 !important;
 }
 
 .company-name {
@@ -780,5 +900,13 @@ const getDayColor = (day) => {
   .schedule-dialog-card {
     max-width: 100%;
   }
+}
+
+.order-badge {
+  padding: 3px 5px;
+  font-size: 10px;
+  border: 1px solid white;
+  min-height: 14px;
+  min-width: 14px;
 }
 </style>

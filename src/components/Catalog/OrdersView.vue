@@ -1,22 +1,30 @@
 <template>
   <div class="orders-view">
     <!-- Header -->
-    <div class="orders-header q-pa-md bg-white row justify-between items-center">
-      <div>
+    <div class="orders-header q-pa-md bg-white">
+      <div class="row items-center no-wrap q-mb-xs">
+        <q-btn
+          icon="arrow_back_ios_new"
+          flat
+          round
+          dense
+          color="dark"
+          class="back-btn bg-white shadow-2 q-mr-md"
+          size="sm"
+          @click="$emit('back-to-catalog')"
+        />
         <div class="text-h5 text-bold">Mis Órdenes</div>
-        <div class="text-caption text-grey-7">
-          Historial de pedidos realizados
-        </div>
+        <q-btn
+          icon="refresh"
+          round
+          flat
+          @click="refreshOrders"
+          :loading="loading"
+          class="q-ml-auto"
+        >
+          <q-tooltip>Actualizar</q-tooltip>
+        </q-btn>
       </div>
-      <q-btn
-        icon="refresh"
-        round
-        flat
-        @click="refreshOrders"
-        :loading="loading"
-      >
-        <q-tooltip>Actualizar</q-tooltip>
-      </q-btn>
     </div>
 
     <!-- Loading State -->
@@ -301,7 +309,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onActivated, watch } from 'vue'
+import { storeToRefs } from 'pinia'
+import { authentication } from 'src/stores/module-authentication'
+import { useOrderStore } from 'src/stores/order'
+
+// Emits
+defineEmits(['back-to-catalog'])
 import { useQuasar } from 'quasar'
 import { formatDate, formatNumber, notify } from 'src/const/mixins'
 import { status } from 'src/const/invoice'
@@ -310,8 +324,14 @@ import { api } from 'boot/axios'
 // Quasar
 const $q = useQuasar()
 
+// Stores
+const authStore = authentication()
+const orderStore = useOrderStore()
+const { userSession } = storeToRefs(authStore)
+
 // State
 const orders = ref([])
+// ... rest of the state
 const loading = ref(false)
 const showDetails = ref(false)
 const selectedOrder = ref(null)
@@ -332,6 +352,12 @@ const totalPages = computed(() =>
 
 // Methods
 const loadOrders = async (page = 1) => {
+  if (!userSession.value) {
+    orders.value = []
+    pagination.value.rowsNumber = 0
+    return
+  }
+
   try {
     loading.value = true
     const { data } = await api.get('public/invoices', {
@@ -346,6 +372,9 @@ const loadOrders = async (page = 1) => {
     orders.value = data.data || []
     pagination.value.rowsNumber = data.total || 0
     pagination.value.page = page
+
+    // También actualizar el contador en el store para consistencia
+    orderStore.setOrderCount(data.total || 0)
   } catch (error) {
     console.error('Error loading orders:', error)
     notify('Error al cargar las órdenes', 'negative', 'warning')
@@ -385,6 +414,18 @@ const openImage = (url) => {
 onMounted(() => {
   loadOrders()
 })
+
+// Refrescar al activar (vía keep-alive)
+onActivated(() => {
+  loadOrders()
+})
+
+// Refrescar al cambiar el usuario
+watch(userSession, () => {
+  currentPage.value = 1
+  loadOrders()
+}, { immediate: true })
+
 </script>
 
 <style scoped>
@@ -395,6 +436,17 @@ onMounted(() => {
 
 .orders-header {
   border-bottom: 1px solid #e0e0e0;
+}
+
+.back-btn {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+}
+
+.back-btn :deep(.q-icon) {
+  font-size: 16px;
+  margin-right: -2px; /* Center adjustment for arrow_back_ios_new */
 }
 
 /* Orders List */

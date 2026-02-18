@@ -28,6 +28,7 @@
             <CatalogView
               :loading="loadingPage"
               @open-product="openProductDetail"
+              @change-tab="currentTab = $event"
             />
           </q-tab-panel>
 
@@ -49,7 +50,7 @@
 
           <!-- Tab 4: Órdenes -->
           <q-tab-panel name="orders" class="q-pa-none">
-            <OrdersView />
+            <OrdersView @back-to-catalog="currentTab = 'menu'" />
           </q-tab-panel>
         </q-tab-panels>
 
@@ -315,6 +316,11 @@ onMounted(async () => {
 .q-tab :deep(.q-badge) {
   top: 8px;
   right: 8px;
+}
+
+/* Mejoras para tabs */
+.q-tab-panels {
+  border-radius: 0 !important;
 }
 
 /* Responsive adjustments */
