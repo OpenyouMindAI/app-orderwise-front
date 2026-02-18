@@ -23,8 +23,13 @@ api.interceptors.response.use(
   },
   (error) => {
     // Centralized error normalization
-    // This replaces manual try/catch in every single call
     const normalizedError = error?.response?.data || error
+
+    // Preservar el status para que el interceptor de seguridad pueda actuar
+    if (error.response?.status && typeof normalizedError === 'object' && normalizedError !== null) {
+      normalizedError.status = error.response.status
+    }
+
     return Promise.reject(normalizedError)
   }
 )
