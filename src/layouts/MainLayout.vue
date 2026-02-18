@@ -2211,6 +2211,7 @@ export default {
       this.getAllModules()
       this.getDataNotification()
       this.getBrachOffice()
+      this.loadSubscriptionInfo()
       this.cuit = this.userSession?.company_session?.document_number
       this.loadingTasks()
     },
