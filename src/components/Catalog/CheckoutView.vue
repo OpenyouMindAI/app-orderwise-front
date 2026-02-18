@@ -1,14 +1,15 @@
 <template>
   <div class="checkout-view">
-    <!-- Header -->
     <div class="checkout-header">
       <q-btn
+        icon="arrow_back_ios_new"
         flat
         round
         dense
-        icon="arrow_back"
-        @click="$emit('cancel')"
-        class="back-btn"
+        color="dark"
+        class="back-btn bg-white shadow-2"
+        size="sm"
+        @click="handleBack"
       />
       <div class="header-title">Finalizar Pedido</div>
     </div>
@@ -638,6 +639,29 @@ const handleNext = () => {
 }
 
 // Methods
+const resetState = () => {
+  currentStep.value = 1
+  selectedPaymentMethod.value = null
+  voucherFile.value = null
+  deliveryAddress.value = userSession.value?.address || ''
+  submitting.value = false
+  authTab.value = 'login'
+  loginForm.value = { username: '', password: '' }
+  registerForm.value = {
+    name: '',
+    last_name: '',
+    email: '',
+    phone_number: '',
+    password: '',
+    password_confirmation: ''
+  }
+}
+
+const handleBack = () => {
+  resetState()
+  emit('cancel')
+}
+
 const handlePaymentSelect = (methodId) => {
   selectedPaymentMethod.value = methodId
 }
@@ -649,7 +673,6 @@ const handleLogin = async () => {
     await authStore.login(loginForm.value)
     deliveryAddress.value = userSession.value?.address || ''
     notify('Sesión iniciada correctamente', 'positive', 'check_circle')
-    orderStore.fetchOrderCount()
   } catch (error) {
     notify(error.message || 'Error al iniciar sesión', 'negative', 'warning')
   } finally {
@@ -676,7 +699,6 @@ const handleRegister = async () => {
     authStore.setSessionData(data)
     deliveryAddress.value = data.address || ''
     notify('Registro exitoso', 'positive', 'check_circle')
-    orderStore.fetchOrderCount()
   } catch (error) {
     notify(error.message || 'Error al registrarse', 'negative', 'warning')
   } finally {
@@ -694,7 +716,6 @@ const googleAuthCallbacks = {
     }
     deliveryAddress.value = data.user?.address || data.address || ''
     notify('Sesión iniciada con Google', 'positive', 'check_circle')
-    orderStore.fetchOrderCount()
   },
   onError: (error) => {
     console.error('Google auth error:', error)
@@ -761,8 +782,9 @@ const submitOrder = async () => {
 
     // Limpiar carrito y notificar éxito
     cart.clearCart()
+    resetState()
     notify('¡Pedido creado exitosamente!', 'positive', 'check_circle')
-    orderStore.fetchOrderCount()
+    orderStore.fetchOrders()
     emit('success', data)
   } catch (error) {
     notify(error.message || 'Error al crear el pedido', 'negative', 'warning')
@@ -790,9 +812,7 @@ const submitOrder = async () => {
   padding: 16px 20px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  position: relative;
 }
 
 .back-btn {

@@ -6,7 +6,7 @@ import { notify } from 'src/const/mixins'
  * Composable para gestionar el carrito de compras
  * Centraliza toda la lógica de añadir, eliminar, actualizar y validar productos
  */
-export function useCart() {
+export function useCart () {
   const commandStore = useCommandStore()
 
   // Computed properties
@@ -22,7 +22,7 @@ export function useCart() {
    * @param {Number} quantity - Cantidad solicitada
    * @returns {Boolean}
    */
-  function hasStock(product, quantity) {
+  function hasStock (product, quantity) {
     const stock = product.is_bundle ? product.bundle_stock : product.normal_stock
     return product.skip_stock || stock >= quantity
   }
@@ -34,7 +34,7 @@ export function useCart() {
    * @param {String} observation - Observación opcional
    * @returns {Boolean} - true si se añadió exitosamente
    */
-  function addToCart(product, quantity = 1, observation = null) {
+  function addToCart (product, quantity = 1, observation = null) {
     // Validar stock
     if (!hasStock(product, quantity)) {
       notify(
@@ -92,7 +92,7 @@ export function useCart() {
    * @param {Number} quantity - Nueva cantidad
    * @returns {Boolean} - true si se actualizó exitosamente
    */
-  function updateQuantity(productId, quantity) {
+  function updateQuantity (productId, quantity) {
     const item = items.value.find(i => i.id === productId)
     if (!item) return false
 
@@ -122,16 +122,23 @@ export function useCart() {
    * Elimina un producto del carrito
    * @param {Number} productId - ID del producto a eliminar
    */
-  function removeFromCart(productId) {
+  function removeFromCart (productId) {
     const filtered = items.value.filter(item => item.id !== productId)
     commandStore.setCommands({ products: filtered })
   }
 
   /**
-   * Limpia todo el carrito
+   * Limpia todo el carrito y resetea la orden
    */
-  function clearCart() {
+  function clearCart () {
     commandStore.setCommands({ products: [] })
+  }
+
+  /**
+   * Resetea completamente el estado de la orden (productos y facturación)
+   */
+  function resetCart () {
+    commandStore.resetCommand()
   }
 
   /**
@@ -139,7 +146,7 @@ export function useCart() {
    * @param {Number} productId - ID del producto
    * @param {String} observation - Nueva observación
    */
-  function updateObservation(productId, observation) {
+  function updateObservation (productId, observation) {
     const item = items.value.find(i => i.id === productId)
     if (item) {
       item.observation = observation
@@ -152,7 +159,7 @@ export function useCart() {
    * @param {Number} productId - ID del producto
    * @returns {Boolean}
    */
-  function isInCart(productId) {
+  function isInCart (productId) {
     return items.value.some(item => item.id === productId)
   }
 
@@ -161,7 +168,7 @@ export function useCart() {
    * @param {Number} productId - ID del producto
    * @returns {Object|null}
    */
-  function getCartItem(productId) {
+  function getCartItem (productId) {
     return items.value.find(item => item.id === productId) || null
   }
 
@@ -176,6 +183,7 @@ export function useCart() {
     updateQuantity,
     removeFromCart,
     clearCart,
+    resetCart,
     updateObservation,
     hasStock,
     isInCart,

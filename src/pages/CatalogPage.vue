@@ -105,6 +105,7 @@ import { storeToRefs } from 'pinia'
 import { useCatalogStore } from 'src/stores/catalog'
 import { authentication } from 'src/stores/module-authentication'
 import { useCart } from 'src/composables/useCart'
+import { useOrderStore } from 'src/stores/order'
 import { formatNumber, notify } from 'src/const/mixins'
 import { Notify } from 'quasar'
 
@@ -121,6 +122,7 @@ const router = useRouter()
 // Stores
 const catalogStore = useCatalogStore()
 const authStore = authentication()
+const orderStore = useOrderStore()
 const cart = useCart()
 
 const { userSession } = storeToRefs(authStore)
@@ -243,6 +245,11 @@ onMounted(async () => {
       catalogStore.fetchProducts(route.params.company_id, route.params.branch_office_id),
       catalogStore.fetchPaymentMethods(route.params.company_id)
     ])
+
+    // Cargar contador de órdenes inicial
+    if (isAuthenticated.value) {
+      orderStore.fetchOrders()
+    }
   } catch (error) {
     console.error('Error loading catalog:', error)
     notify(error.message || 'Error al cargar el catálogo', 'negative', 'warning')

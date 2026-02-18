@@ -130,13 +130,15 @@
 
     <!-- Order Details Dialog -->
     <q-dialog v-model="showDetails" :maximized="$q.screen.lt.sm">
-      <q-card v-if="selectedOrder" class="order-details-card">
+      <q-card v-if="selectedOrder" class="order-details-card column no-wrap" :style="$q.screen.lt.sm ? 'height: 100%;' : 'width: 1000px; max-width: 95vw; max-height: 90vh;'">
         <!-- Header -->
-        <q-card-section class="bg-primary text-white row justify-between items-center">
+        <q-card-section class="bg-primary text-white row items-center q-py-md col-auto">
+          <q-icon name="receipt_long" size="sm" class="q-mr-sm" />
           <div>
             <div class="text-h6">Detalles de la Orden</div>
-            <div class="text-caption">Orden #{{ selectedOrder.code }}</div>
+            <div class="text-caption text-white-8">Referencia: #{{ selectedOrder.code }}</div>
           </div>
+          <q-space />
           <q-btn
             icon="close"
             flat
@@ -146,145 +148,188 @@
           />
         </q-card-section>
 
+        <q-separator />
+
         <!-- Content -->
-        <q-card-section class="scroll details-content">
-          <div class="q-gutter-md">
-            <!-- Order Info -->
-            <div class="info-section">
-              <div class="section-title">Información General</div>
-              <q-input
-                label="Código"
-                :model-value="selectedOrder.code"
-                filled
-                readonly
-                dense
-              />
-              <q-input
-                label="Cliente"
-                :model-value="selectedOrder.client?.name"
-                filled
-                readonly
-                dense
-                class="q-mt-sm"
-              />
-              <q-input
-                label="Fecha"
-                :model-value="formatDate(selectedOrder.created_at, 'DD/MM/YYYY HH:mm:ss')"
-                filled
-                readonly
-                dense
-                class="q-mt-sm"
-              />
-              <div class="q-mt-sm">
-                <q-badge
-                  :color="getStatusColor(selectedOrder.status)"
-                  :label="getStatusLabel(selectedOrder.status)"
-                  rounded
-                  class="q-pa-sm"
-                />
-              </div>
-            </div>
-
-            <!-- Address -->
-            <div class="info-section" v-if="selectedOrder.address">
-              <div class="section-title">Dirección de Entrega</div>
-              <q-input
-                :model-value="selectedOrder.address"
-                type="textarea"
-                filled
-                readonly
-                dense
-                autogrow
-              />
-            </div>
-
-            <!-- Description -->
-            <div class="info-section" v-if="selectedOrder.description">
-              <div class="section-title">Descripción</div>
-              <q-input
-                :model-value="selectedOrder.description"
-                type="textarea"
-                filled
-                readonly
-                autogrow
-              />
-            </div>
-
-            <!-- Products -->
-            <div class="info-section" v-if="selectedOrder.products?.length">
-              <div class="section-title">Productos</div>
-              <q-list bordered separator class="rounded-borders">
-                <q-item
-                  v-for="product in selectedOrder.products"
-                  :key="product.id"
-                >
-                  <q-item-section>
-                    <q-item-label>{{ product.name }}</q-item-label>
-                    <q-item-label caption v-if="product.observation">
-                      Obs: {{ product.observation }}
-                    </q-item-label>
-                  </q-item-section>
-                  <q-item-section side>
-                    <q-item-label>
-                      {{ product.amount }} x $ {{ formatNumber(product.price) }}
-                    </q-item-label>
-                    <q-item-label caption class="text-bold text-primary">
-                      $ {{ formatNumber(product.subtotal) }}
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-              </q-list>
-            </div>
-
-            <!-- Payments -->
-            <div class="info-section" v-if="selectedOrder.invoice_payments?.length">
-              <div class="section-title">Pagos</div>
-              <div
-                v-for="payment in selectedOrder.invoice_payments"
-                :key="payment.id"
-                class="payment-item q-pa-md bg-grey-2 rounded-borders q-mb-sm"
-              >
-                <div class="text-subtitle1 text-bold q-mb-sm">
-                  {{ payment.payment_method?.name || 'Método de pago' }}
+        <q-card-section class="col scroll q-pa-none">
+          <div :class="$q.screen.lt.sm ? 'q-pa-md' : 'q-pa-lg'">
+          <div class="row q-col-gutter-md">
+            <!-- Columna Izquierda: Información General y Cliente -->
+            <div class="col-12 col-md-5">
+              <q-card flat bordered class="q-pa-md q-mb-md">
+                <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                  <q-icon name="info" class="q-mr-sm" />
+                  Información General
                 </div>
-                <div class="text-body2 text-grey-7 q-mb-sm">
-                  Monto: $ {{ formatNumber(payment.amount) }}
-                </div>
-
-                <!-- Payment Vouchers -->
-                <div v-if="payment.files?.length" class="voucher-images">
-                  <div class="text-caption text-grey-7 q-mb-xs">Comprobantes:</div>
-                  <div class="row q-gutter-sm">
-                    <q-img
-                      v-for="file in payment.files"
-                      :key="file.id"
-                      :src="file.url"
-                      alt="comprobante"
-                      class="voucher-thumbnail"
-                      @click="openImage(file.url)"
+                <div class="row q-col-gutter-sm">
+                  <div class="col-12">
+                    <q-input
+                      label="Estado de la Orden"
+                      readonly
+                      filled
+                      dense
+                      class="q-mb-sm"
                     >
-                      <template v-slot:loading>
-                        <q-spinner color="primary" />
+                      <template v-slot:append>
+                        <q-badge
+                          :color="getStatusColor(selectedOrder.status)"
+                          :label="getStatusLabel(selectedOrder.status)"
+                          rounded
+                          class="q-pa-xs q-px-sm"
+                        />
                       </template>
-                    </q-img>
+                    </q-input>
+                  </div>
+                  <div class="col-6">
+                    <q-input
+                      label="Código"
+                      :model-value="selectedOrder.code"
+                      filled
+                      readonly
+                      dense
+                    />
+                  </div>
+                  <div class="col-6">
+                    <q-input
+                      label="Fecha"
+                      :model-value="formatDate(selectedOrder.created_at, 'DD/MM/YYYY')"
+                      filled
+                      readonly
+                      dense
+                    />
+                  </div>
+                  <div class="col-12">
+                    <q-input
+                      label="Cliente"
+                      :model-value="selectedOrder.client?.name || 'Cliente Final'"
+                      filled
+                      readonly
+                      dense
+                    />
                   </div>
                 </div>
-              </div>
+              </q-card>
+
+              <q-card flat bordered class="q-pa-md q-mb-md" v-if="selectedOrder.address">
+                <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                  <q-icon name="location_on" class="q-mr-sm" />
+                  Dirección de Entrega
+                </div>
+                <q-input
+                  :model-value="selectedOrder.address"
+                  type="textarea"
+                  filled
+                  readonly
+                  dense
+                  autogrow
+                />
+              </q-card>
+
+              <q-card flat bordered class="q-pa-md q-mb-md" v-if="selectedOrder.description">
+                <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                  <q-icon name="notes" class="q-mr-sm" />
+                  Descripción / Notas
+                </div>
+                <q-input
+                  :model-value="selectedOrder.description"
+                  type="textarea"
+                  filled
+                  readonly
+                  dense
+                  autogrow
+                />
+              </q-card>
+
+              <q-card flat class="bg-primary text-white q-pa-md overflow-hidden total-elevation shadow-5">
+                <div class="row justify-between items-center">
+                  <div class="column">
+                    <div class="text-subtitle2 text-white-8">Total de la Orden</div>
+                    <div class="text-h4 text-bold">$ {{ formatNumber(selectedOrder.total) }}</div>
+                  </div>
+                  <q-icon name="payments" size="lg" class="opacity-2" />
+                </div>
+              </q-card>
             </div>
 
-            <!-- Total -->
-            <q-card flat bordered class="total-card">
-              <q-card-section>
-                <div class="row justify-between items-center">
-                  <span class="text-h6">Total</span>
-                  <span class="text-h5 text-bold text-primary">
-                    $ {{ formatNumber(selectedOrder.total) }}
-                  </span>
+            <!-- Columna Derecha: Productos y Pagos -->
+            <div class="col-12 col-md-7">
+              <q-card flat bordered class="q-pa-md q-mb-md" v-if="selectedOrder.products?.length">
+                <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                  <q-icon name="shopping_cart" class="q-mr-sm" />
+                  Productos
                 </div>
-              </q-card-section>
-            </q-card>
+                <q-list bordered separator class="rounded-borders">
+                  <q-item
+                    v-for="product in selectedOrder.products"
+                    :key="product.id"
+                    class="q-py-md"
+                  >
+                    <q-item-section>
+                      <q-item-label class="text-weight-bold">{{ product.name }}</q-item-label>
+                      <q-item-label caption v-if="product.observation" class="bg-grey-2 q-pa-xs rounded-borders q-mt-xs">
+                        <q-icon name="info_outline" size="xs" /> {{ product.observation }}
+                      </q-item-label>
+                    </q-item-section>
+                    <q-item-section side class="text-right">
+                      <q-item-label class="text-subtitle2">
+                        {{ formatNumber(product.pivot?.amount || product.amount || 0) }} x <span class="text-primary">$ {{ formatNumber(product.pivot?.price || product.price || 0) }}</span>
+                      </q-item-label>
+                      <q-item-label class="text-weight-bolder text-dark">
+                        $ {{ formatNumber(product.subtotal || (product.pivot ? (product.pivot.amount * product.pivot.price) : ((product.amount || 0) * (product.price || 0)))) }}
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-card>
+
+              <q-card flat bordered class="q-pa-md" v-if="selectedOrder.invoice_payments?.length">
+                <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                  <q-icon name="payment" class="q-mr-sm" />
+                  Historial de Pagos
+                </div>
+                <div
+                  v-for="payment in selectedOrder.invoice_payments"
+                  :key="payment.id"
+                  class="payment-item-v2 q-pa-md q-mb-sm rounded-borders shadow-1 bg-white bordered"
+                  style="border-left: 5px solid var(--q-primary);"
+                >
+                  <div class="row justify-between items-start q-mb-xs">
+                    <div class="text-subtitle2 text-weight-bold">
+                      {{ payment.payment_method?.name || 'Pago' }}
+                    </div>
+                    <div class="text-primary text-bold">
+                      $ {{ formatNumber(payment.amount) }}
+                    </div>
+                  </div>
+
+                  <!-- Payment Vouchers -->
+                  <div v-if="payment.files?.length" class="voucher-section q-mt-sm">
+                    <div class="text-caption text-grey-7 q-mb-xs">Comprobantes adjuntos:</div>
+                    <div class="row q-gutter-sm">
+                      <q-img
+                        v-for="file in payment.files"
+                        :key="file.id"
+                        :src="file.url"
+                        alt="comprobante"
+                        class="voucher-thumbnail shadow-2 bordered"
+                        @click="openImage(file.url)"
+                        style="width: 80px; height: 80px; border-radius: 8px; cursor: pointer;"
+                      >
+                        <template v-slot:loading>
+                          <q-spinner color="primary" />
+                        </template>
+                      </q-img>
+                    </div>
+                  </div>
+                </div>
+              </q-card>
+            </div>
           </div>
-        </q-card-section>
+        </div>
+      </q-card-section>
+
+        <!-- Tooltip for Image -->
+        <q-tooltip v-if="!$q.screen.lt.sm">Click para ver en grande</q-tooltip>
       </q-card>
     </q-dialog>
 
@@ -309,7 +354,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onActivated, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { useOrderStore } from 'src/stores/order'
@@ -319,7 +364,6 @@ defineEmits(['back-to-catalog'])
 import { useQuasar } from 'quasar'
 import { formatDate, formatNumber, notify } from 'src/const/mixins'
 import { status } from 'src/const/invoice'
-import { api } from 'boot/axios'
 
 // Quasar
 const $q = useQuasar()
@@ -328,22 +372,13 @@ const $q = useQuasar()
 const authStore = authentication()
 const orderStore = useOrderStore()
 const { userSession } = storeToRefs(authStore)
+const { orders, pagination, loading } = storeToRefs(orderStore)
 
 // State
-const orders = ref([])
-// ... rest of the state
-const loading = ref(false)
 const showDetails = ref(false)
-const selectedOrder = ref(null)
 const currentPage = ref(1)
 const showImageViewer = ref(false)
 const viewerImageUrl = ref('')
-
-const pagination = ref({
-  rowsPerPage: 10,
-  rowsNumber: 0,
-  page: 1
-})
 
 // Computed
 const totalPages = computed(() =>
@@ -353,33 +388,15 @@ const totalPages = computed(() =>
 // Methods
 const loadOrders = async (page = 1) => {
   if (!userSession.value) {
-    orders.value = []
-    pagination.value.rowsNumber = 0
+    orderStore.resetOrderStore()
+    showDetails.value = false
     return
   }
 
   try {
-    loading.value = true
-    const { data } = await api.get('public/invoices', {
-      params: {
-        page,
-        perPage: pagination.value.rowsPerPage,
-        sortBy: 'id',
-        sortOrder: 'desc',
-        paginate: true
-      }
-    })
-    orders.value = data.data || []
-    pagination.value.rowsNumber = data.total || 0
-    pagination.value.page = page
-
-    // También actualizar el contador en el store para consistencia
-    orderStore.setOrderCount(data.total || 0)
+    await orderStore.fetchOrders(page)
   } catch (error) {
-    console.error('Error loading orders:', error)
     notify('Error al cargar las órdenes', 'negative', 'warning')
-  } finally {
-    loading.value = false
   }
 }
 
@@ -393,12 +410,14 @@ const loadPage = (page) => {
 }
 
 const openOrderDetails = (order) => {
-  selectedOrder.value = order
+  selectedOrder.value = { ...order }
   showDetails.value = true
 }
 
-const getStatusColor = (statusValue) => {
-  return status[statusValue]?.color || 'grey'
+const selectedOrder = ref(null)
+
+const getStatusColor = (statusKey) => {
+  return status[statusKey]?.color || 'grey'
 }
 
 const getStatusLabel = (statusValue) => {
@@ -410,22 +429,8 @@ const openImage = (url) => {
   showImageViewer.value = true
 }
 
-// Lifecycle
-onMounted(() => {
-  loadOrders()
-})
-
-// Refrescar al activar (vía keep-alive)
-onActivated(() => {
-  loadOrders()
-})
-
-// Refrescar al cambiar el usuario
-watch(userSession, () => {
-  currentPage.value = 1
-  loadOrders()
-}, { immediate: true })
-
+// La carga de órdenes ahora se dispara solo por acciones específicas (login, checkout)
+// o manualmente vía refreshOrders. Hemos removido onActivated y watch(userSession).
 </script>
 
 <style scoped>
@@ -480,72 +485,70 @@ watch(userSession, () => {
 /* Order Details Dialog */
 .order-details-card {
   width: 100%;
-  max-width: 700px;
+  border-radius: 16px;
+  overflow: hidden;
 }
 
-.details-content {
-  max-height: 70vh;
+.text-white-8 {
+  color: rgba(255, 255, 255, 0.8);
 }
 
-.info-section {
-  margin-bottom: 1.5rem;
+.opacity-2 {
+  opacity: 0.2;
 }
 
-.section-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid var(--primary, #ff4d00);
+.total-elevation {
+  border-radius: 12px;
+  position: relative;
 }
 
-.payment-item {
-  border-left: 4px solid var(--primary, #ff4d00);
+.total-elevation::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+  pointer-events: none;
 }
 
-.voucher-images {
-  margin-top: 0.5rem;
+.payment-item-v2 {
+  transition: all 0.2s ease;
+  border: 1px solid #eee;
+}
+
+.payment-item-v2:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
 .voucher-thumbnail {
-  width: 120px;
-  height: 120px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .voucher-thumbnail:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-}
-
-.total-card {
-  background: #f9f9f9;
-  border-radius: 12px;
-  border: 2px solid var(--primary, #ff4d00);
+  transform: scale(1.1);
+  z-index: 10;
 }
 
 /* Image Viewer */
 .image-viewer {
-  max-width: 90vw;
-  max-height: 90vh;
+  max-width: 95vw;
+  max-height: 95vh;
+  background: transparent;
+  box-shadow: none;
 }
 
 .image-viewer .q-img {
-  max-height: 85vh;
+  max-height: 90vh;
+  border-radius: 12px;
 }
 
 /* Responsive */
 @media (max-width: 599px) {
   .order-details-card {
-    max-width: 100%;
-    height: 100%;
-  }
-
-  .details-content {
-    max-height: none;
+    border-radius: 0;
   }
 }
 </style>

@@ -76,7 +76,7 @@
       >
         <div class="banner-overlay"></div>
         <div class="header-content column items-center full-width q-pa-md">
-          <q-avatar v-if="company?.url" size="80px" class="profile-avatar shadow-5">
+          <q-avatar v-if="company?.url" size="120px" class="profile-avatar shadow-5">
             <q-img :src="company.url" />
           </q-avatar>
           <div class="text-h5 text-center text-white text-bold q-mt-md text-uppercase company-name">
@@ -293,7 +293,7 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch, onActivated } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { useCatalogStore } from 'src/stores/catalog'
@@ -545,27 +545,9 @@ onMounted(() => {
   timeUpdateInterval = setInterval(() => {
     currentTime.value = new Date()
   }, 60000)
-
-  // Fetch order count if logged in
-  if (userSession.value) {
-    orderStore.fetchOrderCount()
-  }
 })
 
 // Refrescar al activar la pestaña (ej: al volver de otra pestaña)
-onActivated(() => {
-  if (userSession.value) {
-    orderStore.fetchOrderCount()
-  }
-})
-
-// Observar la sesión para cargar datos cuando se restaure (ej: al refrescar la página)
-watch(userSession, (newSession) => {
-  if (newSession) {
-    orderStore.fetchOrderCount()
-  }
-}, { immediate: true })
-
 onBeforeUnmount(() => {
   if (scrollContainer === document.scrollingElement || scrollContainer === document.documentElement) {
     window.removeEventListener('scroll', onScroll)
@@ -633,11 +615,16 @@ const getDayColor = (day) => {
 const logout = async () => {
   try {
     await authStore.logout()
+    // Limpiar estados locales de otras tiendas
+    cart.resetCart()
+    orderStore.resetOrderStore()
     notify('Has cerrado sesión correctamente', 'positive', 'check_circle')
   } catch (error) {
     console.error('Error logging out:', error)
     // Fallback in case backend call fails
     authStore.forceLogout()
+    cart.resetCart()
+    orderStore.resetOrderStore()
   }
 }
 </script>
