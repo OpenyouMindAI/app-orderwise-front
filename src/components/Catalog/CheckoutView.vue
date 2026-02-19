@@ -1167,15 +1167,19 @@ const submitOrder = async () => {
   height: 56px;
   font-size: 17px;
   font-weight: 600;
-  background: var(--text);
-  color: var(--surface);
-  border-radius: var(--border-radius-md);
-  letter-spacing: 0.3px;
-  transition: var(--transition-transform);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border-radius: 12px;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
 }
 
 .finalizar-btn:hover:not(:disabled) {
   transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
 }
 
 .finalizar-btn:active:not(:disabled) {
