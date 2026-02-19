@@ -1,53 +1,72 @@
 <template>
-  <div class="q-pa-md">
-    <div class="row q-gutter-y-sm justify-between">
-      <div class="col-lg-6 col-md-6 col-sm-6  col-xs-12 q-pa-sm">
-        <span class="text-h6">Cuentas por pagar</span>
+  <q-page class="q-pa-md">
+    <div class="row q-gutter-y-sm justify-between items-center">
+      <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 q-px-md">
+        <!-- Título principal con peso fuerte -->
+        <div class="text-h5 text-weight-bolder text-primary">Cuentas por pagar</div>
+
+        <!-- Fecha corregida y visible -->
+        <div class="text-caption text-grey-9 flex items-center q-gutter-x-xs text-weight-bold">
+          <q-icon name="calendar_today" size="16px" color="primary" />
+          <span v-if="filters.day">{{ formatDate(filters.day) }}</span>
+          <span v-else-if="filters.from && filters.to">{{ formatDate(filters.from) }} - {{ formatDate(filters.to) }}</span>
+          <span v-else class="opacity-60">Reporte Histórico (Sin filtros)</span>
+          <q-badge class="q-pa-sm text-weight-bold" color="secondary" rounded>
+            {{ branchOffice?.name || 'Cargando Sucursal...' }}
+          </q-badge>
+        </div>
       </div>
-      <div class="col-lg-6 col-md-6 col-sm-6  col-xs-12 text-subtitle1 flex justify-end items-center q-gutter-x-sm">
-        <q-badge class="text-subtitle2" color="secondary">
-          {{ branchOffice?.name }}
-        </q-badge>
+
+      <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 flex justify-end items-center q-gutter-x-sm">
         <q-btn
           icon="filter_alt"
           color="primary"
           round
-          size="sm"
+          unelevated
           @click="dialogFilter = true"
         />
       </div>
-      <div class="row full-width col-12 q-col-gutter-sm">
-        <div class="col-xs-12 col-sm-12 col-md-4 col-lg-4 col-xl-4">
-          <q-card class="text-negative">
-            <q-card-section horizontal>
-              <q-card-section class="full-width"> Deuda total </q-card-section>
-              <q-card-section class="text-right full-width">
-                {{ formatNumber(totals?.total_owed || 0) }}
-              </q-card-section>
-            </q-card-section>
-          </q-card>
+
+      <div class="row full-width q-col-gutter-sm q-mt-md">
+        <!-- Owed Bento Item -->
+        <div class="col-xs-12 col-sm-6 col-md-4">
+          <div class="bento-item stat-hero">
+            <div class="stat-icon-wrap bg-soft-negative">
+              <q-icon name="shopping_cart" size="28px" color="negative" />
+            </div>
+            <div class="stat-data">
+              <div class="stat-val text-negative text-weight-bolder">{{ formatNumber(totals?.total_owed || 0) }}</div>
+              <!-- Label más grande y oscuro -->
+              <div class="stat-lab text-grey-9">Compras del Período</div>
+            </div>
+          </div>
         </div>
-        <div class="col-xs-12 col-sm-12 col-md-4 col-lg-4 col-xl-4">
-          <q-card class="text-positive">
-            <q-card-section horizontal>
-              <q-card-section class="full-width"> Pagado </q-card-section>
-              <q-card-section class="text-right full-width">
-                {{ formatNumber(totals?.total_paid || 0) }}
-              </q-card-section>
-            </q-card-section>
-          </q-card>
+        <!-- Pagos Bento Item -->
+        <div class="col-xs-12 col-sm-6 col-md-4">
+          <div class="bento-item stat-hero">
+            <div class="stat-icon-wrap bg-soft-positive">
+              <q-icon name="payments" size="28px" color="positive" />
+            </div>
+            <div class="stat-data">
+              <div class="stat-val text-positive text-weight-bolder">{{ formatNumber(totals?.total_paid || 0) }}</div>
+              <div class="stat-lab text-grey-9">Pagos Realizados</div>
+            </div>
+          </div>
         </div>
-        <div class="col-xs-12 col-sm-12 col-md-4 col-lg-4 col-xl-4">
-          <q-card class="text-blue">
-            <q-card-section horizontal>
-              <q-card-section class="full-width"> Balance </q-card-section>
-              <q-card-section class="text-right full-width">
-                {{ formatNumber(totals?.balance || 0) }}
-              </q-card-section>
-            </q-card-section>
-          </q-card>
+        <!-- Balance Bento Item -->
+        <div class="col-xs-12 col-sm-12 col-md-4">
+          <div class="bento-item stat-hero highlight-item shadow-2">
+            <div class="stat-icon-wrap bg-soft-primary">
+              <q-icon name="account_balance_wallet" size="28px" color="primary" />
+            </div>
+            <div class="stat-data">
+              <div class="stat-val text-primary text-weight-bolder">{{ formatNumber(totals?.balance || 0) }}</div>
+              <div class="stat-lab text-primary text-weight-bolder">DEUDA TOTAL ACTUAL</div>
+            </div>
+          </div>
         </div>
       </div>
+
       <div class="col-12 q-pa-sm">
         <q-table
           v-model:pagination="paginationConfig"
@@ -101,35 +120,47 @@
                 @click="addPaymentDialog = true"
               />
             </div>
-            <div class="col-xs-12 col-sm-12 col-md-4 col-lg-4 col-xl-4">
-              <q-card class="text-negative">
-                <q-card-section horizontal>
-                  <q-card-section class="full-width"> Ventas totales </q-card-section>
-                  <q-card-section class="text-right full-width">
-                    {{ formatNumber(totals?.total_owed || 0) }}
-                  </q-card-section>
-                </q-card-section>
-              </q-card>
+            <div class="col-12">
+              <div class="flex items-center q-gutter-x-sm">
+                <div class="text-overline text-grey-7 letter-spacing-1">DESGLOSE DE CUENTA</div>
+                <q-separator horizontal class="col" />
+              </div>
             </div>
-            <div class="col-xs-12 col-sm-12 col-md-4 col-lg-4 col-xl-4">
-              <q-card class="text-positive">
-                <q-card-section horizontal>
-                  <q-card-section class="full-width"> Pagado </q-card-section>
-                  <q-card-section class="text-right full-width">
-                    {{ formatNumber(totals?.total_paid || 0) }}
-                  </q-card-section>
-                </q-card-section>
-              </q-card>
+
+            <div class="col-xs-12 col-sm-6 col-md-4">
+              <div class="bento-item stat-hero dense-stat">
+                <div class="stat-icon-wrap bg-soft-negative">
+                  <q-icon name="shopping_cart" size="22px" color="negative" />
+                </div>
+                <div class="stat-data">
+                  <div class="stat-val text-negative">{{ formatNumber(totals?.total_owed || 0) }}</div>
+                  <div class="stat-lab">Nuevas Compras</div>
+                </div>
+              </div>
             </div>
-            <div class="col-xs-12 col-sm-12 col-md-4 col-lg-4 col-xl-4">
-              <q-card class="text-blue">
-                <q-card-section horizontal>
-                  <q-card-section class="full-width"> Balance </q-card-section>
-                  <q-card-section class="text-right full-width">
-                    {{ formatNumber(totals?.balance || 0) }}
-                  </q-card-section>
-                </q-card-section>
-              </q-card>
+
+            <div class="col-xs-12 col-sm-6 col-md-4">
+              <div class="bento-item stat-hero dense-stat">
+                <div class="stat-icon-wrap bg-soft-positive">
+                  <q-icon name="payments" size="22px" color="positive" />
+                </div>
+                <div class="stat-data">
+                  <div class="stat-val text-positive">{{ formatNumber(totals?.total_paid || 0) }}</div>
+                  <div class="stat-lab">Pagos Realizados</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xs-12 col-sm-12 col-md-4">
+              <div class="bento-item stat-hero dense-stat highlight-item">
+                <div class="stat-icon-wrap bg-soft-primary">
+                  <q-icon name="account_balance_wallet" size="22px" color="primary" />
+                </div>
+                <div class="stat-data">
+                  <div class="stat-val text-primary">{{ formatNumber(totals?.balance || 0) }}</div>
+                  <div class="stat-lab">BALANCE PENDIENTE</div>
+                </div>
+              </div>
             </div>
           </div>
         </q-card-section>
@@ -425,7 +456,7 @@
         </q-card-section>
       </q-card>
     </q-dialog>
-  </div>
+  </q-page>
 </template>
 
 <script>
@@ -943,3 +974,129 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+
+.stat-val {
+  font-size: 24px; /* Un poco más grande para que destaque */
+  font-weight: 900;
+  line-height: 1;
+}
+
+.stat-lab {
+  font-size: 11px; /* Aumentado */
+  font-weight: 800; /* Más peso */
+  color: #1e293b; /* Gris oscuro casi negro para máxima lectura */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+/* Para que la cabecera se vea igual que la Home */
+.text-overline {
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.2;
+}
+/**
+ * Bento Grid & Stat Cards Style (Home Style Sync)
+ */
+.bento-item {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  border: 1px solid #f1f5f9;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.bento-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -8px rgba(0,0,0,0.08);
+  border-color: #e2e8f0;
+}
+
+.stat-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 100px;
+}
+
+.stat-icon-wrap {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-data {
+  flex: 1;
+}
+
+.stat-val {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+
+.stat-lab {
+  font-size: 10px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-top: 6px;
+}
+
+.highlight-item {
+  background: linear-gradient(to bottom right, #ffffff, #f8faff);
+  border-left: 4px solid var(--q-primary);
+}
+
+/* Dense version for Dialogs */
+.dense-stat {
+  padding: 12px 16px;
+  min-height: 80px;
+  border-radius: 16px;
+}
+.dense-stat .stat-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+.dense-stat .stat-val {
+  font-size: 18px;
+}
+
+/* Soft Background Utilities */
+.bg-soft-primary { background: rgba(var(--q-primary-rgb), 0.08); }
+.bg-soft-positive { background: rgba(33, 186, 69, 0.08); }
+.bg-soft-negative { background: rgba(193, 0, 21, 0.08); }
+.bg-soft-blue { background: rgba(43, 108, 176, 0.08); }
+
+.letter-spacing-1 {
+  letter-spacing: 1px;
+}
+
+/* Dark Mode Overrides (Optional but recommended) */
+body.body--dark .bento-item {
+  background: #1e293b;
+  border-color: #334155;
+  color: white;
+}
+
+body.body--dark .highlight-item {
+  background: linear-gradient(to bottom right, #1e293b, #0f172a);
+}
+
+body.body--dark .stat-lab {
+  color: #94a3b8;
+}
+</style>

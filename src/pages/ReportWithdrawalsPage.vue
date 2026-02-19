@@ -260,19 +260,73 @@
         </div>
         <div class="stat-card-content-compact">
           <div class="stat-icon-wrapper-compact success">
-            <q-icon name="trending_up" size="24px" />
+            <q-icon name="shopping_cart" size="24px" />
           </div>
           <div class="stat-info-compact">
-            <div class="stat-label-compact">Ventas del Período</div>
+            <div class="stat-label-compact">Ventas Facturadas</div>
             <div class="stat-value-compact">{{ formatCurrency(totalsAmount.paid_sales) }}</div>
-            <div class="stat-description-compact">Total facturado en ventas</div>
+            <div class="stat-description-compact">Total bruto vendido</div>
+          </div>
+        </div>
+        <div class="stat-card-shine"></div>
+      </div>
+
+      <!-- Entries (Debit) Card -->
+      <div class="stat-card-compact stat-card-positive animate-scale-in" style="animation-delay: 0.15s;">
+        <div class="stat-card-bg">
+          <div class="stat-card-circle"></div>
+        </div>
+        <div class="stat-card-content-compact">
+          <div class="stat-icon-wrapper-compact positive">
+            <q-icon name="add_circle" size="24px" />
+          </div>
+          <div class="stat-info-compact">
+            <div class="stat-label-compact">Entradas a Caja</div>
+            <div class="stat-value-compact">{{ formatCurrency(totalsAmount.debit) }}</div>
+            <div class="stat-description-compact">Ingresos manuales adicionales</div>
+          </div>
+        </div>
+        <div class="stat-card-shine"></div>
+      </div>
+
+      <!-- Exits (Credit) Card -->
+      <div class="stat-card-compact stat-card-negative animate-scale-in" style="animation-delay: 0.2s;">
+        <div class="stat-card-bg">
+          <div class="stat-card-circle"></div>
+        </div>
+        <div class="stat-card-content-compact">
+          <div class="stat-icon-wrapper-compact negative">
+            <q-icon name="remove_circle" size="24px" />
+          </div>
+          <div class="stat-info-compact">
+            <div class="stat-label-compact">Salidas de Caja</div>
+            <div class="stat-value-compact">{{ formatCurrency(totalsAmount.credit) }}</div>
+            <div class="stat-description-compact">Gastos/Egresos manuales</div>
+          </div>
+        </div>
+        <div class="stat-card-shine"></div>
+      </div>
+
+      <!-- Real Sales Card -->
+      <div class="stat-card-compact stat-card-purple animate-scale-in" style="animation-delay: 0.25s;">
+        <div class="stat-card-bg">
+          <div class="stat-card-circle"></div>
+        </div>
+        <div class="stat-card-content-compact">
+          <div class="stat-icon-wrapper-compact purple">
+            <q-icon name="account_balance" size="24px" />
+          </div>
+          <div class="stat-info-compact">
+            <div class="stat-label-compact">Monto Real Esperado</div>
+            <div class="stat-value-compact">{{ formatCurrency(totalsAmount.real_sales) }}</div>
+            <div class="stat-description-compact">Venta + Entradas - Salidas</div>
           </div>
         </div>
         <div class="stat-card-shine"></div>
       </div>
 
       <!-- Withdrawals Card -->
-      <div class="stat-card-compact stat-card-info animate-scale-in" style="animation-delay: 0.2s;">
+      <div class="stat-card-compact stat-card-info animate-scale-in" style="animation-delay: 0.3s;">
         <div class="stat-card-bg">
           <div class="stat-card-circle"></div>
         </div>
@@ -293,7 +347,7 @@
       <div
         class="stat-card-compact animate-scale-in"
         :class="`stat-card-${getDifferenceStatus().colorClass}`"
-        style="animation-delay: 0.3s;"
+        style="animation-delay: 0.35s;"
       >
         <div class="stat-card-bg">
           <div class="stat-card-circle"></div>
@@ -303,7 +357,7 @@
             <q-icon :name="getDifferenceStatus().iconName" size="24px" />
           </div>
           <div class="stat-info-compact">
-            <div class="stat-label-compact">Diferencia</div>
+            <div class="stat-label-compact">Diferencia Total</div>
             <div class="stat-value-compact">{{ formatCurrency(Math.abs(totalsAmount.difference_report || 0)) }}</div>
             <div class="stat-description-compact">{{ getDifferenceStatus().label }}</div>
           </div>
@@ -313,7 +367,6 @@
           <q-icon name="verified" size="14px" /> Perfecto
         </div>
       </div>
-
     </div>
     <!-- Loading State -->
     <div v-if="loading" class="q-gutter-md">
@@ -374,39 +427,63 @@
 
             <!-- Right Info: Financial Metrics -->
             <div class="col-12 col-md-auto">
-              <div class="row q-col-gutter-md items-center justify-end">
+              <div class="row q-col-gutter-sm items-center justify-end">
                 <!-- Metrics Grid for small screens -->
                 <div class="col-12 col-sm-auto">
-                  <div class="row q-col-gutter-md justify-end">
+                  <div class="row q-col-gutter-sm justify-end">
                     <!-- Sales -->
-                    <div class="col-6 col-sm-auto text-right">
-                      <div class="text-caption text-grey-7">Ventas</div>
-                      <div class="text-subtitle1 text-md-h6 text-weight-bold text-positive">
+                    <div class="col-auto text-right">
+                      <div class="text-caption text-grey-7" style="font-size: 10px;">Ventas</div>
+                      <div class="text-subtitle2 text-weight-bold text-positive">
                         {{ formatCurrency(day.paid_sales) }}
                       </div>
                     </div>
 
+                    <!-- Debit -->
+                    <div v-if="day.debit > 0" class="col-auto text-right">
+                      <div class="text-caption text-grey-7" style="font-size: 10px;">Entradas</div>
+                      <div class="text-subtitle2 text-weight-bold text-info">
+                        +{{ formatCurrency(day.debit) }}
+                      </div>
+                    </div>
+
+                    <!-- Credit -->
+                    <div v-if="day.credit > 0" class="col-auto text-right">
+                      <div class="text-caption text-grey-7" style="font-size: 10px;">Salidas</div>
+                      <div class="text-subtitle2 text-weight-bold text-negative">
+                        -{{ formatCurrency(day.credit) }}
+                      </div>
+                    </div>
+
+                    <!-- Real Sales -->
+                    <div class="col-auto text-right">
+                      <div class="text-caption text-grey-7" style="font-size: 10px;">Monto Real</div>
+                      <div class="text-subtitle2 text-weight-bold text-purple">
+                        {{ formatCurrency(day.real_paid_sales) }}
+                      </div>
+                    </div>
+
                     <!-- Expected Amount -->
-                    <div class="col-6 col-sm-auto text-right">
-                      <div class="text-caption text-grey-7">Esperado</div>
-                      <div class="text-subtitle1 text-md-h6 text-weight-bold text-blue">
+                    <div class="col-auto text-right">
+                      <div class="text-caption text-grey-7" style="font-size: 10px;">Esperado</div>
+                      <div class="text-subtitle2 text-weight-bold text-blue">
                         {{ formatCurrency(day.expected_amount) }}
                       </div>
                     </div>
 
                     <!-- Counted Amount -->
-                    <div class="col-6 col-sm-auto text-right">
-                      <div class="text-caption text-grey-7">Contado</div>
-                      <div class="text-subtitle1 text-md-h6 text-weight-bold text-orange">
+                    <div class="col-auto text-right">
+                      <div class="text-caption text-grey-7" style="font-size: 10px;">Contado</div>
+                      <div class="text-subtitle2 text-weight-bold text-orange">
                         {{ formatCurrency(day.counted_amount) }}
                       </div>
                     </div>
 
-                    <!-- Difference (Counted - Sales) -->
-                    <div class="col-6 col-sm-auto text-right" style="min-width: 100px;">
-                      <div class="text-caption text-grey-7">Diferencia</div>
+                    <!-- Difference (Counted - Real Paid Sales) -->
+                    <div class="col-auto text-right" style="min-width: 80px;">
+                      <div class="text-caption text-grey-7" style="font-size: 10px;">Diferencia</div>
                       <div
-                        class="text-subtitle1 text-md-h6 text-weight-bold"
+                        class="text-subtitle2 text-weight-bold"
                         :class="day.difference_counted_sales >= 0 ? 'text-positive' : 'text-negative'"
                       >
                         {{ day.difference_counted_sales >= 0 ? '+' : '-' }}{{ formatCurrency(Math.abs(day.difference_counted_sales || 0)) }}
