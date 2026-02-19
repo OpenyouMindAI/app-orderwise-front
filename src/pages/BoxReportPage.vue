@@ -2151,17 +2151,17 @@ export default {
      */
     async getBranchOffices () {
       try {
-        if (this.userSession.is_root) {
-          const { data } = await this.$api.get('branch-offices')
-          this.branchOffices = data
-          this.branchOfficeSelect = data
-        } else {
-          this.branchOffices = [this.branchOffice]
-          this.branchOfficeSelect = [this.branchOffice]
+        const params = {}
+        if (!this.userSession.is_root) {
+          params.dataEqualFilter = {
+            'branchOfficeUsers.user_id': this.userSession.id
+          }
         }
+        const { data } = await this.$api.get('branch-offices', { params })
+        this.branchOffices = data
+        this.branchOfficeSelect = [this.branchOffice]
       } catch (error) {
         notify(error.message, 'negative', 'warning')
-        console.error('Error fetching branch offices:', error)
       }
     },
 
