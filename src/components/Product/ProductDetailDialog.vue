@@ -78,7 +78,7 @@
         </div>
 
         <!-- Comments Section -->
-        <div class="comments-section q-mb-xl">
+        <div class="comments-section">
           <div class="text-subtitle1 text-bold text-dark q-mb-sm">Comentarios</div>
           <q-input
             v-model="localObservation"
@@ -94,29 +94,36 @@
       </div>
       </div>
 
-      <!-- Fixed Bottom Button -->
-      <div class="action-footer">
-        <q-btn
-          unelevated
-          rounded
-          no-caps
-          color="dark"
-          text-color="white"
-          class="full-width add-to-order-btn"
-          @click="addToOrder"
-        >
-          <div class="row full-width justify-between items-center q-px-sm">
-            <span class="text-bold">Agregar a mi pedido</span>
-            <span class="text-bold">$ {{ formatNumber(totalPrice) }}</span>
+        <!-- Fixed Bottom Button -->
+        <div class="action-footer">
+          <div v-if="!hasStock" class="out-of-stock-banner q-mb-md flex flex-center">
+            <q-icon name="error_outline" color="negative" size="xs" class="q-mr-xs" />
+            <span class="text-negative text-weight-bold">Producto actualmente sin unidades disponibles</span>
           </div>
-        </q-btn>
-      </div>
+
+          <q-btn
+            unelevated
+            rounded
+            no-caps
+            :color="hasStock ? 'dark' : 'grey-5'"
+            text-color="white"
+            class="full-width add-to-order-btn"
+            @click="addToOrder"
+            :disable="!hasStock"
+          >
+            <div class="row full-width justify-between items-center q-px-sm">
+              <span class="text-bold">{{ hasStock ? 'Agregar a mi pedido' : 'Agotado' }}</span>
+              <span class="text-bold">$ {{ formatNumber(totalPrice) }}</span>
+            </div>
+          </q-btn>
+        </div>
     </q-card>
   </q-dialog>
 </template>
 
 <script>
 import { formatNumber } from 'src/const/mixins'
+import { noProductImage as defaultImage } from 'src/const/images'
 
 export default {
   name: 'ProductDetailDialog',
@@ -147,10 +154,15 @@ export default {
       }
     },
     heroImage () {
-      return this.product?.images?.[0]?.url || 'https://cdn.quasar.dev/img/image-src.png'
+      return this.product?.images?.[0]?.url || defaultImage
     },
     totalPrice () {
       return (this.product?.price || 0) * this.quantity
+    },
+    hasStock () {
+      if (!this.product) return false
+      const stock = this.product.is_bundle ? this.product.bundle_stock : this.product.normal_stock
+      return this.product.skip_stock || stock >= this.quantity
     }
   },
   watch: {
@@ -299,6 +311,13 @@ export default {
   padding: 16px 20px;
   border-top: 1px solid var(--border);
   z-index: 10;
+}
+
+.out-of-stock-banner {
+  background: #fff5f5;
+  border: 1px solid #feb2b2;
+  padding: 10px;
+  border-radius: 8px;
 }
 
 .add-to-order-btn {

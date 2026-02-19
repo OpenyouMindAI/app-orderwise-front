@@ -174,7 +174,10 @@
                 flat
                 bordered
                 class="product-horizontal-card shadow-1"
-                :class="{ 'product-in-cart': isInCart(product.id) }"
+                :class="{
+                  'product-in-cart': isInCart(product.id),
+                  'product-out-of-stock': !hasStock(product)
+                }"
                 @click="$emit('open-product', product)"
               >
                 <q-card-section horizontal class="items-center">
@@ -191,19 +194,18 @@
                   </q-card-section>
 
                   <q-card-section class="col-auto q-pa-md">
-                    <q-img
-                      :src="product.images[0]?.url || defaultImage"
-                      class="product-image"
-                    >
-                      <q-badge
+                    <div class="relative-position">
+                      <q-img
+                        :src="product.images[0]?.url || defaultImage"
+                        class="product-image"
+                      />
+                      <div
                         v-if="!hasStock(product)"
-                        color="negative"
-                        floating
-                        style="top: 7px; right: 7px;"
+                        class="out-of-stock-overlay flex flex-center"
                       >
-                        Sin stock
-                      </q-badge>
-                    </q-img>
+                        <span class="out-of-stock-text">AGOTADO</span>
+                      </div>
+                    </div>
                   </q-card-section>
                 </q-card-section>
               </q-card>
@@ -302,6 +304,7 @@ import { useCart } from 'src/composables/useCart'
 import { formatNumber, notify } from 'src/const/mixins'
 import SkeletonCard from 'src/components/SkeletonCard.vue'
 import AuthDialog from 'src/components/Auth/AuthDialog.vue'
+import { noProductImage as defaultImage } from 'src/const/images'
 
 // Day translations for schedule
 const dayTranslations = {
@@ -353,7 +356,6 @@ let scrollContainer = null
 let timeUpdateInterval = null
 
 // Constantes
-const defaultImage = 'https://cdn.quasar.dev/img/image-src.png'
 
 // Computed
 const userInitials = computed(() => {
@@ -790,11 +792,37 @@ const logout = async () => {
   box-shadow: 0 0 0 2px var(--primary, #ff4d00) !important;
 }
 
-.product-title {
-  font-weight: 700;
-  line-height: 1.2;
-  font-size: 1.1rem;
-  color: var(--text);
+.product-out-of-stock {
+  background: #fdfdfd;
+}
+
+.product-out-of-stock .product-image {
+  filter: grayscale(1) opacity(0.7);
+}
+
+.product-out-of-stock .product-title,
+.product-out-of-stock .price-text {
+  color: #9e9e9e;
+}
+
+.out-of-stock-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
+}
+
+.out-of-stock-text {
+  color: white;
+  font-weight: 900;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  background: rgba(193, 27, 27, 0.9);
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 
 .text-content {

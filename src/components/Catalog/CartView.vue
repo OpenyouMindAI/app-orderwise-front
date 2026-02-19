@@ -47,24 +47,35 @@
                 <div class="item-name">{{ item.name }}</div>
                 <div class="item-price">$ {{ formatNumber(item.subtotal) }}</div>
               </div>
-              <div class="quantity-controls-cart">
+              <div class="item-actions">
+                <div class="quantity-controls-cart">
+                  <q-btn
+                    icon="remove"
+                    flat
+                    round
+                    size="sm"
+                    class="quantity-btn-cart"
+                    @click="decrementQuantity(item)"
+                    :disable="item.amount <= 1"
+                  />
+                  <span class="quantity-display-cart">{{ item.amount }}</span>
+                  <q-btn
+                    icon="add"
+                    flat
+                    round
+                    size="sm"
+                    class="quantity-btn-cart"
+                    @click="incrementQuantity(item)"
+                  />
+                </div>
                 <q-btn
-                  icon="remove"
+                  icon="delete_outline"
                   flat
                   round
-                  size="sm"
-                  class="quantity-btn-cart"
-                  @click="decrementQuantity(item)"
-                  :disable="item.amount <= 1"
-                />
-                <span class="quantity-display-cart">{{ item.amount }}</span>
-                <q-btn
-                  icon="add"
-                  flat
-                  round
-                  size="sm"
-                  class="quantity-btn-cart"
-                  @click="incrementQuantity(item)"
+                  dense
+                  color="negative"
+                  class="remove-item-btn"
+                  @click="removeItem(item)"
                 />
               </div>
             </div>
@@ -123,6 +134,10 @@ const decrementQuantity = (item) => {
   if (item.amount > 1) {
     cart.updateQuantity(item.id, item.amount - 1)
   }
+}
+
+const removeItem = (item) => {
+  cart.removeFromCart(item.id)
 }
 
 </script>
@@ -203,8 +218,18 @@ const decrementQuantity = (item) => {
 .item-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
+}
+
+.item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.remove-item-btn {
+  margin-left: 4px;
 }
 
 .item-info {
