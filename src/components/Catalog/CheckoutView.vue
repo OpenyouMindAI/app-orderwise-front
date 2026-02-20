@@ -759,8 +759,11 @@ const submitOrder = async () => {
       seller_id: userSession.value?.id,
       products: cart.items.value,
       address: deliveryAddress.value,
-      company_id: route.params.company_id,
+      company_id: Number(route.params.company_id),
+      branch_office_id: Number(route.params.branch_office_id),
       client_id: userSession.value.id,
+      invoice_type_id: 1,
+      type_of_service_id: 1,
       code: 1,
       payments: [{
         payment_method_id: selectedPaymentMethod.value,
