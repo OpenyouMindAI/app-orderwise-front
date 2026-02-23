@@ -48,7 +48,7 @@
     </div>
 
     <!-- Products Grid -->
-    <div class="products-container full-width q-pa-sm">
+    <div class="full-width q-pa-md">
       <!-- Loading State -->
       <div v-show="loading" class="row q-col-gutter-sm">
         <div class="col-12" v-for="i in 8" :key="i">
@@ -147,6 +147,30 @@
         </div>
       </div>
     </div>
+
+    <!-- Floating Cart Button -->
+    <div class="cart-sticky-footer">
+      <q-btn
+        unelevated
+        rounded
+        no-caps
+        class="continuar-btn full-width shadow-4"
+        @click="$emit('view-cart')"
+      >
+        <div class="row full-width justify-between items-center">
+          <div class="row items-center">
+            <q-badge
+              color="white"
+              text-color="dark"
+              :label="cart.itemCount.value"
+              class="q-mr-sm text-weight-bold"
+            />
+            <span class="text-weight-bold">Ver mi pedido</span>
+          </div>
+          <span class="text-weight-bold">$ {{ formatNumber(cart.total.value) }}</span>
+        </div>
+      </q-btn>
+    </div>
   </div>
 </template>
 
@@ -168,7 +192,7 @@ defineProps({
 })
 
 // Emits
-defineEmits(['open-product'])
+defineEmits(['open-product', 'view-cart'])
 
 // Stores y composables
 const catalogStore = useCatalogStore()
@@ -231,7 +255,7 @@ const scrollToCategory = async (categoryId) => {
 <style scoped>
 /* ===== Base ===== */
 .catalog-view {
-  background: #f4f5f7;
+  background: #fff;
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
 }
 
@@ -250,7 +274,6 @@ const scrollToCategory = async (categoryId) => {
 
 .filter-wrapper {
   width: 100%;
-  max-width: 620px; /* Alineado con products-container */
   padding: 0 8px;
 }
 
@@ -313,7 +336,6 @@ const scrollToCategory = async (categoryId) => {
   background: var(--q-primary) !important;
   color: #ffffff !important;
   border-color: var(--q-primary) !important;
-  box-shadow: 0 3px 10px rgba(var(--q-primary-rgb, 255,77,0), 0.3);
   animation: chip-press 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -321,13 +343,6 @@ const scrollToCategory = async (categoryId) => {
   0%   { transform: scale(1); }
   45%  { transform: scale(0.94); }
   100% { transform: scale(1); }
-}
-
-/* ===== Products Container ===== */
-.products-container {
-  max-width: 620px;
-  margin: 0 auto;
-  padding-bottom: 80px;
 }
 
 .category-section {
@@ -371,8 +386,7 @@ const scrollToCategory = async (categoryId) => {
 }
 
 .product-in-cart {
-  border-color: var(--q-primary) !important;
-  box-shadow: 0 0 0 2px rgba(var(--q-primary-rgb, 255,77,0), 0.2) !important;
+  border:2px solid var(--q-primary) !important;
 }
 
 .product-out-of-stock {
@@ -503,5 +517,42 @@ const scrollToCategory = async (categoryId) => {
 
 .q-page {
   overflow: visible;
+}
+
+/* ===== Floating Cart Sticky ===== */
+.cart-sticky-footer {
+  position: -webkit-sticky;
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1001;
+  width: 100%;
+  pointer-events: none;
+  padding: 16px;
+  background: transparent;
+}
+
+.continuar-btn {
+  pointer-events: auto;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  height: 56px;
+  font-size: 1rem;
+  border-radius: 16px !important;
+  transition: all 0.3s ease;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+}
+
+.continuar-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.45) !important;
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
+}
+
+.continuar-btn:active {
+  transform: translateY(0) scale(0.98);
+  filter: brightness(0.95);
 }
 </style>

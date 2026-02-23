@@ -140,6 +140,7 @@
                       <CatalogView
                         :loading="loadingPage"
                         @open-product="openProductDetail"
+                        @view-cart="currentTab = 'cart'"
                       />
                     </q-tab-panel>
 
@@ -174,54 +175,81 @@
                       <q-badge v-if="cartItems.length > 0" :label="cartItemCount" color="primary" rounded />
                     </div>
 
-                    <!-- Empty Cart State -->
-                    <div v-if="cartItems.length === 0" class="empty-cart text-center q-pa-lg">
-                      <div class="empty-cart-icon-wrapper">
-                        <q-icon name="shopping_cart" size="44px" color="grey-4" />
-                      </div>
-                      <div class="empty-cart-text q-mt-sm">Tu carrito está vacío</div>
+                    <!-- Empty Cart State (Matching CartView.vue) -->
+                    <div v-if="cartItems.length === 0" class="empty-cart-sidebar text-center q-pa-lg">
+                      <q-img src="images/car_empty.png" style="width: 200px; max-width: 100%; opacity: 0.8;" />
+                      <div class="empty-cart-text q-mt-md">Tu carrito está vacío</div>
                       <div class="empty-cart-sub q-mt-xs">Agrega productos para comenzar</div>
                     </div>
 
-                    <!-- Cart Items -->
-                    <div v-else class="cart-items">
-                      <div
-                        v-for="item in cartItems"
-                        :key="item.id"
-                        class="cart-item"
-                      >
-                        <div class="row items-start justify-between no-wrap">
-                          <div class="cart-item-info col">
-                            <div class="cart-item-name">{{ item.name }}</div>
-                            <div class="cart-item-price">$ {{ formatNumber(item.price) }} × {{ item.amount }}</div>
+                    <!-- Cart Items (Enhanced Layout from CartView.vue) -->
+                    <div v-else class="cart-items-container">
+                      <div class="cart-items-list">
+                        <div
+                          v-for="item in cartItems"
+                          :key="item.id"
+                          class="cart-item-row"
+                        >
+                          <div class="item-header-sidebar">
+                            <div class="item-info-sidebar">
+                              <div class="item-name-sidebar">{{ item.name }}</div>
+                              <div class="item-price-sidebar">$ {{ formatNumber(item.price) }}</div>
+                            </div>
+                            <div class="item-actions-sidebar">
+                              <div class="quantity-controls-sidebar">
+                                <q-btn
+                                  icon="remove"
+                                  flat
+                                  round
+                                  size="xs"
+                                  class="quantity-btn-sidebar"
+                                  @click="decrementQuantity(item)"
+                                  :disable="item.amount <= 1"
+                                />
+                                <span class="quantity-display-sidebar">{{ item.amount }}</span>
+                                <q-btn
+                                  icon="add"
+                                  flat
+                                  round
+                                  size="xs"
+                                  class="quantity-btn-sidebar"
+                                  @click="incrementQuantity(item)"
+                                />
+                              </div>
+                              <q-btn
+                                icon="delete_outline"
+                                flat
+                                round
+                                dense
+                                size="sm"
+                                color="negative"
+                                class="remove-item-btn-sidebar"
+                                @click="removeItem(item)"
+                              />
+                            </div>
                           </div>
-                          <div class="cart-item-total q-ml-sm">
-                            $ {{ formatNumber(item.price * item.amount) }}
+                          <!-- Observation Badge (Optional) -->
+                          <div v-if="item.observation" class="item-observation-sidebar">
+                            <q-icon name="chat_bubble_outline" size="12px" class="q-mr-xs" />
+                            {{ item.observation }}
                           </div>
                         </div>
                       </div>
 
-                      <div class="cart-divider"></div>
+                      <div class="sidebar-separator"></div>
 
-                      <!-- Cart Total -->
-                      <div class="cart-total row items-center justify-between">
-                        <div class="cart-total-label">Total</div>
-                        <div class="cart-total-amount">$ {{ formatNumber(cartTotal) }}</div>
+                      <!-- Summary Section (Matching CartView.vue) -->
+                      <div class="sidebar-summary">
+                        <div class="summary-row-sidebar">
+                          <span class="summary-label-sidebar">Subtotal</span>
+                          <span class="summary-value-sidebar">$ {{ formatNumber(cartTotal) }}</span>
+                        </div>
+
+                        <div class="summary-total-sidebar">
+                          <span class="total-label-sidebar">Total</span>
+                          <span class="total-value-sidebar">$ {{ formatNumber(cartTotal) }}</span>
+                        </div>
                       </div>
-
-                      <!-- View Cart Button -->
-                      <q-btn
-                        class="full-width q-mt-lg checkout-btn"
-                        size="md"
-                        unelevated
-                        rounded
-                        no-caps
-                        @click="currentTab = 'checkout'"
-                        aria-label="Ver mi pedido"
-                      >
-                        <q-icon name="shopping_cart" size="18px" class="q-mr-xs" />
-                        Ver mi pedido
-                      </q-btn>
                     </div>
                   </div>
                 </div>
@@ -229,38 +257,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Floating Cart Button (mobile only, menu tab with items) -->
-        <q-page-sticky
-          v-if="currentTab === 'menu' && cart.total.value > 0 && $q.screen.lt.md"
-          position="bottom"
-          :offset="[0, 0]"
-          class="floating-cart-container"
-        >
-          <div class="floating-cart-footer">
-            <q-btn
-              unelevated
-              rounded
-              no-caps
-              class="continuar-btn full-width shadow-4"
-              @click="currentTab = 'cart'"
-            >
-              <div class="row full-width justify-between items-center q-px-sm">
-                <div class="row items-center">
-                  <q-badge
-                    color="white"
-                    text-color="dark"
-                    :label="cart.itemCount.value"
-                    class="q-mr-sm text-weight-bold"
-                    style="padding: 4px 8px"
-                  />
-                  <span class="text-weight-bold">Ver mi pedido</span>
-                </div>
-                <span class="text-weight-bold">$ {{ formatNumber(cart.total.value) }}</span>
-              </div>
-            </q-btn>
-          </div>
-        </q-page-sticky>
 
         <!-- Schedule Dialog -->
         <q-dialog
@@ -635,6 +631,21 @@ onMounted(async () => {
   }, 60000)
 })
 
+// Sidebar Cart Methods
+const incrementQuantity = (item) => {
+  cart.updateQuantity(item.id, item.amount + 1)
+}
+
+const decrementQuantity = (item) => {
+  if (item.amount > 1) {
+    cart.updateQuantity(item.id, item.amount - 1)
+  }
+}
+
+const removeItem = (item) => {
+  cart.removeFromCart(item.id)
+}
+
 onBeforeUnmount(() => {
   if (timeUpdateInterval) {
     clearInterval(timeUpdateInterval)
@@ -824,7 +835,7 @@ onBeforeUnmount(() => {
 
 @media (min-width: 1024px) {
   .catalog-content-wrapper {
-    padding: 24px 48px 48px;
+    padding: 24px 70px 48px;
   }
 
   .catalog-content-card {
@@ -860,7 +871,9 @@ onBeforeUnmount(() => {
   border: 1px solid #e8ecf0;
   box-shadow: 0 2px 16px rgba(0,0,0,0.07);
   padding: 20px;
-  min-height: 320px;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
 }
 
 .cart-header {
@@ -870,6 +883,7 @@ onBeforeUnmount(() => {
   padding-bottom: 14px;
   border-bottom: 1.5px solid #f0f2f5;
   margin-bottom: 16px;
+  flex-shrink: 0;
 }
 
 .cart-header-title {
@@ -884,121 +898,200 @@ onBeforeUnmount(() => {
   color: var(--q-primary);
 }
 
-.empty-cart {
+/* Empty State Sidebar */
+.empty-cart-sidebar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   padding: 24px 0;
 }
 
-.empty-cart-icon-wrapper {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background: #f7f8fa;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto;
-}
-
 .empty-cart-text {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #4a5568;
-}
-
-.empty-cart-sub {
-  font-size: 0.8rem;
-  color: #a0aec0;
-}
-
-.cart-items {
-  max-height: calc(100vh - 340px);
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #e2e8f0 transparent;
-}
-
-.cart-items::-webkit-scrollbar {
-  width: 4px;
-}
-.cart-items::-webkit-scrollbar-track {
-  background: transparent;
-}
-.cart-items::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
-  border-radius: 4px;
-}
-
-.cart-item {
-  background: #f8fafc;
-  border-radius: 10px;
-  padding: 10px 12px;
-  margin-bottom: 8px;
-  border: 1px solid #edf2f7;
-  transition: background 0.15s ease;
-}
-
-.cart-item:hover {
-  background: #f0f4f8;
-}
-
-.cart-item-name {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #2d3748;
-  line-height: 1.3;
-}
-
-.cart-item-price {
-  font-size: 0.78rem;
-  color: #718096;
-  margin-top: 3px;
-}
-
-.cart-item-total {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: #2d3748;
-  white-space: nowrap;
-}
-
-.cart-divider {
-  height: 1.5px;
-  background: #edf2f7;
-  margin: 14px 0;
-  border-radius: 1px;
-}
-
-.cart-total {
-  padding-top: 4px;
-}
-
-.cart-total-label {
   font-size: 0.95rem;
   font-weight: 600;
   color: #4a5568;
 }
 
-.cart-total-amount {
-  font-size: 1.3rem;
+.empty-cart-sub {
+  font-size: 0.85rem;
+  color: #a0aec0;
+}
+
+/* Cart Items Container */
+.cart-items-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.cart-items-list {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+  margin-bottom: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: #e2e8f0 transparent;
+}
+
+.cart-items-list::-webkit-scrollbar {
+  width: 4px;
+}
+.cart-items-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cart-items-list::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 4px;
+}
+
+.cart-item-row {
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.cart-item-row:last-child {
+  border-bottom: none;
+}
+
+/* Item Header Sidebar */
+.item-header-sidebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.item-info-sidebar {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-name-sidebar {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2d3748;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.item-price-sidebar {
+  font-size: 0.8rem;
+  color: #718096;
+  margin-top: 2px;
+}
+
+/* Actions Sidebar */
+.item-actions-sidebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quantity-controls-sidebar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #f7f8fa;
+  border-radius: 8px;
+  padding: 2px;
+  border: 1px solid #edf2f7;
+}
+
+.quantity-btn-sidebar {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  color: #2d3748;
+}
+
+.quantity-display-sidebar {
+  min-width: 20px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.remove-item-btn-sidebar {
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.remove-item-btn-sidebar:hover {
+  opacity: 1;
+}
+
+/* Observation Sidebar */
+.item-observation-sidebar {
+  font-size: 0.75rem;
+  color: #718096;
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: #f8fafc;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  font-style: italic;
+}
+
+/* Sidebar Separator */
+.sidebar-separator {
+  height: 2px;
+  margin: 16px 0;
+  background-image: repeating-linear-gradient(
+    90deg,
+    #e2e8f0,
+    #e2e8f0 8px,
+    transparent 8px,
+    transparent 16px
+  );
+}
+
+/* Sidebar Summary */
+.sidebar-summary {
+  margin-bottom: 8px;
+}
+
+.summary-row-sidebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.summary-label-sidebar {
+  font-size: 0.85rem;
+  color: #718096;
+}
+
+.summary-value-sidebar {
+  font-size: 0.85rem;
+  color: #2d3748;
+  font-weight: 600;
+}
+
+.summary-total-sidebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+}
+
+.total-label-sidebar {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.total-value-sidebar {
+  font-size: 1.15rem;
   font-weight: 800;
   color: var(--q-primary);
-}
-
-/* ===== Checkout Button (Right Panel) ===== */
-.checkout-btn {
-  background: linear-gradient(135deg, var(--q-primary) 0%, color-mix(in srgb, var(--q-primary) 80%, #000) 100%);
-  color: #ffffff;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-  transition: filter 0.2s ease, transform 0.15s ease;
-}
-
-.checkout-btn:hover {
-  filter: brightness(1.07);
-}
-
-.checkout-btn:active {
-  transform: scale(0.98);
 }
 
 /* ===== Floating Cart Button (mobile) ===== */

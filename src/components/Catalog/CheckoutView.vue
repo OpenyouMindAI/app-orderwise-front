@@ -2,6 +2,10 @@
   <PageContainer
     title="Finalizar Pedido"
     @back="handleBack"
+    :footer-button-label="buttonText"
+    :footer-button-loading="submitting"
+    :footer-button-disable="!canProceed || submitting"
+    @footer-click="handleNext"
   >
     <!-- Authentication Overlay (shown when not authenticated) -->
     <div v-if="!isAuthenticated" class="auth-overlay">
@@ -472,18 +476,6 @@
       </q-step>
     </q-stepper>
 
-    <!-- Footer Slot -->
-    <template #footer>
-      <q-btn
-        :label="buttonText"
-        :loading="submitting"
-        :disable="!canProceed || submitting"
-        unelevated
-        no-caps
-        class="finalizar-btn full-width"
-        @click="handleNext"
-      />
-    </template>
   </PageContainer>
 </template>
 
@@ -1133,19 +1125,6 @@ const submitOrder = async () => {
   padding: 1rem;
   background: var(--surface);
   border-top: 1px solid var(--border);
-}
-
-.finalizar-btn {
-  height: 56px;
-  font-size: 17px;
-  font-weight: 600;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-  color: white !important;
-  border-radius: 12px;
-  letter-spacing: 0.5px;
-  transition: all 0.3s ease;
-  border: none !important;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
 }
 
 /* Authentication Overlay */

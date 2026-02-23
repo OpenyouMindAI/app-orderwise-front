@@ -2,13 +2,15 @@
   <PageContainer
     title="Mi pedido"
     @back="$emit('back-to-catalog')"
+    footer-button-label="Continuar"
+    :footer-button-visible="cart.items.value.length > 0"
+    @footer-click="$emit('checkout')"
   >
-    <!-- Empty State -->
-    <div v-if="cart.items.value.length === 0" class="empty-cart">
-      <q-img src="images/car_empty.png" style="width: 300px; max-width: 80vw;" />
-      <span class="text-subtitle2 text-center q-mt-md">
-        No hay productos en la orden
-      </span>
+    <!-- Empty Cart State -->
+    <div v-if="cart.items.value.length === 0" class="empty-cart-view text-center q-pa-lg">
+      <q-img src="images/car_empty.png" style="width: 200px; max-width: 100%; opacity: 0.8;" />
+      <div class="empty-cart-text q-mt-md">Tu carrito está vacío</div>
+      <div class="empty-cart-sub q-mt-xs">Agrega productos para comenzar</div>
       <q-btn
         color="primary"
         label="Ver Catálogo"
@@ -20,86 +22,75 @@
     </div>
 
     <!-- Cart Items -->
-    <template v-else>
-      <div class="cart-content">
-        <!-- Items List -->
-        <div class="cart-items">
-          <div
-            v-for="item in cart.items.value"
-            :key="item.id"
-            class="cart-item"
-          >
-            <!-- Product Name and Quantity Controls -->
-            <div class="item-header">
-              <div class="item-info">
-                <div class="item-name">{{ item.name }}</div>
-                <div class="item-price">$ {{ formatNumber(item.subtotal) }}</div>
-              </div>
-              <div class="item-actions">
-                <div class="quantity-controls-cart">
-                  <q-btn
-                    icon="remove"
-                    flat
-                    round
-                    size="sm"
-                    class="quantity-btn-cart"
-                    @click="decrementQuantity(item)"
-                    :disable="item.amount <= 1"
-                  />
-                  <span class="quantity-display-cart">{{ item.amount }}</span>
-                  <q-btn
-                    icon="add"
-                    flat
-                    round
-                    size="sm"
-                    class="quantity-btn-cart"
-                    @click="incrementQuantity(item)"
-                  />
-                </div>
+    <div v-else class="cart-items-container-view">
+      <div class="cart-items-list-view">
+        <div
+          v-for="item in cart.items.value"
+          :key="item.id"
+          class="cart-item-row-view"
+        >
+          <div class="item-header-view">
+            <div class="item-info-view">
+              <div class="item-name-view">{{ item.name }}</div>
+              <div class="item-price-view">$ {{ formatNumber(item.price) }}</div>
+            </div>
+            <div class="item-actions-view">
+              <div class="quantity-controls-view">
                 <q-btn
-                  icon="delete_outline"
+                  icon="remove"
                   flat
                   round
-                  dense
-                  color="negative"
-                  class="remove-item-btn"
-                  @click="removeItem(item)"
+                  size="xs"
+                  class="quantity-btn-view"
+                  @click="decrementQuantity(item)"
+                  :disable="item.amount <= 1"
+                />
+                <span class="quantity-display-view">{{ item.amount }}</span>
+                <q-btn
+                  icon="add"
+                  flat
+                  round
+                  size="xs"
+                  class="quantity-btn-view"
+                  @click="incrementQuantity(item)"
                 />
               </div>
+              <q-btn
+                icon="delete_outline"
+                flat
+                round
+                dense
+                size="sm"
+                color="negative"
+                class="remove-item-btn-view"
+                @click="removeItem(item)"
+              />
             </div>
           </div>
-        </div>
-
-        <!-- Dashed Separator -->
-        <div class="separator"></div>
-
-        <!-- Summary Section -->
-        <div class="cart-summary">
-          <div class="summary-title">Resumen</div>
-
-          <div class="summary-row">
-            <span class="summary-label">Subtotal</span>
-            <span class="summary-value">$ {{ formatNumber(cart.total.value) }}</span>
-          </div>
-
-          <div class="summary-total">
-            <span class="total-label">Total</span>
-            <span class="total-value">$ {{ formatNumber(cart.total.value) }}</span>
+          <!-- Observation Badge -->
+          <div v-if="item.observation" class="item-observation-view">
+            <q-icon name="chat_bubble_outline" size="12px" class="q-mr-xs" />
+            {{ item.observation }}
           </div>
         </div>
       </div>
-    </template>
 
-    <!-- Footer Slot -->
-    <template #footer v-if="cart.items.value.length > 0">
-      <q-btn
-        label="Continuar"
-        unelevated
-        no-caps
-        class="continuar-btn full-width"
-        @click="$emit('checkout')"
-      />
-    </template>
+      <div class="sidebar-separator"></div>
+
+      <!-- Summary Section -->
+      <div class="sidebar-summary">
+        <div class="summary-row-sidebar">
+          <span class="summary-label-sidebar">Subtotal</span>
+          <span class="summary-value-sidebar">$ {{ formatNumber(cart.total.value) }}</span>
+        </div>
+
+        <div class="summary-total-sidebar">
+          <span class="total-label-sidebar">Total</span>
+          <span class="total-value-sidebar">$ {{ formatNumber(cart.total.value) }}</span>
+        </div>
+      </div>
+    </div>
+
   </PageContainer>
 </template>
 
@@ -131,244 +122,190 @@ const removeItem = (item) => {
 </script>
 
 <style scoped>
+/* Page Layout */
+.cart-items-container-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  background: white;
+}
+
+.cart-items-list-view {
+  flex: 1;
+}
+
 /* Empty State */
-.empty-cart {
+.empty-cart-view {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
   min-height: 60vh;
 }
 
-/* Cart Content */
-.cart-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 20px;
-  overflow-y: auto;
-  overflow-x: hidden;
+.empty-cart-text {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #4a5568;
 }
 
-/* Cart Items */
-.cart-items {
-  flex: 1;
+.empty-cart-sub {
+  font-size: 0.95rem;
+  color: #a0aec0;
 }
 
-.cart-item {
-  padding: 20px 0;
+/* Item Row */
+.cart-item-row-view {
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f2f5;
 }
 
-.cart-item:not(:last-child) {
-  border-bottom: 1px solid var(--border);
+.cart-item-row-view:last-child {
+  border-bottom: none;
 }
 
-/* Item Header */
-.item-header {
+.item-header-view {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
+  gap: 12px;
 }
 
-.item-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.remove-item-btn {
-  margin-left: 4px;
-}
-
-.item-info {
+.item-info-view {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0; /* Critical for preventing flex items from pushing parent width */
+  min-width: 0;
 }
 
-.item-name {
-  font-size: 18px;
+.item-name-view {
+  font-size: 1rem;
   font-weight: 600;
-  color: var(--text);
+  color: #2d3748;
   line-height: 1.3;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  line-clamp: 2;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
 }
 
-.item-price {
-  font-size: 16px;
-  font-weight: 400;
-  color: var(--text);
+.item-price-view {
+  font-size: 0.9rem;
+  color: #718096;
+  margin-top: 4px;
 }
 
-/* Quantity Controls */
-.quantity-controls-cart {
+/* Actions */
+.item-actions-view {
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--border-radius-md);
-  padding: 0.5rem;
-  background: var(--surface);
 }
 
-.quantity-btn-cart {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  border: 1px solid var(--border);
-  border-radius: var(--border-radius-sm);
-  background: var(--surface);
-  color: var(--text);
-}
-
-.quantity-btn-cart:hover {
-  background: var(--background);
-}
-
-.quantity-display-cart {
-  min-width: 32px;
-  text-align: center;
-  font-weight: 600;
-  font-size: 16px;
-  color: var(--text);
-}
-
-/* Item Observation */
-.item-observation {
+.quantity-controls-view {
   display: flex;
   align-items: center;
-  font-size: 13px;
-  color: var(--text-light);
+  gap: 4px;
+  background: #f7f8fa;
+  border-radius: 8px;
+  padding: 2px;
+  border: 1px solid #edf2f7;
+}
+
+.quantity-btn-view {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  color: #2d3748;
+}
+
+.quantity-display-view {
+  min-width: 24px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.remove-item-btn-view {
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.remove-item-btn-view:hover {
+  opacity: 1;
+}
+
+/* Observation */
+.item-observation-view {
+  font-size: 0.8rem;
+  color: #718096;
   margin-top: 8px;
-  padding: 8px;
-  background: var(--background);
-  border-radius: var(--border-radius-sm);
+  padding: 6px 10px;
+  background: #f8fafc;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  font-style: italic;
 }
 
 /* Separator */
-.separator {
+.sidebar-separator {
   height: 2px;
-  margin: 24px 0;
+  margin: 20px 0;
   background-image: repeating-linear-gradient(
     90deg,
-    var(--border),
-    var(--border) 8px,
+    #e2e8f0,
+    #e2e8f0 8px,
     transparent 8px,
     transparent 16px
   );
 }
 
 /* Summary */
-.cart-summary {
-  margin-bottom: 24px;
+.sidebar-summary {
+  margin-bottom: 20px;
 }
 
-.summary-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 16px;
-}
-
-.summary-row {
+.summary-row-sidebar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
-.summary-label {
-  font-size: 16px;
-  color: var(--text-light);
+.summary-label-sidebar {
+  font-size: 0.9rem;
+  color: #718096;
 }
 
-.summary-value {
-  font-size: 16px;
-  color: var(--text);
-  font-weight: 500;
+.summary-value-sidebar {
+  font-size: 0.95rem;
+  color: #2d3748;
+  font-weight: 600;
 }
 
-.summary-total {
+.summary-total-sidebar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 16px;
+  padding-top: 10px;
 }
 
-.total-label {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.total-value {
-  font-size: 20px;
+.total-label-sidebar {
+  font-size: 1.1rem;
   font-weight: 700;
-  color: var(--text);
+  color: #1a202c;
 }
 
-/* Footer */
-
-.continuar-btn {
-  height: 56px;
-  font-size: 17px;
-  font-weight: 600;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-  color: white !important;
-  border-radius: 12px;
-  letter-spacing: 0.5px;
-  transition: all 0.3s ease;
-  border: none !important;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+.total-value-sidebar {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--q-primary);
 }
 
-.continuar-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
-  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
-}
-
-.continuar-btn:active {
-  transform: translateY(0);
-}
-
-/* Responsive */
+/* Responsive adjustments */
 @media (max-width: 599px) {
-  .cart-content {
+  .cart-items-container-view {
     padding: 16px;
-  }
-
-  .item-name {
-    font-size: 16px;
-  }
-
-  .item-price {
-    font-size: 14px;
-  }
-
-  .quantity-controls-cart {
-    padding: 0.25rem;
-  }
-
-  .quantity-btn-cart {
-    width: 28px;
-    height: 28px;
-    min-width: 28px;
-  }
-
-  .quantity-display-cart {
-    min-width: 28px;
-    font-size: 14px;
   }
 }
 </style>

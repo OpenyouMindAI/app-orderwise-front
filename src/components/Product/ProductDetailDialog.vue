@@ -3,37 +3,31 @@
     v-model="internalModel"
     no-focus-restore
     no-refocus
-    :maximized="$q.screen.lt.sm"
+    :maximized="$q.screen.lt.md"
     transition-show="fade"
     transition-hide="fade"
   >
-    <q-card class="product-detail-card" flat>
-      <!-- Scrollable Content -->
-      <div class="product-content-scroll">
-        <!-- Hero Image Selection -->
-        <div class="hero-section relative-position">
-          <q-img
-            :src="heroImage"
-            class="hero-image"
-            height="350px"
-            fit="cover"
-          >
+    <PageContainer
+      class="product-detail-card"
+      :show-back-button="true"
+      @back="close"
+      :overlay-header="true"
+      :footer-button-label="hasStock ? `Agregar a mi pedido — $ ${formatNumber(totalPrice)}` : 'Agotado'"
+      :footer-button-disable="!hasStock"
+      @footer-click="addToOrder"
+    >
+      <!-- Hero Image Selection -->
+      <div class="hero-section relative-position">
+        <q-img
+          :src="heroImage"
+          class="hero-image"
+          height="350px"
+          fit="cover"
+        >
           <template v-slot:loading>
             <q-skeleton height="350px" square />
           </template>
         </q-img>
-        <div class="back-button-overlay">
-          <q-btn
-            icon="arrow_back_ios_new"
-            flat
-            round
-            dense
-            color="dark"
-            class="back-btn bg-white shadow-2"
-            size="sm"
-            @click="close"
-          />
-        </div>
       </div>
 
       <!-- Content Section -->
@@ -91,42 +85,26 @@
             class="comment-input"
           />
         </div>
-      </div>
-      </div>
 
-        <!-- Fixed Bottom Button -->
-        <div class="action-footer">
-          <div v-if="!hasStock" class="out-of-stock-banner q-mb-md flex flex-center">
-            <q-icon name="error_outline" color="negative" size="xs" class="q-mr-xs" />
-            <span class="text-negative text-weight-bold">Producto actualmente sin unidades disponibles</span>
-          </div>
-
-          <q-btn
-            unelevated
-            rounded
-            no-caps
-            :color="hasStock ? 'dark' : 'grey-5'"
-            text-color="white"
-            class="full-width add-to-order-btn"
-            @click="addToOrder"
-            :disable="!hasStock"
-          >
-            <div class="row full-width justify-between items-center q-px-sm">
-              <span class="text-bold">{{ hasStock ? 'Agregar a mi pedido' : 'Agotado' }}</span>
-              <span class="text-bold">$ {{ formatNumber(totalPrice) }}</span>
-            </div>
-          </q-btn>
+        <div v-if="!hasStock" class="out-of-stock-banner q-mt-lg flex flex-center">
+          <q-icon name="error_outline" color="negative" size="xs" class="q-mr-xs" />
+          <span class="text-negative text-weight-bold">Producto actualmente sin unidades disponibles</span>
         </div>
-    </q-card>
+      </div>
+    </PageContainer>
   </q-dialog>
 </template>
 
 <script>
 import { formatNumber } from 'src/const/mixins'
 import { noProductImage as defaultImage } from 'src/const/images'
+import PageContainer from 'src/components/Navigation/PageContainer.vue'
 
 export default {
   name: 'ProductDetailDialog',
+  components: {
+    PageContainer
+  },
   props: {
     modelValue: {
       type: Boolean,
@@ -219,40 +197,6 @@ export default {
   border-radius: 0;
 }
 
-.product-content-scroll {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  background: var(--background);
-}
-
-.hero-section {
-  width: 100%;
-}
-
-.hero-image {
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-.back-button-overlay {
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  z-index: 10;
-}
-
-.back-btn {
-  width: 36px;
-  height: 36px;
-  min-height: 36px;
-}
-
-.back-btn :deep(.q-icon) {
-  font-size: 16px;
-  margin-right: -2px;
-}
-
 .product-name {
   line-height: 1.2;
   font-size: 20px;
@@ -304,43 +248,6 @@ export default {
 
 .comment-input :deep(.q-field__native) {
   color: var(--text);
-}
-
-.action-footer {
-  background: var(--surface);
-  padding: 16px 20px;
-  border-top: 1px solid var(--border);
-  z-index: 10;
-}
-
-.out-of-stock-banner {
-  background: #fff5f5;
-  border: 1px solid #feb2b2;
-  padding: 10px;
-  border-radius: 8px;
-}
-
-.add-to-order-btn {
-  height: 56px;
-  font-size: 17px;
-  font-weight: 600;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-  color: white !important;
-  border-radius: 12px;
-  letter-spacing: 0.5px;
-  transition: all 0.3s ease;
-  border: none !important;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
-}
-
-.add-to-order-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
-  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
-}
-
-.add-to-order-btn:active {
-  transform: translateY(0);
 }
 
 .opacity-2 {
