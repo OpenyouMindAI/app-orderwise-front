@@ -1,19 +1,8 @@
 <template>
-  <div class="checkout-view">
-    <div class="checkout-header">
-      <q-btn
-        icon="arrow_back_ios_new"
-        flat
-        round
-        dense
-        color="dark"
-        class="back-btn bg-white shadow-2"
-        size="sm"
-        @click="handleBack"
-      />
-      <div class="header-title">Finalizar Pedido</div>
-    </div>
-
+  <PageContainer
+    title="Finalizar Pedido"
+    @back="handleBack"
+  >
     <!-- Authentication Overlay (shown when not authenticated) -->
     <div v-if="!isAuthenticated" class="auth-overlay">
       <div class="auth-container">
@@ -483,8 +472,8 @@
       </q-step>
     </q-stepper>
 
-    <!-- Smart Sticky Bottom Button -->
-    <div class="checkout-footer">
+    <!-- Footer Slot -->
+    <template #footer>
       <q-btn
         :label="buttonText"
         :loading="submitting"
@@ -494,8 +483,8 @@
         class="finalizar-btn full-width"
         @click="handleNext"
       />
-    </div>
-  </div>
+    </template>
+  </PageContainer>
 </template>
 
 <script setup>
@@ -510,6 +499,7 @@ import { useOrderStore } from 'src/stores/order'
 import { formatNumber, loading, notify, setFiles } from 'src/const/mixins'
 import FileButtonComponent from 'src/components/FileButtonComponent.vue'
 import AddressComponent from 'src/components/Billing/AddressComponent.vue'
+import PageContainer from 'src/components/Navigation/PageContainer.vue'
 import { api } from 'boot/axios'
 
 // Emits
@@ -799,25 +789,17 @@ const submitOrder = async () => {
 </script>
 
 <style scoped>
-.checkout-view {
-  min-height: 100dvh;
+/* Authentication Overlay */
+.auth-overlay {
+  position: absolute;
+  inset: 0;
   background: var(--background);
-  display: flex;
-  flex-direction: column;
-  overflow-x: hidden;
+  z-index: 100;
+  overflow-y: auto;
+  padding: 24px 16px;
 }
 
 /* Header */
-.checkout-header {
-  gap: 1rem;
-  display: flex;
-  align-items: center;
-  padding: 16px 20px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  position: relative;
-}
-
 .back-btn {
   width: 36px;
   height: 36px;
@@ -841,9 +823,7 @@ const submitOrder = async () => {
 }
 
 .checkout-stepper :deep(.q-stepper__header) {
-  padding: 0 4px;
   position: sticky;
-  top: 73px; /* Height of checkout-header (16*2 + 20 + 21ish) */
   z-index: 99;
 }
 
@@ -1155,17 +1135,6 @@ const submitOrder = async () => {
   border-top: 1px solid var(--border);
 }
 
-/* Footer */
-.checkout-footer {
-  position: sticky;
-  bottom: 0;
-  background: var(--surface);
-  padding: 16px 20px;
-  border-top: 1px solid var(--border);
-  margin-top: auto;
-  z-index: 1000;
-}
-
 .finalizar-btn {
   height: 56px;
   font-size: 17px;
@@ -1177,30 +1146,6 @@ const submitOrder = async () => {
   transition: all 0.3s ease;
   border: none !important;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
-}
-
-.finalizar-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
-  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
-}
-
-.finalizar-btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.finalizar-btn:disabled {
-  background: var(--border) !important;
-  color: var(--text-light) !important;
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-/* Safe area support */
-@supports (padding: max(0px)) {
-  .checkout-footer {
-    padding-bottom: max(16px, env(safe-area-inset-bottom));
-  }
 }
 
 /* Authentication Overlay */

@@ -221,25 +221,10 @@ const selectCategory = (categoryId) => {
 
 const scrollToCategory = async (categoryId) => {
   await nextTick()
-
   const el = document.getElementById(`category-${categoryId}`)
-  if (!el) return
-
-  // Obtener la altura del filtro sticky para compensar el offset
-  const stickyEl = document.querySelector('.sticky-filter-container')
-  const stickyHeight = stickyEl?.offsetHeight || 0
-
-  el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-
-  // Compensar el height del sticky header
-  requestAnimationFrame(() => {
-    const scrollParent = el.closest('.q-panel.scroll') || window
-    if (scrollParent === window) {
-      window.scrollBy({ top: -(stickyHeight + 12), behavior: 'smooth' })
-    } else {
-      scrollParent.scrollTop -= (stickyHeight + 12)
-    }
-  })
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 }
 </script>
 
@@ -259,7 +244,6 @@ const scrollToCategory = async (categoryId) => {
   width: 100%;
   background: #ffffff;
   padding: 8px 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   /* Transición suave */
   transition: all 0.3s ease;
 }
@@ -347,6 +331,7 @@ const scrollToCategory = async (categoryId) => {
 }
 
 .category-section {
+  scroll-margin-top: 130px;
   animation: fadeInUp 0.3s ease both;
 }
 

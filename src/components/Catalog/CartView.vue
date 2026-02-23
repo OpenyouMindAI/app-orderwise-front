@@ -1,20 +1,8 @@
 <template>
-  <div class="cart-view">
-    <!-- Header with Back Button -->
-    <div class="cart-header">
-      <q-btn
-        icon="arrow_back_ios_new"
-        flat
-        round
-        dense
-        color="dark"
-        class="back-btn bg-white shadow-2"
-        size="sm"
-        @click="$emit('back-to-catalog')"
-      />
-      <div class="header-title">Mi pedido</div>
-    </div>
-
+  <PageContainer
+    title="Mi pedido"
+    @back="$emit('back-to-catalog')"
+  >
     <!-- Empty State -->
     <div v-if="cart.items.value.length === 0" class="empty-cart">
       <q-img src="images/car_empty.png" style="width: 300px; max-width: 80vw;" />
@@ -100,24 +88,25 @@
           </div>
         </div>
       </div>
-
-      <!-- Continue Button - Moved outside for better sticky behavior and to avoid horizontal scroll -->
-      <div class="cart-footer">
-        <q-btn
-          label="Continuar"
-          unelevated
-          no-caps
-          class="continuar-btn full-width"
-          @click="$emit('checkout')"
-        />
-      </div>
     </template>
-  </div>
+
+    <!-- Footer Slot -->
+    <template #footer v-if="cart.items.value.length > 0">
+      <q-btn
+        label="Continuar"
+        unelevated
+        no-caps
+        class="continuar-btn full-width"
+        @click="$emit('checkout')"
+      />
+    </template>
+  </PageContainer>
 </template>
 
 <script setup>
 import { useCart } from 'src/composables/useCart'
 import { formatNumber } from 'src/const/mixins'
+import PageContainer from 'src/components/Navigation/PageContainer.vue'
 
 // Emits
 defineEmits(['checkout', 'back-to-catalog'])
@@ -139,47 +128,9 @@ const decrementQuantity = (item) => {
 const removeItem = (item) => {
   cart.removeFromCart(item.id)
 }
-
 </script>
 
 <style scoped>
-.cart-view {
-  min-height: 100dvh;
-  background: var(--background);
-  display: flex;
-  flex-direction: column;
-  overflow-x: hidden;
-  width: 100%;
-}
-
-/* Header */
-.cart-header {
-  gap: 1rem;
-  display: flex;
-  align-items: center;
-  padding: 16px 20px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  position: relative;
-}
-
-.back-btn {
-  width: 36px;
-  height: 36px;
-  min-height: 36px;
-}
-
-.back-btn :deep(.q-icon) {
-  font-size: 16px;
-  margin-right: -2px; /* Center adjustment for arrow_back_ios_new */
-}
-
-.header-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text);
-}
-
 /* Empty State */
 .empty-cart {
   flex: 1;
@@ -367,13 +318,6 @@ const removeItem = (item) => {
 }
 
 /* Footer */
-.cart-footer {
-  background: var(--surface);
-  padding: 16px 20px;
-  border-top: 1px solid var(--border);
-  position: relative;
-  z-index: 10;
-}
 
 .continuar-btn {
   height: 56px;
