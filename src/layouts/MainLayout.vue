@@ -1476,7 +1476,7 @@ export default {
         if (redirected) return
       }
 
-      this.showSubscriptionDialog = true
+      // this.showSubscriptionDialog = true
     },
 
     /**
