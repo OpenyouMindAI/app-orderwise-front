@@ -1466,14 +1466,14 @@ export default {
       }
     },
     /**
-     * New method to handle payment flow before company setup
+     * Handle payment flow before company setup
+     * @return {Promise<void>}
      */
     async proceedToPaymentFirst () {
       const hasPendingPlan = localStorage.getItem('pending_plan_subscription')
 
       if (hasPendingPlan) {
-        const redirected = await this.processPendingSubscription()
-        if (redirected) return
+        await this.processPendingSubscription()
       }
 
       // this.showSubscriptionDialog = true
@@ -1614,6 +1614,7 @@ export default {
     },
     /**
      * Process pending subscription from localStorage
+     * @return {Promise<boolean>}
      */
     async processPendingSubscription () {
       const pendingPlan = localStorage.getItem('pending_plan_subscription')
