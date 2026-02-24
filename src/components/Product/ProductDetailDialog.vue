@@ -180,21 +180,28 @@ export default {
 
 <style scoped>
 .product-detail-card {
-  height: 100dvh;
   width: 100%;
   max-width: 500px;
-  border-radius: 24px;
   background: var(--surface);
-  display: flex;
-  flex-direction: column;
+  border-radius: 24px;
   overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.12);
 }
 
-/* Override for maximized state on mobile */
-.q-dialog__inner--maximized .product-detail-card {
-  max-width: 100%;
-  height: 100dvh;
-  border-radius: 0;
+/* Override PageContainer's 100dvh only on Desktop */
+@media (min-width: 1024px) {
+  .product-detail-card :deep(.page-container) {
+    min-height: auto !important;
+  }
+}
+
+/* Fullscreen for Mobile/Tablet */
+@media (max-width: 1023px) {
+  .product-detail-card {
+    height: 100dvh;
+    max-width: 100%;
+    border-radius: 0;
+  }
 }
 
 .product-name {

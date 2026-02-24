@@ -149,7 +149,7 @@
     </div>
 
     <!-- Floating Cart Button -->
-    <div class="cart-sticky-footer">
+    <div class="cart-sticky-footer" v-if="cart.itemCount.value > 0">
       <q-btn
         unelevated
         rounded

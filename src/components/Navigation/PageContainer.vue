@@ -90,7 +90,6 @@ defineEmits(['back', 'footer-click'])
 
 <style scoped>
 .page-container {
-  min-height: 100dvh;
   background: var(--background);
   display: flex;
   flex-direction: column;
