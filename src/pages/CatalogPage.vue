@@ -133,7 +133,10 @@
                   <q-icon name="schedule" size="18px" class="q-mr-xs" />
                   <span v-if="todaySchedule">
                     <template v-if="todaySchedule.isOpen">
-                      {{ todaySchedule.openTime }} a {{ todaySchedule.closeTime }}
+                      <span v-if="todaySchedule.openTime && todaySchedule.openTime.includes('|')" v-html="todaySchedule.openTime.split('|').map(t => t.trim()).join(' <span class=\'q-mx-xs\'>|</span> ')"></span>
+                      <span v-else-if="todaySchedule.openTime && todaySchedule.closeTime">
+                        {{ todaySchedule.openTime }} a {{ todaySchedule.closeTime }}
+                      </span>
                     </template>
                     <template v-else>
                       No disponible
@@ -570,7 +573,13 @@ const todaySchedule = computed(() => {
   if (!currentDayKey || !scheduleData.value || !scheduleData.value[currentDayKey]) {
     return null
   }
-  return scheduleData.value[currentDayKey]
+  const dayData = scheduleData.value[currentDayKey]
+  return {
+    ...dayData,
+    openTime: dayData?.from || '',
+    closeTime: dayData?.to || '',
+    isOpen: dayData?.isOpen || false
+  }
 })
 
 const weekSchedule = computed(() => {
