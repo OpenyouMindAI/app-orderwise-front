@@ -116,6 +116,60 @@
           </div>
         </div>
 
+        <!-- Card Banner horario -->
+        <div class="row justify-center q-pa-md">
+          <q-card class="schedule-info-card full-width" style="max-width: 500px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+            <q-card-section>
+              <div class="row items-center justify-between cursor-pointer q-py-sm" @click="scheduleExpanded = !scheduleExpanded">
+                <q-badge
+                  :color="isCurrentlyOpen ? 'green-2' : 'red-2'"
+                  :text-color="isCurrentlyOpen ? 'green-8' : 'red-8'"
+                  class="q-px-sm q-py-xs text-weight-bold"
+                  style="border-radius: 6px;"
+                >
+                  {{ isCurrentlyOpen ? 'Disponible' : 'No disponible' }}
+                </q-badge>
+                <div class="row items-center text-grey-7">
+                  <q-icon name="schedule" size="18px" class="q-mr-xs" />
+                  <span v-if="todaySchedule">
+                    <template v-if="todaySchedule.isOpen">
+                      {{ todaySchedule.openTime }} a {{ todaySchedule.closeTime }}
+                    </template>
+                    <template v-else>
+                      No disponible
+                    </template>
+                  </span>
+                  <q-icon :name="scheduleExpanded ? 'arrow_drop_up' : 'arrow_drop_down'" size="24px" />
+                </div>
+              </div>
+
+              <q-slide-transition>
+                <div v-show="scheduleExpanded" class="q-pt-sm">
+                  <div v-for="day in weekSchedule" :key="day.dayKey" class="row items-start q-mb-xs">
+                    <div class="col-2 text-weight-bold" :class="day.isToday ? 'text-primary' : 'text-grey-8'">
+                      {{ day.dayName.substring(0, 2).toUpperCase() }}
+                    </div>
+                    <div class="col-10 text-grey-7 row items-center">
+                      <template v-if="day.isOpen && !day.error">
+                        <q-icon name="schedule" size="16px" class="q-mr-xs" />
+                        <span v-if="day.openTime && day.openTime.includes('|')" v-html="day.openTime.split('|').map(t => `<q-icon name='schedule' size='16px' class='q-mr-xs' /> ${t.trim()}`).join(' <span class=\'q-mx-sm\'>|</span> ')"></span>
+                        <span v-else>{{ day.openTime }} a {{ day.closeTime }}</span>
+                      </template>
+                      <template v-else-if="!day.isOpen && !day.error">
+                        No disponible
+                      </template>
+                      <template v-if="day.error">
+                        <q-icon name="warning" color="warning" size="16px" class="q-mr-xs" />
+                        <span class="text-warning">{{ day.errorMessage }}</span>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </q-slide-transition>
+            </q-card-section>
+          </q-card>
+        </div>
+
         <!-- Main Content Area -->
         <div class="catalog-content-wrapper">
           <div class="catalog-content-card">
@@ -144,21 +198,21 @@
                       />
                     </q-tab-panel>
 
-                    <q-tab-panel name="cart" class="q-pa-none">
+                    <q-tab-panel v-if="!isMobileOrTablet" name="cart" class="q-pa-none">
                       <CartView
                         @checkout="goToCheckout"
                         @back-to-catalog="currentTab = 'menu'"
                       />
                     </q-tab-panel>
 
-                    <q-tab-panel name="checkout" class="q-pa-none">
+                    <q-tab-panel v-if="!isMobileOrTablet" name="checkout" class="q-pa-none">
                       <CheckoutView
                         @success="handleCheckoutSuccess"
                         @cancel="currentTab = 'cart'"
                       />
                     </q-tab-panel>
 
-                    <q-tab-panel name="orders" class="q-pa-none">
+                    <q-tab-panel v-if="!isMobileOrTablet" name="orders" class="q-pa-none">
                       <OrdersView @back-to-catalog="currentTab = 'menu'" />
                     </q-tab-panel>
                   </q-tab-panels>
@@ -339,6 +393,32 @@
           :product="selectedProduct"
           @add-to-cart="handleAddToCart"
         />
+
+        <!-- Sub-page Dialog for Mobile/Tablet (Full Screen) -->
+        <q-dialog
+          v-model="isSubPageDialogOpen"
+          persistent
+          maximized
+          transition-show="slide-up"
+          transition-hide="slide-down"
+        >
+          <div class="bg-white full-height column no-wrap">
+            <CartView
+              v-if="currentTab === 'cart'"
+              @checkout="goToCheckout"
+              @back-to-catalog="currentTab = 'menu'"
+            />
+            <CheckoutView
+              v-else-if="currentTab === 'checkout'"
+              @success="handleCheckoutSuccess"
+              @cancel="currentTab = 'cart'"
+            />
+            <OrdersView
+              v-else-if="currentTab === 'orders'"
+              @back-to-catalog="currentTab = 'menu'"
+            />
+          </div>
+        </q-dialog>
       </q-page>
     </q-page-container>
   </q-layout>
@@ -353,7 +433,7 @@ import { authentication } from 'src/stores/module-authentication'
 import { useCart } from 'src/composables/useCart'
 import { useOrderStore } from 'src/stores/order'
 import { formatNumber, notify } from 'src/const/mixins'
-import { Notify } from 'quasar'
+import { Notify, useQuasar } from 'quasar'
 
 import CatalogView from 'src/components/Catalog/CatalogView.vue'
 import CartView from 'src/components/Catalog/CartView.vue'
@@ -379,6 +459,7 @@ const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'satur
 // Router
 const route = useRoute()
 const router = useRouter()
+const $q = useQuasar()
 
 // Stores
 const catalogStore = useCatalogStore()
@@ -398,11 +479,23 @@ const loadingPage = ref(false)
 const showScheduleDialog = ref(false)
 const showAuthDialog = ref(false)
 const currentTime = ref(new Date())
+const scheduleExpanded = ref(true)
 let savedScrollPosition = 0
 let scrollContainerEl = null
 let timeUpdateInterval = null
 
 // Computed — User
+const isMobileOrTablet = computed(() => $q.screen.lt.md)
+
+const isSubPageDialogOpen = computed({
+  get: () => ['cart', 'checkout', 'orders'].includes(currentTab.value) && isMobileOrTablet.value,
+  set: (val) => {
+    if (!val) {
+      currentTab.value = 'menu'
+    }
+  }
+})
+
 const userInitials = computed(() => {
   if (!userSession.value) return 'U'
   const name = userSession.value.name || userSession.value.first_name || 'Usuario'
@@ -444,13 +537,28 @@ const isCurrentlyOpen = computed(() => {
     const currentMinutes = currentTime.value.getMinutes()
     const currentTimeInMinutes = currentHours * 60 + currentMinutes
 
-    const [openHours, openMinutes] = today.from.split(':').map(Number)
-    const [closeHours, closeMinutes] = today.to.split(':').map(Number)
+    // Support for multiple intervals separated by '|'
+    const fromIntervals = today.from.toString().split('|')
+    const toIntervals = today.to.toString().split('|')
 
-    const openTimeInMinutes = openHours * 60 + openMinutes
-    const closeTimeInMinutes = closeHours * 60 + closeMinutes
+    for (let i = 0; i < fromIntervals.length; i++) {
+      const fromStr = fromIntervals[i].trim()
+      const toStr = toIntervals[i]?.trim()
 
-    return currentTimeInMinutes >= openTimeInMinutes && currentTimeInMinutes < closeTimeInMinutes
+      if (!fromStr || !toStr) continue
+
+      const [openH, openM] = fromStr.split(':').map(Number)
+      const [closeH, closeM] = toStr.split(':').map(Number)
+
+      const openMins = (openH || 0) * 60 + (openM || 0)
+      const closeMins = (closeH || 0) * 60 + (closeM || 0)
+
+      if (currentTimeInMinutes >= openMins && currentTimeInMinutes < closeMins) {
+        return true
+      }
+    }
+
+    return false
   } catch (error) {
     console.error('Error in isCurrentlyOpen:', error)
     return false
@@ -721,7 +829,7 @@ onBeforeUnmount(() => {
 }
 
 .header-banner {
-  min-height: 270px;
+  min-height: 350px;
   background-size: cover;
   background-position: center;
   display: flex;
