@@ -3,11 +3,47 @@
     <q-page-container>
       <q-page class="catalog-page">
 
-        <!-- Navbar con perfil de usuario -->
+        <!-- Navbar con perfil de usuario y Empresa -->
         <div class="catalog-navbar text-white">
-          <q-toolbar class="items-center">
+          <q-toolbar class="items-center no-wrap">
             <q-space />
-            <div v-if="userSession" class="row items-center no-wrap">
+
+            <!-- Contact Info Bar (inspired by reference image) - Desktop -->
+            <div class="contact-info-container gt-xs">
+              <div class="row items-center no-wrap contact-info-bar">
+                <!-- Section 1: Location & Schedule -->
+                <div class="column q-px-md contact-section items-end">
+                  <div class="row items-center q-mb-xs no-wrap">
+                    <q-icon name="location_on" size="16px" class="q-mr-xs" />
+                    <span class="text-caption text-weight-medium ellipsis" style="max-width: 200px">{{ formatCompanyAddress(company?.address) }}</span>
+                  </div>
+                  <div class="row items-center no-wrap" v-if="todaySchedule && todaySchedule.isOpen">
+                    <q-icon name="schedule" size="16px" class="q-mr-xs" />
+                    <span class="text-caption text-weight-medium">
+                      {{ todaySchedule.from }} a {{ todaySchedule.to }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="vertical-divider"></div>
+
+                <!-- Section 2: Phone & Email -->
+                <div class="column q-px-md contact-section items-end">
+                  <div class="row items-center q-mb-xs no-wrap" v-if="company?.phone_number">
+                    <q-icon name="phone" size="16px" class="q-mr-xs" />
+                    <span class="text-caption text-weight-medium">{{ company.phone_number }}</span>
+                  </div>
+                  <div class="row items-center no-wrap" v-if="company?.email">
+                    <q-icon name="mail" size="16px" class="q-mr-xs" />
+                    <span class="text-caption text-weight-medium ellipsis" style="max-width: 150px">{{ company.email }}</span>
+                  </div>
+                </div>
+
+                <div class="vertical-divider"></div>
+              </div>
+            </div>
+
+            <div v-if="userSession" class="row items-center no-wrap q-ml-md">
               <q-btn
                 flat
                 round
@@ -90,87 +126,46 @@
               <div class="company-name text-center text-white text-bold text-uppercase q-mt-sm">
                 {{ company?.name }}
               </div>
+
+              <!-- Info de Contacto Móvil (Minimalista) -->
+              <div class="lt-sm row justify-center items-center q-mt-sm q-gutter-sm text-white" style="max-width: 95%;">
+                <div v-if="company?.address" class="contact-pill row items-center no-wrap">
+                  <q-icon name="location_on" size="14px" class="q-mr-xs opacity-80" />
+                  <span class="text-caption ellipsis" style="max-width: 160px; font-weight: 500;">{{ formatCompanyAddress(company?.address) }}</span>
+                </div>
+                <div v-if="company?.phone_number" class="contact-pill row items-center no-wrap">
+                  <q-icon name="phone" size="14px" class="q-mr-xs opacity-80" />
+                  <span class="text-caption" style="font-weight: 500;">{{ company.phone_number }}</span>
+                </div>
+                <div v-if="company?.email" class="contact-pill row items-center no-wrap">
+                  <q-icon name="mail" size="14px" class="q-mr-xs opacity-80" />
+                  <span class="text-caption ellipsis" style="max-width: 160px; font-weight: 500;">{{ company.email }}</span>
+                </div>
+              </div>
+
               <!-- Schedule Status Button -->
               <q-btn
                 v-if="scheduleData"
                 flat
-                rounded
                 no-caps
-                class="schedule-status-badge q-mt-sm"
+                class="schedule-status-badge q-mt-md text-white"
                 :class="isCurrentlyOpen ? 'status-open' : 'status-closed'"
                 aria-label="Ver horarios de atención"
                 @click="showScheduleDialog = true"
               >
                 <div class="row items-center no-wrap">
                   <span class="status-dot" :class="isCurrentlyOpen ? 'dot-open' : 'dot-closed'"></span>
-                  <div class="text-weight-bold status-text q-ml-xs">
+                  <div class="text-caption text-weight-medium status-text q-ml-sm" style="font-weight: 500;">
                     {{ isCurrentlyOpen ? 'Abierto' : 'Cerrado' }}
                   </div>
-                  <div v-if="isCurrentlyOpen && todaySchedule" class="schedule-times q-ml-xs">
+                  <div v-if="isCurrentlyOpen && todaySchedule" class="text-caption schedule-times q-ml-xs opacity-80">
                     ({{ todaySchedule.from }} – {{ todaySchedule.to }})
                   </div>
-                  <q-icon name="expand_more" size="16px" class="q-ml-xs arrow-icon" />
+                  <q-icon name="expand_more" size="14px" class="q-ml-xs arrow-icon opacity-80" />
                 </div>
               </q-btn>
             </div>
           </div>
-        </div>
-
-        <!-- Card Banner horario -->
-        <div class="row justify-center q-pa-md">
-          <q-card class="schedule-info-card full-width" style="max-width: 500px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
-            <q-card-section>
-              <div class="row items-center justify-between cursor-pointer q-py-sm" @click="scheduleExpanded = !scheduleExpanded">
-                <q-badge
-                  :color="isCurrentlyOpen ? 'green-2' : 'red-2'"
-                  :text-color="isCurrentlyOpen ? 'green-8' : 'red-8'"
-                  class="q-px-sm q-py-xs text-weight-bold"
-                  style="border-radius: 6px;"
-                >
-                  {{ isCurrentlyOpen ? 'Disponible' : 'No disponible' }}
-                </q-badge>
-                <div class="row items-center text-grey-7">
-                  <q-icon name="schedule" size="18px" class="q-mr-xs" />
-                  <span v-if="todaySchedule">
-                    <template v-if="todaySchedule.isOpen">
-                      <span v-if="todaySchedule.openTime && todaySchedule.openTime.includes('|')" v-html="todaySchedule.openTime.split('|').map(t => t.trim()).join(' <span class=\'q-mx-xs\'>|</span> ')"></span>
-                      <span v-else-if="todaySchedule.openTime && todaySchedule.closeTime">
-                        {{ todaySchedule.openTime }} a {{ todaySchedule.closeTime }}
-                      </span>
-                    </template>
-                    <template v-else>
-                      No disponible
-                    </template>
-                  </span>
-                  <q-icon :name="scheduleExpanded ? 'arrow_drop_up' : 'arrow_drop_down'" size="24px" />
-                </div>
-              </div>
-
-              <q-slide-transition>
-                <div v-show="scheduleExpanded" class="q-pt-sm">
-                  <div v-for="day in weekSchedule" :key="day.dayKey" class="row items-start q-mb-xs">
-                    <div class="col-2 text-weight-bold" :class="day.isToday ? 'text-primary' : 'text-grey-8'">
-                      {{ day.dayName.substring(0, 2).toUpperCase() }}
-                    </div>
-                    <div class="col-10 text-grey-7 row items-center">
-                      <template v-if="day.isOpen && !day.error">
-                        <q-icon name="schedule" size="16px" class="q-mr-xs" />
-                        <span v-if="day.openTime && day.openTime.includes('|')" v-html="day.openTime.split('|').map(t => `<q-icon name='schedule' size='16px' class='q-mr-xs' /> ${t.trim()}`).join(' <span class=\'q-mx-sm\'>|</span> ')"></span>
-                        <span v-else>{{ day.openTime }} a {{ day.closeTime }}</span>
-                      </template>
-                      <template v-else-if="!day.isOpen && !day.error">
-                        No disponible
-                      </template>
-                      <template v-if="day.error">
-                        <q-icon name="warning" color="warning" size="16px" class="q-mr-xs" />
-                        <span class="text-warning">{{ day.errorMessage }}</span>
-                      </template>
-                    </div>
-                  </div>
-                </div>
-              </q-slide-transition>
-            </q-card-section>
-          </q-card>
         </div>
 
         <!-- Main Content Area -->
@@ -198,26 +193,20 @@
                         :loading="loadingPage"
                         @open-product="openProductDetail"
                         @view-cart="currentTab = 'cart'"
+                        @checkout="goToCheckout"
                       />
                     </q-tab-panel>
 
-                    <q-tab-panel v-if="!isMobileOrTablet" name="cart" class="q-pa-none">
-                      <CartView
-                        @checkout="goToCheckout"
-                        @back-to-catalog="currentTab = 'menu'"
-                      />
-                    </q-tab-panel>
+                    <!-- Cart tab panel omitted on desktop: cart is always visible in the right sidebar -->
 
                     <q-tab-panel v-if="!isMobileOrTablet" name="checkout" class="q-pa-none">
                       <CheckoutView
                         @success="handleCheckoutSuccess"
-                        @cancel="currentTab = 'cart'"
+                        @cancel="currentTab = 'menu'"
                       />
                     </q-tab-panel>
 
-                    <q-tab-panel v-if="!isMobileOrTablet" name="orders" class="q-pa-none">
-                      <OrdersView @back-to-catalog="currentTab = 'menu'" />
-                    </q-tab-panel>
+                    <!-- Orders tab panel omitted on desktop: shown as full-screen dialog instead -->
                   </q-tab-panels>
                 </div>
 
@@ -314,6 +303,19 @@
             </div>
           </div>
         </div>
+
+        <!-- Orders Full-Screen Dialog (Desktop only) -->
+        <q-dialog
+          v-model="isDesktopOrdersDialogOpen"
+          persistent
+          maximized
+          transition-show="fade"
+          transition-hide="fade"
+        >
+          <div class="orders-desktop-overlay column no-wrap full-height">
+            <OrdersView @back-to-catalog="currentTab = 'menu'" />
+          </div>
+        </q-dialog>
 
         <!-- Schedule Dialog -->
         <q-dialog
@@ -482,7 +484,6 @@ const loadingPage = ref(false)
 const showScheduleDialog = ref(false)
 const showAuthDialog = ref(false)
 const currentTime = ref(new Date())
-const scheduleExpanded = ref(true)
 let savedScrollPosition = 0
 let scrollContainerEl = null
 let timeUpdateInterval = null
@@ -492,6 +493,16 @@ const isMobileOrTablet = computed(() => $q.screen.lt.md)
 
 const isSubPageDialogOpen = computed({
   get: () => ['cart', 'checkout', 'orders'].includes(currentTab.value) && isMobileOrTablet.value,
+  set: (val) => {
+    if (!val) {
+      currentTab.value = 'menu'
+    }
+  }
+})
+
+// Desktop-only full-screen dialog for Orders view
+const isDesktopOrdersDialogOpen = computed({
+  get: () => currentTab.value === 'orders' && !isMobileOrTablet.value,
   set: (val) => {
     if (!val) {
       currentTab.value = 'menu'
@@ -616,6 +627,11 @@ const findScrollContainer = () => {
 
 // Watch tab changes and sync with URL
 watch(currentTab, (newTab) => {
+  // On desktop the cart is always visible in the sidebar — redirect to menu
+  if (newTab === 'cart' && !isMobileOrTablet.value) {
+    currentTab.value = 'menu'
+    return
+  }
   router.push({
     path: route.path,
     query: {
@@ -720,6 +736,12 @@ const logout = async () => {
   }
 }
 
+const formatCompanyAddress = (address) => {
+  if (!address) return ''
+  if (typeof address === 'string') return address
+  return address.formattedAddress || address.address || ''
+}
+
 // Init - Load catalog data
 onMounted(async () => {
   try {
@@ -772,7 +794,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .catalog-page {
-  background: #f4f5f7;
+  background: #fff;
   min-height: 100vh;
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
 }
@@ -784,7 +806,7 @@ onBeforeUnmount(() => {
   left: 0;
   right: 0;
   z-index: 100;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, transparent 100%);
+  background: transparent;
 }
 
 .navbar-icon-btn {
@@ -797,6 +819,43 @@ onBeforeUnmount(() => {
 .user-avatar {
   box-shadow: 0 0 0 2px rgba(255,255,255,0.5);
   transition: box-shadow 0.2s ease;
+}
+
+/* Contact Bar Styles */
+.contact-info-container {
+  margin-right: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.contact-info-bar {
+  background: transparent;
+  padding: 12px 0;
+  border-radius: 4px;
+  max-width: 950px;
+}
+
+.contact-section {
+  min-width: 200px;
+}
+
+.vertical-divider {
+  width: 1px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.contact-section-title {
+  max-width: 180px;
+  text-align: left;
+}
+
+.line-height-tight {
+  line-height: 1.2;
+}
+
+.opacity-80 {
+  opacity: 0.8;
 }
 .user-avatar:hover {
   box-shadow: 0 0 0 3px rgba(255,255,255,0.8);
@@ -864,7 +923,7 @@ onBeforeUnmount(() => {
 }
 
 .profile-avatar {
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 0 3px rgba(255,255,255,0.25);
+  box-shadow: 0 0 0 0 !important;
   border-radius: 50%;
 }
 
@@ -876,23 +935,48 @@ onBeforeUnmount(() => {
   line-height: 1.2;
 }
 
+/* ===== Mobile Contact Pills ===== */
+.contact-pill {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+
+.opacity-80 {
+  opacity: 0.8;
+}
+
 /* ===== Schedule Status Badge ===== */
 .schedule-status-badge {
-  min-height: 34px;
+  min-height: 32px;
   padding: 4px 14px;
+  border-radius: 20px !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(6px);
-  font-size: 0.82rem;
 }
 
 .status-open {
-  background: rgba(232, 245, 233, 0.92) !important;
-  color: #1b5e20 !important;
+  background: rgba(76, 175, 80, 0.25) !important;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+}
+.status-open:hover {
+  background: rgba(76, 175, 80, 0.35) !important;
 }
 
 .status-closed {
-  background: rgba(255, 235, 238, 0.92) !important;
-  color: #b71c1c !important;
+  background: rgba(244, 67, 54, 0.25) !important;
+  border: 1px solid rgba(244, 67, 54, 0.4);
+}
+.status-closed:hover {
+  background: rgba(244, 67, 54, 0.35) !important;
 }
 
 .status-dot {
@@ -903,28 +987,26 @@ onBeforeUnmount(() => {
 }
 
 .dot-open {
-  background: #43a047;
-  box-shadow: 0 0 0 3px rgba(67,160,71,0.25);
+  background: #4caf50;
+  box-shadow: 0 0 0 3px rgba(76,175,80,0.25);
   animation: pulse-open 2s infinite;
 }
 
 .dot-closed {
-  background: #e53935;
+  background: #f44336;
+  box-shadow: 0 0 0 3px rgba(244,67,54,0.25);
 }
 
 @keyframes pulse-open {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(67,160,71,0.25); }
-  50%       { box-shadow: 0 0 0 5px rgba(67,160,71,0.12); }
+  0%, 100% { box-shadow: 0 0 0 3px rgba(76,175,80,0.25); }
+  50%       { box-shadow: 0 0 0 5px rgba(76,175,80,0.12); }
 }
 
 .schedule-times {
-  font-size: 0.78rem;
   font-weight: 500;
-  opacity: 0.85;
 }
 
 .arrow-icon {
-  opacity: 0.65;
   transition: transform 0.2s ease;
 }
 
@@ -1211,6 +1293,22 @@ onBeforeUnmount(() => {
   color: var(--q-primary);
 }
 
+/* ===== Sidebar Checkout Button ===== */
+.checkout-btn-sidebar {
+  background: linear-gradient(135deg, var(--q-primary) 0%, color-mix(in srgb, var(--q-primary) 75%, #000) 100%);
+  color: #fff;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  padding: 10px 16px;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+.checkout-btn-sidebar:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
 /* ===== Floating Cart Button (mobile) ===== */
 .floating-cart-container {
   width: 100%;
@@ -1308,5 +1406,11 @@ onBeforeUnmount(() => {
   .continuar-btn {
     font-size: 16px;
   }
+}
+/* ===== Desktop Orders Dialog Overlay ===== */
+.orders-desktop-overlay {
+  background: #f8f8f8;
+  width: 100%;
+  overflow-y: auto;
 }
 </style>

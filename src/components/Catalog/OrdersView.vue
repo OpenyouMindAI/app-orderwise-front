@@ -28,7 +28,7 @@
     </div>
 
     <!-- Loading State -->
-    <div v-if="loading && orders.length === 0" class="q-pa-md">
+    <div v-if="loading && orders.length === 0" class="orders-list q-pa-md">
       <q-card
         v-for="i in 5"
         :key="i"

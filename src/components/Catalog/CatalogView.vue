@@ -155,7 +155,7 @@
         rounded
         no-caps
         class="continuar-btn full-width shadow-4"
-        @click="$emit('view-cart')"
+        @click="handleCartButtonClick"
       >
         <div class="row full-width justify-between items-center">
           <div class="row items-center">
@@ -180,6 +180,7 @@ import { storeToRefs } from 'pinia'
 import { useCatalogStore } from 'src/stores/catalog'
 import { useCart } from 'src/composables/useCart'
 import { formatNumber } from 'src/const/mixins'
+import { useQuasar } from 'quasar'
 import SkeletonCard from 'src/components/SkeletonCard.vue'
 import { noProductImage as defaultImage } from 'src/const/images'
 
@@ -190,13 +191,10 @@ defineProps({
     default: false
   }
 })
-
-// Emits
-defineEmits(['open-product', 'view-cart'])
-
 // Stores y composables
 const catalogStore = useCatalogStore()
 const cart = useCart()
+const $q = useQuasar()
 const { categories, products } = storeToRefs(catalogStore)
 
 // Estado local
@@ -248,6 +246,17 @@ const scrollToCategory = async (categoryId) => {
   const el = document.getElementById(`category-${categoryId}`)
   if (el) {
     el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+}
+
+// En desktop el carrito es siempre visible → ir directo a checkout
+// En móvil/tablet → abrir la vista de carrito
+const emit = defineEmits(['open-product', 'view-cart', 'checkout'])
+const handleCartButtonClick = () => {
+  if ($q.screen.lt.md) {
+    emit('view-cart')
+  } else {
+    emit('checkout')
   }
 }
 </script>
