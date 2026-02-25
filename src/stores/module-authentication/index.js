@@ -83,7 +83,17 @@ export const authentication = defineStore('authentication', {
        * Force user to select a plan
        * @type {Boolean}
        */
-      mustSelectPlan: false
+      mustSelectPlan: false,
+      /**
+       * Whether subscription is currently expired
+       * @type {Boolean}
+       */
+      isExpired: false,
+      /**
+       * Current plan object (from subscriptions/current API)
+       * @type {Object|null}
+       */
+      currentPlan: null
     }
   },
   actions: {
@@ -244,10 +254,15 @@ export const authentication = defineStore('authentication', {
      */
     setSubscriptionData (subscriptionData) {
       this.subscriptionPlan = subscriptionData.plan?.slug || 'free'
-      this.subscriptionDaysLeft = subscriptionData.days_until_expiration || null
+      this.subscriptionDaysLeft = subscriptionData.days_left !== undefined ? subscriptionData.days_left : (subscriptionData.days_until_expiration || null)
       this.currentSubscription = subscriptionData.subscription || null
       this.maxBranches = subscriptionData.subscription?.branch_offices_count || 1
-      this.hasApiAccess = subscriptionData?.api_access || false
+      this.hasApiAccess = subscriptionData?.api_access || subscriptionData?.has_api_access || false
+
+      // Track expiration state for progressive modals
+      this.isExpired = subscriptionData.is_expired === true
+      // Store the full plan object for direct use in modals
+      this.currentPlan = subscriptionData.plan || subscriptionData.subscription?.plan || null
     },
     /**
      * Set current branch count
@@ -281,6 +296,9 @@ export const authentication = defineStore('authentication', {
       this.currentSubscription = null
       this.maxBranches = 1
       this.currentBranchCount = 0
+      this.isExpired = false
+      this.currentPlan = null
+      localStorage.removeItem('subscription_expired_since')
     }
   },
   getters: {

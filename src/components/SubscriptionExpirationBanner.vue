@@ -23,6 +23,7 @@
             label="Renovar"
             color="white"
             class="banner-btn"
+            :loading="loading"
             @click="handleRenew"
           />
           <q-btn
@@ -42,6 +43,9 @@
 
 <script>
 import { ref, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { api } from 'src/boot/axios'
+import { notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 
 export default {
@@ -55,7 +59,9 @@ export default {
   emits: ['open-subscription-dialog', 'banner-dismissed'],
   setup (props, { emit }) {
     const store = authentication()
+    const route = useRoute()
     const dismissed = ref(false)
+    const loading = ref(false)
 
     const subscriptionInfo = computed(() => store.currentSubscription)
     const daysLeft = computed(() => store.subscriptionDaysLeft)
@@ -115,8 +121,44 @@ export default {
       })
     }
 
-    const handleRenew = () => {
-      emit('open-subscription-dialog')
+    const handleRenew = async () => {
+      const plan = store.currentPlan
+
+      // Fallback: open plans dialog if we don't have plan data
+      if (!plan?.id) {
+        emit('open-subscription-dialog')
+        return
+      }
+
+      loading.value = true
+      try {
+        const businessType = route.query.business_type ||
+          store.userSession?.company_session?.business_type?.name
+
+        const response = await api.post('mercadopago/create-payment', {
+          subscription_plan_id: plan.id,
+          branch_offices_count: store.currentSubscription?.branch_offices_count || 1,
+          months: 1,
+          business_type: businessType
+        })
+
+        if (!response.data.init_point) {
+          throw new Error('No se recibió URL de pago de Mercado Pago')
+        }
+
+        localStorage.setItem('mp_preference_id', response.data.preference_id)
+        localStorage.setItem('mp_plan_id', plan.id)
+        localStorage.setItem('mp_plan_name', plan.name)
+
+        notify('Redirigiendo a Mercado Pago...', 'info', 'payment')
+        await new Promise(resolve => setTimeout(resolve, 500))
+        window.location.href = response.data.init_point
+      } catch (error) {
+        const msg = error.response?.data?.message || 'Error al crear el link de pago'
+        notify(msg, 'negative', 'warning')
+      } finally {
+        loading.value = false
+      }
     }
 
     // Watch for subscription changes to handle dismissal reset
@@ -128,6 +170,7 @@ export default {
       subscriptionInfo,
       daysLeft,
       dismissed,
+      loading,
       showBanner,
       bannerClass,
       bannerIcon,
