@@ -21,6 +21,11 @@ export const authentication = defineStore('authentication', {
        */
       userSession: null,
       /**
+       * Profile photo URL (persisted separately for reliability)
+       * @type {String|null}
+       */
+      profilePhoto: null,
+      /**
        * Expires in
        * @type {Number}
        */
@@ -126,6 +131,7 @@ export const authentication = defineStore('authentication', {
         this.branchOffice = null
         this.setTimeOut = 0
         this.isDemo = false
+        this.profilePhoto = null
 
         // Limpiar headers de Axios para evitar que se use un token viejo
         delete api.defaults.headers.common.authorization
@@ -208,7 +214,25 @@ export const authentication = defineStore('authentication', {
         this.setTimeOut = Date.now() + (data.expires_in * 1000)
       }
 
+      // Auto-detect photo field from user object (backend may use different names)
+      const user = data.user
+      if (user) {
+        const photo = user.avatar || user.picture || user.photo || user.profile_photo || user.photo_url || null
+        if (photo) {
+          this.profilePhoto = photo
+        }
+      }
+
       api.defaults.headers.common.authorization = `${this.token_type} ${this.access_token}`
+    },
+    /**
+     * Set profile photo URL explicitly (e.g. from Google OAuth)
+     * @param {String} url
+     */
+    setProfilePhoto (url) {
+      if (url) {
+        this.profilePhoto = url
+      }
     },
     /**
      * Login app
