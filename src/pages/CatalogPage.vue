@@ -7,42 +7,6 @@
         <div class="catalog-navbar text-white">
           <q-toolbar class="items-center no-wrap">
             <q-space />
-
-            <!-- Contact Info Bar (inspired by reference image) - Desktop -->
-            <div class="contact-info-container gt-xs">
-              <div class="row items-center no-wrap contact-info-bar">
-                <!-- Section 1: Location & Schedule -->
-                <div class="column q-px-md contact-section items-end">
-                  <div class="row items-center q-mb-xs no-wrap">
-                    <q-icon name="location_on" size="16px" class="q-mr-xs" />
-                    <span class="text-caption text-weight-medium ellipsis" style="max-width: 200px">{{ formatCompanyAddress(company?.address) }}</span>
-                  </div>
-                  <div class="row items-center no-wrap" v-if="todaySchedule && todaySchedule.isOpen">
-                    <q-icon name="schedule" size="16px" class="q-mr-xs" />
-                    <span class="text-caption text-weight-medium">
-                      {{ todaySchedule.from }} a {{ todaySchedule.to }}
-                    </span>
-                  </div>
-                </div>
-
-                <div class="vertical-divider"></div>
-
-                <!-- Section 2: Phone & Email -->
-                <div class="column q-px-md contact-section items-end">
-                  <div class="row items-center q-mb-xs no-wrap" v-if="company?.phone_number">
-                    <q-icon name="phone" size="16px" class="q-mr-xs" />
-                    <span class="text-caption text-weight-medium">{{ company.phone_number }}</span>
-                  </div>
-                  <div class="row items-center no-wrap" v-if="company?.email">
-                    <q-icon name="mail" size="16px" class="q-mr-xs" />
-                    <span class="text-caption text-weight-medium ellipsis" style="max-width: 150px">{{ company.email }}</span>
-                  </div>
-                </div>
-
-                <div class="vertical-divider"></div>
-              </div>
-            </div>
-
             <div v-if="userSession" class="row items-center no-wrap q-ml-md">
               <q-btn
                 flat
@@ -127,19 +91,16 @@
                 {{ company?.name }}
               </div>
 
-              <!-- Info de Contacto Móvil (Minimalista) -->
-              <div class="lt-sm row justify-center items-center q-mt-sm q-gutter-sm text-white" style="max-width: 95%;">
-                <div v-if="company?.address" class="contact-pill row items-center no-wrap">
+              <!-- Info de Contacto Always Visible -->
+              <div class="row justify-center items-center q-mt-sm q-gutter-md text-white" style="max-width: 95%;">
+                <div v-if="company?.address" class="contact-pill row items-center no-wrap cursor-pointer">
                   <q-icon name="location_on" size="14px" class="q-mr-xs opacity-80" />
-                  <span class="text-caption ellipsis" style="max-width: 160px; font-weight: 500;">{{ formatCompanyAddress(company?.address) }}</span>
-                </div>
-                <div v-if="company?.phone_number" class="contact-pill row items-center no-wrap">
-                  <q-icon name="phone" size="14px" class="q-mr-xs opacity-80" />
-                  <span class="text-caption" style="font-weight: 500;">{{ company.phone_number }}</span>
-                </div>
-                <div v-if="company?.email" class="contact-pill row items-center no-wrap">
-                  <q-icon name="mail" size="14px" class="q-mr-xs opacity-80" />
-                  <span class="text-caption ellipsis" style="max-width: 160px; font-weight: 500;">{{ company.email }}</span>
+                  <span class="text-caption ellipsis" style="max-width: 160px; font-weight: 500;">
+                    {{ formatCompanyAddress(company?.address) }}
+                    <q-tooltip class="bg-dark text-white text-body2" anchor="top middle" self="bottom middle" :offset="[10, 10]">
+                      {{ formatCompanyAddress(company?.address) }}
+                    </q-tooltip>
+                  </span>
                 </div>
               </div>
 
@@ -424,6 +385,20 @@
             />
           </div>
         </q-dialog>
+        <!-- WhatsApp Floating Button -->
+        <a
+          v-if="company?.phone_number"
+          :href="`https://wa.me/${company.phone_number.replace(/\D/g, '')}`"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="whatsapp-fab"
+          aria-label="Contactar por WhatsApp"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="28" height="28" fill="white">
+            <path d="M16 0C7.164 0 0 7.163 0 16c0 2.822.736 5.472 2.025 7.775L0 32l8.424-2.007A15.934 15.934 0 0 0 16 32c8.836 0 16-7.163 16-16S24.836 0 16 0zm0 29.333a13.27 13.27 0 0 1-6.77-1.853l-.484-.287-5.003 1.193 1.218-4.876-.316-.5A13.26 13.26 0 0 1 2.667 16C2.667 8.636 8.636 2.667 16 2.667S29.333 8.636 29.333 16 23.364 29.333 16 29.333zm7.293-9.907c-.4-.2-2.364-1.166-2.731-1.3-.366-.133-.633-.2-.9.2-.266.4-1.033 1.3-1.266 1.566-.233.267-.466.3-.866.1-.4-.2-1.687-.622-3.214-1.982-1.188-1.059-1.99-2.367-2.223-2.767-.233-.4-.025-.616.175-.815.18-.179.4-.467.6-.7.2-.233.267-.4.4-.666.133-.267.067-.5-.033-.7-.1-.2-.9-2.167-1.233-2.967-.325-.78-.655-.674-.9-.686l-.766-.013c-.267 0-.7.1-1.067.5-.366.4-1.4 1.367-1.4 3.333s1.433 3.867 1.633 4.133c.2.267 2.82 4.307 6.833 6.034.955.412 1.7.658 2.281.843.958.305 1.831.262 2.52.159.769-.114 2.364-.967 2.698-1.9.333-.934.333-1.734.233-1.9-.1-.167-.366-.267-.766-.467z"/>
+          </svg>
+        </a>
+
       </q-page>
     </q-page-container>
   </q-layout>
@@ -797,6 +772,51 @@ onBeforeUnmount(() => {
   background: #fff;
   min-height: 100vh;
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ===== WhatsApp FAB ===== */
+.whatsapp-fab {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 9999;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(37, 211, 102, 0.45);
+  text-decoration: none;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  animation: whatsapp-pulse 2.5s infinite;
+}
+
+.whatsapp-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 24px rgba(37, 211, 102, 0.65);
+  animation: none;
+}
+
+@keyframes whatsapp-pulse {
+  0%   { box-shadow: 0 4px 16px rgba(37, 211, 102, 0.45); }
+  50%  { box-shadow: 0 4px 28px rgba(37, 211, 102, 0.75); }
+  100% { box-shadow: 0 4px 16px rgba(37, 211, 102, 0.45); }
+}
+
+.whatsapp-pill {
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.whatsapp-pill:hover {
+  opacity: 0.75;
+}
+
+@media (max-width: 1024px) {
+  .whatsapp-fab {
+    bottom: 5.25rem;
+  }
 }
 
 /* ===== Navbar ===== */
