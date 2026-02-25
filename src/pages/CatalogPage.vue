@@ -927,11 +927,7 @@ onBeforeUnmount(() => {
 .banner-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(0,0,0,0.15) 0%,
-    rgba(0,0,0,0.65) 100%
-  );
+  background: rgba(0,0,0,0.45);
   z-index: 0;
 }
 
