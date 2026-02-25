@@ -245,7 +245,6 @@ import { qBitsLogo } from 'src/const/mixins'
 
 defineProps({
   showLogo: {
-
     type: Boolean,
     default: true
   },

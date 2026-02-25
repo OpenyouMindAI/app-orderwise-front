@@ -173,6 +173,13 @@
       :user-email="userEmail"
       @success="handleCompanySetupSuccess"
     />
+
+    <BusinessTypeModal
+      v-model="showBusinessTypeSetup"
+      :loading="loadingCompanySetup"
+      @submit="handleBusinessTypeNext"
+      @back="showBusinessTypeSetup = false"
+    />
   </div>
 </template>
 <script>
@@ -187,6 +194,7 @@ import VerifyResetCodeDialog from 'src/components/VerifyResetCodeDialog.vue'
 import NewPasswordDialog from 'src/components/NewPasswordDialog.vue'
 import EmailVerificationModal from 'src/components/Auth/EmailVerificationModal.vue'
 import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
+import BusinessTypeModal from 'src/components/Register/BusinessTypeModal.vue'
 
 export default {
   name: 'LoginPage',
@@ -195,7 +203,8 @@ export default {
     VerifyResetCodeDialog,
     NewPasswordDialog,
     EmailVerificationModal,
-    CompanySetupModal
+    CompanySetupModal,
+    BusinessTypeModal
   },
   data () {
     return {
@@ -286,6 +295,21 @@ export default {
        */
       showCompanySetup: false,
       /**
+       * Show business type setup modal
+       * @type {Boolean} Visibility of the business type setup modal
+       */
+      showBusinessTypeSetup: false,
+      /**
+       * Loading state for company setup
+       * @type {Boolean} Whether the company setup is currently loading
+       */
+      loadingCompanySetup: false,
+      /**
+       * Temporary company data
+       * @type {Object|null} Temporary data stored during the setup process
+       */
+      tempCompanyData: null,
+      /**
        * User email for verification
        * @type {String}
        */
@@ -342,7 +366,7 @@ export default {
      * Access token
      * @returns {String|null}
      */
-    ...mapState(authentication, ['access_token'])
+    ...mapState(authentication, ['access_token', 'userGetter'])
   },
   async mounted () {
     this.$q.dark.set(this.darkMode)
@@ -894,8 +918,8 @@ export default {
         }
 
         if (!data.company_session || data.company_session === null) {
-          notify('Configura tu empresa para continuar', 'info', 'business')
-          this.showCompanySetup = true
+          notify('Selecciona tu rubro para continuar', 'info', 'business')
+          this.showBusinessTypeSetup = true
           this.btnDisable = false
           return
         }
@@ -1005,8 +1029,8 @@ export default {
         if (!data.user.company_session || data.user.company_session === null) {
           // Pequeña pausa antes de mostrar el siguiente modal
           await new Promise(resolve => setTimeout(resolve, 300))
-          notify('Ahora configura tu empresa', 'info', 'business')
-          this.showCompanySetup = true
+          notify('Ahora selecciona tu rubro', 'info', 'business')
+          this.showBusinessTypeSetup = true
         } else {
           // Tiene empresa, redirigir al dashboard
           if (data.user.is_root) {
@@ -1060,6 +1084,58 @@ export default {
       } catch (error) {
         console.error('Error al configurar empresa:', error)
         notify('Error al configurar la empresa', 'negative', 'warning')
+      }
+    },
+
+    /**
+     * Handle business type selection
+     * @param {Object} businessData - Selected business type data
+     */
+    async handleBusinessTypeNext (businessData) {
+      this.tempCompanyData = businessData
+      await this.autoSetupCompany()
+      this.showBusinessTypeSetup = false
+    },
+
+    /**
+     * Automatically setup company using user data and selected business type
+     */
+    async autoSetupCompany () {
+      try {
+        this.loadingCompanySetup = true
+
+        // Obtener datos del usuario desde el store
+        const user = this.userGetter || {}
+
+        // Construir nombre completo de la empresa
+        const firstName = user.name || ''
+        const lastName = user.last_name || ''
+        const companyName = `${firstName} ${lastName}`.trim() || 'Mi Empresa'
+
+        const email = user.email || ''
+        const phoneNumber = user.phone_number || user.phone || null
+
+        const payload = {
+          company_name: companyName,
+          company_document: null,
+          company_email: email,
+          company_phone: phoneNumber,
+          company_address: null,
+          business_type_id: this.tempCompanyData?.business_type_id || null,
+          country_id: null,
+          copy_test_products: false
+        }
+
+        const { data } = await this.$api.post('authentication/setup-company', payload)
+        await this.handleCompanySetupSuccess(data)
+      } catch (error) {
+        console.error('❌ Error en auto-setup:', error)
+        // Si falla el auto-setup, mostramos el modal manual
+        this.showCompanySetup = true
+        const errorMessage = error.response?.data?.message || 'No se pudo completar la configuración automática.'
+        notify(errorMessage, 'negative', 'warning')
+      } finally {
+        this.loadingCompanySetup = false
       }
     },
 
