@@ -385,7 +385,7 @@
         </q-dialog>
         <!-- WhatsApp Floating Button -->
         <a
-          v-if="company?.phone_number"
+          v-if="company?.phone_number && currentTab === 'menu' && !isDesktopOrdersDialogOpen"
           :href="`https://wa.me/${company.phone_number.replace(/\D/g, '')}`"
           target="_blank"
           rel="noopener noreferrer"
