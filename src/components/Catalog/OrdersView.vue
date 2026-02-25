@@ -435,12 +435,16 @@ const openImage = (url) => {
 
 <style scoped>
 .orders-view {
-  min-height: 100vh;
+  flex: 1;
+  min-height: 0;
   background: #f8f8f8;
+  display: flex;
+  flex-direction: column;
 }
 
 .orders-header {
   border-bottom: 1px solid #e0e0e0;
+  flex: 0 0 auto;
 }
 
 .back-btn {
@@ -456,8 +460,11 @@ const openImage = (url) => {
 
 /* Orders List */
 .orders-list {
-  max-width: 600px;
+  max-width: 100%;
+  width: 100%;
   margin: 0 auto;
+  overflow-y: auto;
+  flex: 1 1 auto;
 }
 
 .order-card {

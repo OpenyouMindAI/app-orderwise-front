@@ -14,7 +14,7 @@
                 dense
                 class="q-mr-sm navbar-icon-btn"
                 aria-label="Ver mis pedidos"
-                @click="currentTab = 'orders'"
+                @click="openOrders"
               >
                 <q-icon name="shopping_basket" size="24px" />
                 <q-badge
@@ -265,16 +265,14 @@
           </div>
         </div>
 
-        <!-- Orders Full-Screen Dialog (Desktop only) -->
+        <!-- Orders Modal Dialog (Desktop only) -->
         <q-dialog
           v-model="isDesktopOrdersDialogOpen"
-          persistent
-          maximized
-          transition-show="fade"
-          transition-hide="fade"
+          transition-show="jump-up"
+          transition-hide="jump-down"
         >
-          <div class="orders-desktop-overlay column no-wrap full-height">
-            <OrdersView @back-to-catalog="currentTab = 'menu'" />
+          <div style="width: 600px; max-width: 90vw; height: 80vh; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; background: #f8f8f8;">
+            <OrdersView @back-to-catalog="isDesktopOrdersDialogOpen = false" />
           </div>
         </q-dialog>
 
@@ -475,15 +473,16 @@ const isSubPageDialogOpen = computed({
   }
 })
 
-// Desktop-only full-screen dialog for Orders view
-const isDesktopOrdersDialogOpen = computed({
-  get: () => currentTab.value === 'orders' && !isMobileOrTablet.value,
-  set: (val) => {
-    if (!val) {
-      currentTab.value = 'menu'
-    }
+// Desktop-only modal dialog for Orders view natively decoupled from currentTab
+const isDesktopOrdersDialogOpen = ref(false)
+
+const openOrders = () => {
+  if (isMobileOrTablet.value) {
+    currentTab.value = 'orders'
+  } else {
+    isDesktopOrdersDialogOpen.value = true
   }
-})
+}
 
 const userInitials = computed(() => {
   if (!userSession.value) return 'U'
@@ -687,7 +686,7 @@ const goToCheckout = () => {
 }
 
 const handleCheckoutSuccess = () => {
-  currentTab.value = 'orders'
+  openOrders()
 }
 
 const getDayColor = (day) => {
@@ -1427,10 +1426,15 @@ onBeforeUnmount(() => {
     font-size: 16px;
   }
 }
-/* ===== Desktop Orders Dialog Overlay ===== */
-.orders-desktop-overlay {
+/* ===== Desktop Orders Modal ===== */
+.orders-desktop-modal {
   background: #f8f8f8;
-  width: 100%;
-  overflow-y: auto;
+  width: 600px;
+  max-width: 90vw;
+  height: 80vh;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 </style>
