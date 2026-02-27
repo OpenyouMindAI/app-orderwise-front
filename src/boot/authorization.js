@@ -112,6 +112,12 @@ export default boot(async ({ router, store }) => {
   let pendingSessionExpiration = null
 
   // Interceptor de respuestas API
+  /**
+   * Handles API response errors globally, including session expiration (401),
+   * permission issues (403), and validation errors (422).
+   * @params {Error} error The interceptor error object
+   * @return {Promise} Rejected promise with normalized error data
+   */
   api.interceptors.response.use(null, async (error) => {
     const $store = authentication()
     const status = error.response?.status || error.status
@@ -136,18 +142,18 @@ export default boot(async ({ router, store }) => {
         })()
 
         await pendingSessionExpiration
-      } else if (status === 403) {
-        notifyError('No tienes permisos para acceder a este recurso')
-      } else if (status === 422) {
-        notifyValidationErrors(error, 'Error de validación')
       }
-
-      // Centralized error normalization (moved from services.js)
-      // This ensures components receive a consistent error format
-      const normalizedError = error?.response?.data || error
-      return Promise.reject(normalizedError)
+    } else if (status === 403) {
+      notifyError('No tienes permisos para acceder a este recurso')
+    } else if (status === 422) {
+      notifyValidationErrors(error, 'Error de validación')
     }
-  )
+
+    // Centralized error normalization (moved from services.js)
+    // This ensures components receive a consistent error format
+    const normalizedError = error?.response?.data || error
+    return Promise.reject(normalizedError)
+  })
 
   // Guard de navegación
   router.beforeEach(async (to, from, next) => {
