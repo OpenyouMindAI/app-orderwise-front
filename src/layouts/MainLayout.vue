@@ -686,6 +686,13 @@
       @open-register="showCreateCompanyDialog = true"
     />
 
+    <subscription-expiration-modal
+      :is-expired="isExpired"
+      :plan-name="store.subscriptionPlan"
+      :is-demo="store.isDemo"
+      @open-subscription="showSubscriptionDialog = true"
+    />
+
     <!-- Global Support Chat Bubble -->
     <SupportChatBubble />
 
@@ -756,6 +763,7 @@
         </q-btn>
       </div>
     </transition>
+
   </q-layout>
 </template>
 
@@ -765,6 +773,7 @@ import NotificationComponent from 'src/components/NotificationComponent.vue'
 import FloatingThemeSelector from 'src/components/ThemeSelector/FloatingThemeSelector.vue'
 import SubscriptionPlansDialog from 'src/components/SubscriptionPlansDialog.vue'
 import SubscriptionExpirationBanner from 'src/components/SubscriptionExpirationBanner.vue'
+import SubscriptionExpirationModal from 'src/components/SubscriptionExpirationModal.vue'
 import RegisterDialog from 'src/components/Auth/RegisterDialog.vue'
 import OtpVerificationDialog from 'src/components/Auth/OtpVerificationDialog.vue'
 import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
@@ -799,6 +808,7 @@ export default {
     FloatingThemeSelector,
     SubscriptionPlansDialog,
     SubscriptionExpirationBanner,
+    SubscriptionExpirationModal,
     RegisterDialog,
     OtpVerificationDialog,
     CompanySetupModal,
@@ -971,7 +981,8 @@ export default {
       'refresh_token',
       'expires_In',
       'token_type',
-      'mustSelectPlan'
+      'mustSelectPlan',
+      'isExpired'
     ]),
     ...mapState(useTourStore, {
       tourActive: 'isActive'
@@ -2212,6 +2223,7 @@ export default {
       this.getAllModules()
       this.getDataNotification()
       this.getBrachOffice()
+      this.loadSubscriptionInfo()
       this.cuit = this.userSession?.company_session?.document_number
       this.loadingTasks()
     },

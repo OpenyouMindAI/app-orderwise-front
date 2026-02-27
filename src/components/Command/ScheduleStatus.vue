@@ -89,7 +89,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 /**
  * Show schedule
  * @type {Ref<Boolean>}
@@ -136,28 +136,14 @@ const props = defineProps({
   schedule: {
     type: Object,
     default: () => ({
-      monday: { from: '07:30', to: '20:00', isOpen: true, hasError: false, errorMessage: '' },
-      tuesday: { from: '07:30', to: '20:00', isOpen: true, hasError: false, errorMessage: '' },
-      wednesday: { from: '07:30', to: '20:00', isOpen: true, hasError: false, errorMessage: '' },
-      thursday: { from: '07:30', to: '20:00', isOpen: true, hasError: false, errorMessage: '' },
-      friday: { from: '07:30', to: '20:00', isOpen: true, hasError: false, errorMessage: '' },
-      saturday: { from: '07:30', to: '20:00', isOpen: true, hasError: false, errorMessage: '' },
-      sunday: { from: '07:30', to: '20:00', isOpen: true, hasError: false, errorMessage: '' }
+      monday: { from: '00:00', to: '23:59', isOpen: true, hasError: false, errorMessage: '' },
+      tuesday: { from: '00:00', to: '23:59', isOpen: true, hasError: false, errorMessage: '' },
+      wednesday: { from: '00:00', to: '23:59', isOpen: true, hasError: false, errorMessage: '' },
+      thursday: { from: '00:00', to: '23:59', isOpen: true, hasError: false, errorMessage: '' },
+      friday: { from: '00:00', to: '23:59', isOpen: true, hasError: false, errorMessage: '' },
+      saturday: { from: '00:00', to: '23:59', isOpen: true, hasError: false, errorMessage: '' },
+      sunday: { from: '00:00', to: '23:59', isOpen: true, hasError: false, errorMessage: '' }
     })
-  }
-})
-
-onMounted(() => {
-  updateInterval.value = setInterval(() => {
-    currentTime.value = new Date()
-  }, 60000)
-  console.log(isCurrentlyOpen.value)
-  emit('update:isCurrentlyOpen', isCurrentlyOpen.value)
-})
-
-onBeforeUnmount(() => {
-  if (updateInterval.value) {
-    clearInterval(updateInterval.value)
   }
 })
 /**
@@ -304,6 +290,21 @@ const getDayProgress = (day) => {
   return (elapsedTime / totalOpenTime) * 100
 }
 
+onMounted(() => {
+  updateInterval.value = setInterval(() => {
+    currentTime.value = new Date()
+  }, 60000)
+})
+
+watch(isCurrentlyOpen, (val) => {
+  emit('update:isCurrentlyOpen', val)
+}, { immediate: true })
+
+onBeforeUnmount(() => {
+  if (updateInterval.value) {
+    clearInterval(updateInterval.value)
+  }
+})
 </script>
 
 <style scoped>

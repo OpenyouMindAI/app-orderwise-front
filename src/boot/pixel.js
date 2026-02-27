@@ -47,7 +47,11 @@ export default boot(({ app, router, store }) => {
         t.async = !0
         t.src = v
         s = b.getElementsByTagName(e)[0]
-        s.parentNode.insertBefore(t, s)
+        if (s && s.parentNode) {
+          s.parentNode.insertBefore(t, s)
+        } else {
+          b.head.appendChild(t)
+        }
       })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js')
     }
   }
@@ -135,4 +139,3 @@ export default boot(({ app, router, store }) => {
     }
   })
 })
-

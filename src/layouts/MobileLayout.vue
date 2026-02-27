@@ -10,7 +10,13 @@
             round
             class="q-mr-sm"
             aria-label="Menu"
-            @click="$router.push({ name: 'Product' })"
+            @click="() => {
+              if ($route.name === 'Catalog') {
+                this.setQueryParams({ tab: 'menu' })
+              } else {
+                $router.push({ name: 'Product' })
+              }
+            }"
           />
           <img :src="company?.url || logo.white" alt="logo" style="max-height: 40px"/>
         </div>
@@ -94,7 +100,6 @@
   </q-layout>
 </template>
 <script>
-import { watch } from 'vue'
 import { useCommandStore } from '../stores/command'
 import { mapActions, mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
@@ -134,21 +139,15 @@ export default {
       if (this.userSession?.is_super_admin) return 'Super Admin'
       const role = this.userSession?.roles?.[0]
       return role?.name || 'Usuario'
+    },
+    commands () {
+      const store = useCommandStore()
+      return store?.command
     }
   },
   created () {
     this.setData()
     this.getCompany()
-    watch(() => this.$route.query, (toParams, previousParams) => {
-      this.tab = toParams.tab
-    })
-  },
-  computed: {
-    commands () {
-      const store = useCommandStore()
-      return store?.command
-    },
-    ...mapState(authentication, ['userSession'])
   },
   methods: {
     /**
@@ -207,10 +206,21 @@ export default {
       this.router.push({ name: 'Login' })
       this.logout()
     },
-    
+
     ...mapActions(authentication, ['logout'])
   },
   watch: {
+    tab (val) {
+      if (this.$route.query.tab !== val) {
+        this.setQueryParams({ tab: val })
+      }
+    },
+    '$route.query.tab': {
+      handler (val) {
+        this.tab = val || 'menu'
+      },
+      immediate: true
+    },
     mustSelectPlan: {
       handler (val) {
         if (val) {

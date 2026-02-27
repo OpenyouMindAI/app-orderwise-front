@@ -23,6 +23,7 @@
             label="Renovar"
             color="white"
             class="banner-btn"
+            :loading="loading"
             @click="handleRenew"
           />
           <q-btn
@@ -41,7 +42,10 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { api } from 'src/boot/axios'
+import { notify } from 'src/const/mixins'
 import { authentication } from 'src/stores/module-authentication'
 
 export default {
@@ -54,60 +58,55 @@ export default {
   },
   emits: ['open-subscription-dialog', 'banner-dismissed'],
   setup (props, { emit }) {
-    const subscriptionInfo = ref(null)
-    const dismissed = ref(false)
-
     const store = authentication()
+    const route = useRoute()
+    const dismissed = ref(false)
+    const loading = ref(false)
+
+    const subscriptionInfo = computed(() => store.currentSubscription)
+    const daysLeft = computed(() => store.subscriptionDaysLeft)
 
     const showBanner = computed(() => {
       if (!subscriptionInfo.value || props.isDemo) return false
-      const daysLeft = subscriptionInfo.value.days_left
-      return daysLeft !== null && daysLeft <= 7 && daysLeft >= 0
+      const days = daysLeft.value
+      return days !== null && days <= 7 && days >= 0
     })
 
     const bannerClass = computed(() => {
-      if (!subscriptionInfo.value) return ''
-      const daysLeft = subscriptionInfo.value.days_left
-      if (daysLeft <= 2) return 'banner-critical'
-      if (daysLeft <= 5) return 'banner-warning'
+      const days = daysLeft.value
+      if (days <= 2) return 'banner-critical'
+      if (days <= 5) return 'banner-warning'
       return 'banner-info'
     })
 
     const bannerIcon = computed(() => {
-      if (!subscriptionInfo.value) return 'info'
-      const daysLeft = subscriptionInfo.value.days_left
-      if (daysLeft <= 2) return 'error'
-      if (daysLeft <= 5) return 'warning'
+      const days = daysLeft.value
+      if (days <= 2) return 'error'
+      if (days <= 5) return 'warning'
       return 'info'
     })
 
     const bannerTitle = computed(() => {
-      if (!subscriptionInfo.value) return ''
-      const daysLeft = subscriptionInfo.value.days_left
-      if (daysLeft === 0) return '¡Tu suscripción vence hoy!'
-      if (daysLeft === 1) return '¡Tu suscripción vence mañana!'
-      return `Tu suscripción vence en ${daysLeft} días`
+      const days = daysLeft.value
+      if (days === 0) return '¡Tu suscripción vence hoy!'
+      if (days === 1) return '¡Tu suscripción vence mañana!'
+      return `Tu suscripción vence en ${days} días`
     })
 
     const bannerMessage = computed(() => {
-      if (!subscriptionInfo.value) return ''
       const planName = subscriptionInfo.value?.plan?.name || 'actual'
       return `Renueva tu plan ${planName} para seguir disfrutando de todas las funcionalidades`
     })
 
-    const loadSubscriptionInfo = async () => {
-      try {
-        subscriptionInfo.value = store.currentSubscription
+    const checkDismissalStatus = () => {
+      if (!subscriptionInfo.value) return
 
-        const storedSubId = localStorage.getItem('dismissed_banner_sub_id')
-        const currentSubId = subscriptionInfo.value?.id
+      const storedSubId = localStorage.getItem('dismissed_banner_sub_id')
+      const currentSubId = subscriptionInfo.value?.id
 
-        if (storedSubId !== String(currentSubId)) {
-          dismissed.value = false
-          localStorage.removeItem('dismissed_banner_sub_id')
-        }
-      } catch (error) {
-        console.error('Error loading subscription banner info:', error)
+      if (storedSubId !== String(currentSubId)) {
+        dismissed.value = false
+        localStorage.removeItem('dismissed_banner_sub_id')
       }
     }
 
@@ -117,32 +116,61 @@ export default {
         localStorage.setItem('dismissed_banner_sub_id', String(subscriptionInfo.value.id))
       }
       emit('banner-dismissed', {
-        daysLeft: subscriptionInfo.value?.days_left,
+        daysLeft: daysLeft.value,
         subscriptionId: subscriptionInfo.value?.id
       })
     }
 
-    const handleRenew = () => {
-      emit('open-subscription-dialog')
+    const handleRenew = async () => {
+      const plan = store.currentPlan
+
+      // Fallback: open plans dialog if we don't have plan data
+      if (!plan?.id) {
+        emit('open-subscription-dialog')
+        return
+      }
+
+      loading.value = true
+      try {
+        const businessType = route.query.business_type ||
+          store.userSession?.company_session?.business_type?.name
+
+        const response = await api.post('mercadopago/create-payment', {
+          subscription_plan_id: plan.id,
+          branch_offices_count: store.currentSubscription?.branch_offices_count || 1,
+          months: 1,
+          business_type: businessType
+        })
+
+        if (!response.data.init_point) {
+          throw new Error('No se recibió URL de pago de Mercado Pago')
+        }
+
+        localStorage.setItem('mp_preference_id', response.data.preference_id)
+        localStorage.setItem('mp_plan_id', plan.id)
+        localStorage.setItem('mp_plan_name', plan.name)
+
+        notify('Redirigiendo a Mercado Pago...', 'info', 'payment')
+        await new Promise(resolve => setTimeout(resolve, 500))
+        window.location.href = response.data.init_point
+      } catch (error) {
+        const msg = error.response?.data?.message || 'Error al crear el link de pago'
+        notify(msg, 'negative', 'warning')
+      } finally {
+        loading.value = false
+      }
     }
 
-    // Watch for subscription updates from parent
-    watch(() => props.isDemo, () => {
-      if (!props.isDemo) {
-        loadSubscriptionInfo()
-      }
-    })
-
-    onMounted(() => {
-      loadSubscriptionInfo()
-
-      // Listen for subscription updates
-      window.addEventListener('subscription-updated', loadSubscriptionInfo)
-    })
+    // Watch for subscription changes to handle dismissal reset
+    watch(subscriptionInfo, () => {
+      checkDismissalStatus()
+    }, { immediate: true })
 
     return {
       subscriptionInfo,
+      daysLeft,
       dismissed,
+      loading,
       showBanner,
       bannerClass,
       bannerIcon,
