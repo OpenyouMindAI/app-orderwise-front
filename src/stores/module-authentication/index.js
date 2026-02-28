@@ -21,6 +21,11 @@ export const authentication = defineStore('authentication', {
        */
       userSession: null,
       /**
+       * Profile photo URL (persisted separately for reliability)
+       * @type {String|null}
+       */
+      profilePhoto: null,
+      /**
        * Expires in
        * @type {Number}
        */
@@ -83,7 +88,17 @@ export const authentication = defineStore('authentication', {
        * Force user to select a plan
        * @type {Boolean}
        */
-      mustSelectPlan: false
+      mustSelectPlan: false,
+      /**
+       * Whether subscription is currently expired
+       * @type {Boolean}
+       */
+      isExpired: false,
+      /**
+       * Current plan object (from subscriptions/current API)
+       * @type {Object|null}
+       */
+      currentPlan: null
     }
   },
   actions: {
@@ -126,6 +141,7 @@ export const authentication = defineStore('authentication', {
         this.branchOffice = null
         this.setTimeOut = 0
         this.isDemo = false
+        this.profilePhoto = null
 
         // Limpiar headers de Axios para evitar que se use un token viejo
         delete api.defaults.headers.common.authorization
@@ -208,7 +224,25 @@ export const authentication = defineStore('authentication', {
         this.setTimeOut = Date.now() + (data.expires_in * 1000)
       }
 
+      // Auto-detect photo field from user object (backend may use different names)
+      const user = data.user
+      if (user) {
+        const photo = user.avatar || user.picture || user.photo || user.profile_photo || user.photo_url || null
+        if (photo) {
+          this.profilePhoto = photo
+        }
+      }
+
       api.defaults.headers.common.authorization = `${this.token_type} ${this.access_token}`
+    },
+    /**
+     * Set profile photo URL explicitly (e.g. from Google OAuth)
+     * @param {String} url
+     */
+    setProfilePhoto (url) {
+      if (url) {
+        this.profilePhoto = url
+      }
     },
     /**
      * Login app
@@ -244,10 +278,15 @@ export const authentication = defineStore('authentication', {
      */
     setSubscriptionData (subscriptionData) {
       this.subscriptionPlan = subscriptionData.plan?.slug || 'free'
-      this.subscriptionDaysLeft = subscriptionData.days_until_expiration || null
+      this.subscriptionDaysLeft = subscriptionData.days_left !== undefined ? subscriptionData.days_left : (subscriptionData.days_until_expiration || null)
       this.currentSubscription = subscriptionData.subscription || null
       this.maxBranches = subscriptionData.subscription?.branch_offices_count || 1
-      this.hasApiAccess = subscriptionData?.api_access || false
+      this.hasApiAccess = subscriptionData?.api_access || subscriptionData?.has_api_access || false
+
+      // Track expiration state for progressive modals
+      this.isExpired = subscriptionData.is_expired === true
+      // Store the full plan object for direct use in modals
+      this.currentPlan = subscriptionData.plan || subscriptionData.subscription?.plan || null
     },
     /**
      * Set current branch count
@@ -281,6 +320,9 @@ export const authentication = defineStore('authentication', {
       this.currentSubscription = null
       this.maxBranches = 1
       this.currentBranchCount = 0
+      this.isExpired = false
+      this.currentPlan = null
+      localStorage.removeItem('subscription_expired_since')
     }
   },
   getters: {

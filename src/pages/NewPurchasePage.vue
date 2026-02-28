@@ -3357,7 +3357,8 @@ export default {
         barcode: product.barcode,
         unit_of_measure_id: this.selectedUom?.id || product.unit_of_measure_id,
         uom_acronym: this.selectedUom?.acronym || product.unit_of_measure?.acronym,
-        conversion_factor: product.conversion_factor || 1
+        conversion_factor: product.conversion_factor || 1,
+        supplier_product_name: product.supplier_product_name || null
       })
     },
     /**
@@ -3899,9 +3900,11 @@ export default {
           // Add to Purchase Grid
           this.addProductToGrid({
             ...productData,
+            name: productData.name, // Nombe real en DB
             quantity: parseFloat(item.quantity),
-            cost: parseFloat(item.unit_price),
-            subtotal: parseFloat(item.quantity) * parseFloat(item.unit_price)
+            cost: parseFloat(item.unit_price), // Mantener precio de la factura
+            subtotal: parseFloat(item.quantity) * parseFloat(item.unit_price),
+            supplier_product_name: item.description // Nombre detectado por IA para alias
           })
         }
 
@@ -3964,13 +3967,15 @@ export default {
       if (existing) {
         existing.quantity += productData.quantity
         existing.cost = productData.cost // Update to latest invoice cost
+        existing.supplier_product_name = productData.supplier_product_name || existing.supplier_product_name
         this.calculate(existing)
       } else {
         this.pushProduct({
           ...productData,
           id: productData.id || productData.product_id,
           unit_of_measure_id: productData.unit_of_measure_id,
-          uom_acronym: productData.unit_of_measure?.acronym || productData.uom_acronym
+          uom_acronym: productData.unit_of_measure?.acronym || productData.uom_acronym,
+          supplier_product_name: productData.supplier_product_name
         })
       }
       this.calculateTotal()
@@ -4005,11 +4010,8 @@ export default {
     onProductSelect (product, row) {
       if (product) {
         row.is_new = false
-        row.description = product.name // Update desc to match product
-        row.unit_price = product.cost // Suggest updating cost to current product cost? Or keep invoice cost?
-        // Usually we want to keep invoice cost. But maybe show product cost as reference.
-        // Let's keep one field. The user can edit it.
-        // We do typically update row.unit_price if it was 0, but invoice usually has price.
+        // No sobreescribimos la descripción ni el precio de la factura
+        // Solo vinculamos la identidad del producto para el backend
       } else {
         row.is_new = true
       }

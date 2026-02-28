@@ -484,18 +484,19 @@ export const formatDate = (value, format = 'DD-MM-YYYY') => {
  * Formatea número con decimales
  */
 export const formatNumber = (data) => {
-  if (!data || (typeof data !== 'number' && typeof data !== 'string')) {
-    return Number(data)
+  if (data === undefined || data === null) {
+    return '0'
   }
 
   const num = Number(data)
-  if (isNaN(num)) return 0
+  if (isNaN(num)) return '0'
 
-  const factor = Math.pow(10, 3)
-  const truncated = Math.floor(num * factor) / factor
+  // Redondeamos a 3 decimales para ver si es efectivamente un entero
+  const rounded = Math.round(num * 1000) / 1000
+  const isInteger = rounded % 1 === 0
 
-  return truncated.toLocaleString('de-DE', {
-    minimumFractionDigits: 2,
+  return rounded.toLocaleString('de-DE', {
+    minimumFractionDigits: isInteger ? 0 : 2,
     maximumFractionDigits: 3
   })
 }
