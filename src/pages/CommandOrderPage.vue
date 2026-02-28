@@ -1531,7 +1531,7 @@ const dateField = ref('delivery_date')
 const dateFilters = ref({
   day: date.formatDate(new Date(), 'YYYY-MM-DD'),
   from: date.formatDate(new Date(), 'YYYY-MM-DD'),
-  to: date.formatDate(date.addToDate(new Date(), { years: 3 }), 'YYYY-MM-DD'),
+  to: date.formatDate(date.addToDate(new Date(), { years: 50 }), 'YYYY-MM-DD'),
   fromHours: '00:00',
   toHours: '23:59'
 })
