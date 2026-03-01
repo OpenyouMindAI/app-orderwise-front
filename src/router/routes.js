@@ -508,6 +508,12 @@ const routes = [
     component: () => import('pages/RegisterPage.vue')
   },
   {
+    path: '/reset-password/:token',
+    name: 'ResetPassword',
+    meta: { requiresAuth: false },
+    component: () => import('pages/ResetPasswordPage.vue')
+  },
+  {
     path: '/verifying/:access_token/:expires_in/:token_type/:redirect',
     name: 'VerifySession',
     meta: { requiresAuth: false },
