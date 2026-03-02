@@ -896,15 +896,10 @@ export default {
      * Filter providers for select
      */
     filterProviders (val, update) {
-      if (val === '') {
-        update(() => {
-          this.providersOptions = []
-        })
-        return
-      }
-
       this.$api.get('providers', {
         params: {
+          paginate: true,
+          perPage: 20,
           dataSearch: {
             name: val,
             document_number: val
@@ -913,8 +908,12 @@ export default {
       })
         .then(({ data }) => {
           update(() => {
-            this.providersOptions = data
+            // Se usa data.data porque el endpoint es paginado
+            this.providersOptions = Array.isArray(data) ? data : (data.data || [])
           })
+        })
+        .catch(err => {
+          console.error('Error fetching providers:', err)
         })
     },
     /**
@@ -923,6 +922,8 @@ export default {
     filterCoins (val, update) {
       this.$api.get('coins', {
         params: {
+          paginate: true,
+          perPage: 20,
           dataSearch: {
             name: val
           }
@@ -930,7 +931,8 @@ export default {
       })
         .then(({ data }) => {
           update(() => {
-            this.coins = data
+            // Se usa data.data porque el endpoint es paginado
+            this.coins = Array.isArray(data) ? data : (data.data || [])
           })
         })
     },
