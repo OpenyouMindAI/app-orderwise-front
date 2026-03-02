@@ -437,10 +437,6 @@
 
         <q-card-section class="q-pa-md scroll" :class="$q.screen.lt.sm ? 'col' : ''" style="max-height: 70vh;">
           <div class="row q-col-gutter-md">
-            <!-- ID -->
-            <div class="col-12 col-sm-6">
-              <q-input filled dense v-model="filters.id" label="Código" type="number" clearable hide-bottom-space />
-            </div>
             <!-- Name -->
             <div class="col-12 col-sm-6">
               <q-input filled dense v-model="filters.name" label="Nombre" clearable hide-bottom-space />
@@ -472,20 +468,6 @@
                 dense
                 v-model="filters.is_active"
                 label="Activo"
-                :options="booleanOptions"
-                emit-value
-                map-options
-                clearable
-                hide-bottom-space
-              />
-            </div>
-            <!-- Is Root -->
-            <div class="col-12 col-sm-6">
-              <q-select
-                filled
-                dense
-                v-model="filters.is_root"
-                label="Root"
                 :options="booleanOptions"
                 emit-value
                 map-options
