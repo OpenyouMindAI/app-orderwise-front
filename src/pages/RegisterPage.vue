@@ -234,6 +234,7 @@ import RegistrationForm from 'src/components/Auth/RegistrationForm.vue'
 import OtpVerificationForm from 'src/components/Auth/OtpVerificationForm.vue'
 import { useRegistration } from 'src/composables/useRegistration'
 import { usePixel } from 'src/composables/usePixel'
+import { useCompanySetup } from 'src/composables/useCompanySetup'
 
 const router = useRouter()
 const store = authentication()
@@ -254,7 +255,9 @@ const {
 const showCompanySetup = ref(false)
 const showBusinessTypeSetup = ref(false)
 const tempCompanyData = ref(null)
-const loadingCompanySetup = ref(false)
+
+// Composable de configuración de empresa
+const { loading: loadingCompanySetup, autoSetupCompany } = useCompanySetup()
 
 // OTP Verification
 const currentTab = ref('register')
@@ -316,9 +319,24 @@ const registrationFormData = ref({
  */
 const handleBusinessTypeNext = async (businessData) => {
   tempCompanyData.value = businessData
-  // En lugar de abrir el modal manual, hacemos el auto-setup con los datos del registro
-  await autoSetupCompany()
   showBusinessTypeSetup.value = false
+
+  await autoSetupCompany({
+    registrationData: registrationFormData.value,
+    businessData,
+    onSuccess: handleCompanySetupSuccess,
+    onError: () => {
+      showCompanyOptions.value = true
+    },
+    trackPixel: fbq?.event
+      ? ({ company_name: companyName }) => fbq.event('CrearEmpresa', {
+          business_type: 'auto-skipped',
+          country: 'not_specified',
+          company_name: companyName,
+          setup_method: 'auto'
+        })
+      : undefined
+  })
 }
 
 /**
@@ -450,67 +468,6 @@ const getBusinessIcon = (name) => {
 
   // Icono por defecto
   return 'store'
-}
-
-/**
- * Crea la empresa automáticamente con los datos del registro (Skip Setup)
- */
-const autoSetupCompany = async () => {
-  try {
-    loadingCompanySetup.value = true
-
-    // Obtener datos del usuario desde el store
-    const user = store.userGetter || {}
-
-    // Priorizar datos del formulario de registro si están disponibles
-    const registrationData = registrationFormData.value || {}
-
-    // Construir nombre completo de la empresa desde datos de registro
-    const firstName = registrationData.name || user.name || ''
-    const lastName = registrationData.last_name || user.last_name || ''
-    const companyName = `${firstName} ${lastName}`.trim() || 'Mi Empresa'
-
-    // Obtener email desde datos de registro o store
-    const email = registrationData.email || user.email || ''
-
-    // Obtener teléfono completo (con código de país) desde datos de registro
-    const phoneNumber = registrationData.phone_number || user.phone_number || user.phone || null
-
-    // Construir payload con datos del formulario de registro
-    const payload = {
-      company_name: companyName,
-      company_document: null,
-      company_email: email,
-      company_phone: phoneNumber,
-      company_address: null,
-      business_type_id: tempCompanyData.value?.business_type_id || null,
-      country_id: null,
-      copy_test_products: tempCompanyData.value?.copy_test_products || false
-    }
-
-    console.log('🚀 autoSetupCompany - Enviando payload:', payload)
-    const { data } = await api.post('authentication/setup-company', payload)
-    console.log('✅ autoSetupCompany - Respuesta recibida:', data)
-
-    handleCompanySetupSuccess(data)
-
-    if (fbq?.event) {
-      fbq.event('CrearEmpresa', {
-        business_type: 'auto-skipped',
-        country: 'not_specified',
-        company_name: payload.company_name,
-        setup_method: 'auto'
-      })
-    }
-  } catch (error) {
-    console.error('❌ Error en auto-setup:', error)
-    // Si falla el auto-setup, mostramos las opciones para que lo haga manual
-    showCompanyOptions.value = true
-    const errorMessage = error.response?.data?.message || 'No se pudo completar la configuración automática.'
-    notify(errorMessage, 'negative', 'warning')
-  } finally {
-    loadingCompanySetup.value = false
-  }
 }
 
 /**

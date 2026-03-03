@@ -799,6 +799,7 @@ import {
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
 import { useDemoPersuasion } from 'src/composables/useDemoPersuasion'
+import { useCompanySetup } from 'src/composables/useCompanySetup'
 import ProPlanPromoBanner from 'src/components/ProPlanPromoBanner.vue'
 
 export default {
@@ -1165,13 +1166,15 @@ export default {
   setup () {
     const router = useRouter()
     const { showDemoModal, trackDemoAction, initDemoPersuasion, stopDemoPersuasion } = useDemoPersuasion()
+    const { autoSetupCompany } = useCompanySetup()
 
     return {
       router,
       showDemoModal,
       trackDemoAction,
       initDemoPersuasion,
-      stopDemoPersuasion
+      stopDemoPersuasion,
+      autoSetupCompany
     }
   },
 
@@ -1500,8 +1503,15 @@ export default {
       this.tempCompanyData = businessData
       this.showBusinessTypeSetup = false
 
-      // En el flujo simplificado, intentamos configuración automática
-      this.autoSetupCompany()
+      // Usar el composable para la configuración automática
+      this.autoSetupCompany({
+        registrationData: this.registrationFormData || {},
+        businessData,
+        onSuccess: (data) => this.handleCompanySetupSuccess(data),
+        onError: () => {
+          this.showCompanySetup = true
+        }
+      })
     },
 
     /**
@@ -1573,58 +1583,7 @@ export default {
       }
     },
     /**
-     * Crea la empresa automáticamente con los datos del registro (Skip Setup)
-     */
-    async autoSetupCompany () {
-      try {
-        this.visibleLoading = true
-
-        // Obtener datos del usuario desde el store
-        const user = this.userSession || {}
-
-        // Priorizar datos de registro previo si están disponibles (desde handleRegisterSuccess)
-        const registrationData = this.registrationFormData || {}
-
-        // Construir nombre completo de la empresa desde datos de registro
-        const firstName = registrationData.name || user.name || ''
-        const lastName = registrationData.last_name || user.last_name || ''
-        const companyName = `${firstName} ${lastName}`.trim() || 'Mi Empresa'
-
-        // Obtener email desde datos de registro o store
-        const email = registrationData.email || user.email || ''
-
-        // Obtener teléfono completo (con código de país) desde datos de registro
-        const phoneNumber = registrationData.phone_number || user.phone_number || user.phone || null
-
-        // Construir payload con datos del formulario de registro
-        const payload = {
-          company_name: companyName,
-          company_document: null,
-          company_email: email,
-          company_phone: phoneNumber,
-          company_address: null,
-          business_type_id: this.tempCompanyData?.business_type_id || null,
-          country_id: null,
-          copy_test_products: this.tempCompanyData?.copy_test_products || false
-        }
-
-        console.log('🚀 autoSetupCompany (MainLayout) - Enviando payload:', payload)
-        const { data } = await api.post('authentication/setup-company', payload)
-        console.log('✅ autoSetupCompany (MainLayout) - Respuesta recibida:', data)
-
-        await this.handleCompanySetupSuccess(data)
-      } catch (error) {
-        console.error('❌ Error en auto-setup (MainLayout):', error)
-        // Si falla el auto-setup, mostramos el formulario como fallback
-        this.showCompanySetup = true
-        const errorMessage = error.response?.data?.message || 'No se pudo completar la configuración automática.'
-        notify(errorMessage, 'negative', 'warning')
-      } finally {
-        this.visibleLoading = false
-      }
-    },
-    /**
-     * Create company
+     * Create company (from manual dialog flow)
      */
     async createCompany () {
       // Validar formulario
