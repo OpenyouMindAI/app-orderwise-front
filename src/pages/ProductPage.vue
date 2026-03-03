@@ -2136,7 +2136,7 @@
                   Código: {{ barcode.barcode }}
                 </div>
                 <q-img
-                  :src="`data:image/png;base64,${barcode.barcode_image}`"
+                  :src="getBarcodeImage(barcode)"
                   style="max-width: 200px; margin: 0 auto;"
                   class="q-mb-md"
                 />
@@ -4290,6 +4290,7 @@ export default {
         const { data } = await this.$api.post('products/generate-barcode', {
           product_ids: productIds
         })
+        console.log('Barcode generation response:', data)
         this.barcodeCodes = data.barcode_codes
         notify('Códigos de barra generados exitosamente', 'positive', 'check_circle')
       } catch (error) {
@@ -4314,6 +4315,7 @@ export default {
         const { data } = await this.$api.post('products/generate-barcode', {
           product_ids: productIds
         })
+        console.log('Barcode generation (all) response:', data)
         this.barcodeCodes = data.barcode_codes
         notify('Códigos de barra generados exitosamente', 'positive', 'check_circle')
       } catch (error) {
@@ -4328,7 +4330,7 @@ export default {
     downloadBarcode (barcode) {
       try {
         const link = document.createElement('a')
-        link.href = `data:image/png;base64,${barcode.barcode_image}`
+        link.href = this.getBarcodeImage(barcode)
         link.download = `Barcode-${barcode.product_name.replace(/[^a-z0-9]/gi, '_')}.png`
         document.body.appendChild(link)
         link.click()
@@ -4344,7 +4346,7 @@ export default {
     async shareBarcodeWhatsApp (barcode) {
       try {
         // Convert base64 to blob
-        const base64Response = await fetch(`data:image/png;base64,${barcode.barcode_image}`)
+        const base64Response = await fetch(this.getBarcodeImage(barcode))
         const blob = await base64Response.blob()
 
         // Create file from blob
@@ -4456,6 +4458,15 @@ export default {
       } finally {
         this.loadingPdf = false
       }
+    },
+    /**
+     * Get barcode image source with fallbacks
+     */
+    getBarcodeImage (barcode) {
+      if (!barcode) return ''
+      const img = barcode.barcode_image || barcode.image || barcode.base64 || barcode.qr_code || barcode.barcode_base64
+      if (!img) return ''
+      return img.startsWith('data:') ? img : `data:image/png;base64,${img}`
     },
     /**
      * Open add product dialog
