@@ -117,7 +117,7 @@ export default {
     })
 
     // Blocking modals can't be dismissed
-    const isPersistent = computed(() => modalType.value === 'blocked')
+    const isPersistent = computed(() => modalType.value === 'blocked' && !store?.userSession?.is_root)
 
     const iconName = computed(() => {
       if (modalType.value === 'blocked') return 'lock'

@@ -186,11 +186,6 @@ export default {
        */
       tempCompanyData: null,
       /**
-       * User email for verification
-       * @type {String}
-       */
-      userEmail: '',
-      /**
        * Username or email for login
        * @type {String}
        */
@@ -810,7 +805,7 @@ export default {
           return
         }
 
-        this.$router.push({ name: 'Home' })
+        this.$router.push({ name: this.redirect || 'Home' })
 
         this.btnDisable = false
       } catch (error) {
