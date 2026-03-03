@@ -1471,6 +1471,9 @@ export default {
         await this.proceedToPaymentFirst()
 
         notify('Correo verificado.', 'positive', 'check_circle')
+
+        // Continuar al flujo de selección de rubro/configuración
+        this.showBusinessTypeSetup = true
       } catch (error) {
         console.error('Error al procesar verificación OTP:', error)
         notify('Error al procesar la verificación', 'negative', 'warning')
@@ -1496,7 +1499,9 @@ export default {
     handleBusinessTypeNext (businessData) {
       this.tempCompanyData = businessData
       this.showBusinessTypeSetup = false
-      this.showCompanySetup = true
+
+      // En el flujo simplificado, intentamos configuración automática
+      this.autoSetupCompany()
     },
 
     /**
@@ -1533,7 +1538,8 @@ export default {
         // Recargar los módulos y estados para que el menú se vea correctamente sin refrescar
         this.loadingPage()
 
-        this.$router.push('/')
+        console.log('🏁 handleCompanySetupSuccess (MainLayout) - Evitando redirección para inspección')
+        // this.$router.push('/')
       } catch (error) {
         console.error('Error al procesar configuración de empresa:', error)
         notify('Error al procesar la configuración', 'negative', 'warning')
@@ -1564,6 +1570,57 @@ export default {
           types: []
         }
         this.companyData.company_address = ''
+      }
+    },
+    /**
+     * Crea la empresa automáticamente con los datos del registro (Skip Setup)
+     */
+    async autoSetupCompany () {
+      try {
+        this.visibleLoading = true
+
+        // Obtener datos del usuario desde el store
+        const user = this.userSession || {}
+
+        // Priorizar datos de registro previo si están disponibles (desde handleRegisterSuccess)
+        const registrationData = this.registrationFormData || {}
+
+        // Construir nombre completo de la empresa desde datos de registro
+        const firstName = registrationData.name || user.name || ''
+        const lastName = registrationData.last_name || user.last_name || ''
+        const companyName = `${firstName} ${lastName}`.trim() || 'Mi Empresa'
+
+        // Obtener email desde datos de registro o store
+        const email = registrationData.email || user.email || ''
+
+        // Obtener teléfono completo (con código de país) desde datos de registro
+        const phoneNumber = registrationData.phone_number || user.phone_number || user.phone || null
+
+        // Construir payload con datos del formulario de registro
+        const payload = {
+          company_name: companyName,
+          company_document: null,
+          company_email: email,
+          company_phone: phoneNumber,
+          company_address: null,
+          business_type_id: this.tempCompanyData?.business_type_id || null,
+          country_id: null,
+          copy_test_products: this.tempCompanyData?.copy_test_products || false
+        }
+
+        console.log('🚀 autoSetupCompany (MainLayout) - Enviando payload:', payload)
+        const { data } = await api.post('authentication/setup-company', payload)
+        console.log('✅ autoSetupCompany (MainLayout) - Respuesta recibida:', data)
+
+        await this.handleCompanySetupSuccess(data)
+      } catch (error) {
+        console.error('❌ Error en auto-setup (MainLayout):', error)
+        // Si falla el auto-setup, mostramos el formulario como fallback
+        this.showCompanySetup = true
+        const errorMessage = error.response?.data?.message || 'No se pudo completar la configuración automática.'
+        notify(errorMessage, 'negative', 'warning')
+      } finally {
+        this.visibleLoading = false
       }
     },
     /**

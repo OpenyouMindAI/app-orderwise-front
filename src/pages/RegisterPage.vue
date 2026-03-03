@@ -161,6 +161,20 @@
             <div class="text-h6 text-grey-6 q-mt-md">No se encontraron rubros</div>
             <div class="text-caption text-grey-5">Intenta con otra búsqueda</div>
           </div>
+
+          <!-- Checkbox de copiar productos (Demo) -->
+          <div class="q-mt-md q-px-sm" v-if="demoBusinessType">
+            <q-checkbox
+              v-model="copyTestProductsDemo"
+              label="Cargar productos y categorías de ejemplo"
+              color="primary"
+              class="text-grey-8"
+            >
+              <q-tooltip class="bg-grey-8">
+                La demo incluirá datos de prueba para que explores el sistema rápidamente
+              </q-tooltip>
+            </q-checkbox>
+          </div>
         </q-card-section>
 
         <q-separator />
@@ -281,6 +295,7 @@ const isGoogleRegister = ref(false)
 const showCompanyOptions = ref(false)
 const showDemoBusinessTypeSelection = ref(false)
 const demoBusinessType = ref(null)
+const copyTestProductsDemo = ref(true)
 const loadingDemo = ref(false)
 const registeredCredentials = ref({
   email: '',
@@ -340,8 +355,9 @@ const handleCompanySetupSuccess = (data) => {
   // Notificar éxito
   notify('¡Bienvenido a Qbits!', 'positive', 'celebration')
 
+  console.log('🏁 handleCompanySetupSuccess - Evitando redirección para inspección:', data)
   // Redirigir a la página principal
-  router.push('/')
+  // router.push('/')
 }
 
 const businessTypeSearch = ref('')
@@ -469,10 +485,12 @@ const autoSetupCompany = async () => {
       company_address: null,
       business_type_id: tempCompanyData.value?.business_type_id || null,
       country_id: null,
-      copy_test_products: false
+      copy_test_products: tempCompanyData.value?.copy_test_products || false
     }
 
+    console.log('🚀 autoSetupCompany - Enviando payload:', payload)
     const { data } = await api.post('authentication/setup-company', payload)
+    console.log('✅ autoSetupCompany - Respuesta recibida:', data)
 
     handleCompanySetupSuccess(data)
 
@@ -1027,9 +1045,17 @@ const assignDemo = async () => {
   try {
     loadingDemo.value = true
 
-    const { data } = await api.post('authentication/assign-demo', {
-      business_type_id: demoBusinessType.value.id
+    console.log('🚀 assignDemo - Enviando payload:', {
+      business_type_id: demoBusinessType.value.id,
+      copy_test_products: copyTestProductsDemo.value
     })
+
+    const { data } = await api.post('authentication/assign-demo', {
+      business_type_id: demoBusinessType.value.id,
+      copy_test_products: copyTestProductsDemo.value
+    })
+
+    console.log('✅ assignDemo - Respuesta recibida:', data)
 
     store.setSessionData(data)
 
@@ -1037,7 +1063,8 @@ const assignDemo = async () => {
 
     showDemoBusinessTypeSelection.value = false
 
-    router.push('/')
+    console.log('🏁 assignDemo - Evitando redirección para inspección')
+    // router.push('/')
   } catch (error) {
     console.error('❌ Error al asignar demo:', error)
     const errorMessage = error.response?.data?.message || 'No se pudo activar la demo del sistema.'
