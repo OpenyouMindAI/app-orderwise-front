@@ -118,7 +118,7 @@
                   @click="openBarcodeDialog"
                 >
                   <q-item-section avatar>
-                    <q-icon name="barcode" color="primary" />
+                    <q-icon name="qr_code_scanner" color="primary" />
                   </q-item-section>
                   <q-item-section>
                     <q-item-label>Códigos de Barra</q-item-label>
@@ -307,7 +307,7 @@
                   @click="openBarcodeDialog"
                 >
                   <q-item-section avatar>
-                    <q-icon name="barcode" color="primary" />
+                    <q-icon name="qr_code_scanner" color="primary" />
                   </q-item-section>
                   <q-item-section>
                     <q-item-label>Códigos de Barra</q-item-label>
@@ -456,11 +456,11 @@
 
           <template v-slot:body-cell-selection="props">
             <q-td :props="props" class="text-center">
-              <q-checkbox 
+              <q-checkbox
                 v-model="props.selected"
-                @update:model-value="val => { 
+                @update:model-value="val => {
                   console.log('Checkbox changed:', props.row.name, 'selected:', val)
-                  props.selected = val 
+                  props.selected = val
                   this.forceSelectionUpdate()
                   console.log('Selection after change:', this.selection)
                 }"
@@ -484,9 +484,9 @@
                 <q-checkbox
                   v-if="multipleSelected"
                   v-model="props.selected"
-                  @update:model-value="val => { 
+                  @update:model-value="val => {
                     console.log('Mobile checkbox changed:', props.row.name, 'selected:', val)
-                    props.selected = val 
+                    props.selected = val
                     this.forceSelectionUpdate()
                     console.log('Mobile selection after change:', this.selection)
                   }"
@@ -2096,7 +2096,7 @@
         :class="$q.screen.lt.sm ? 'column full-height' : ''"
       >
         <q-card-section class="row items-center bg-primary text-white q-py-sm col-auto">
-          <q-icon name="barcode" size="sm" class="q-mr-sm" />
+          <q-icon name="qr_code_scanner" size="sm" class="q-mr-sm" />
           <div class="text-h6">Códigos de Barra de Productos</div>
           <q-space />
           <q-btn icon="close" flat round dense @click="closeBarcodeDialog" />
@@ -2107,7 +2107,7 @@
           :class="$q.screen.lt.sm ? 'col scroll flex flex-center' : ''"
         >
           <div class="text-center q-pa-lg">
-            <q-icon name="barcode" size="4rem" color="grey-5" class="q-mb-md" />
+            <q-icon name="qr_code_scanner" size="4rem" color="grey-5" class="q-mb-md" />
             <div class="text-h6 text-grey-7 q-mb-sm">
               Selecciona productos para generar códigos de barra
             </div>
@@ -2191,31 +2191,19 @@
           />
           <q-btn
             color="primary"
-            label="Generar códigos seleccionados"
-            icon="barcode"
+            icon="qr_code_scanner"
             @click="generateBarcodeSelected"
             :loading="loadingBarcode"
             :disable="!selection.length"
             v-if="!barcodeCodes.length"
             unelevated
           >
-            <template v-slot:default>
-              <span>Generar seleccionados ({{ selection.length }})</span>
-            </template>
+            <span>Generar seleccionados ({{ selection.length }})</span>
           </q-btn>
-          <q-btn
-            color="green"
-            label="🔧 PRUEBA (2 productos)"
-            icon="bug_report"
-            @click="testBarcodeBackend"
-            :loading="loadingBarcode"
-            v-if="!barcodeCodes.length"
-            unelevated
-          />
           <q-btn
             color="primary"
             label="Generar códigos de todos"
-            icon="barcode"
+            icon="qr_code_scanner"
             @click="generateBarcodeAll"
             :loading="loadingBarcode"
             v-if="!barcodeCodes.length"
@@ -2510,7 +2498,7 @@ export default {
       importSuccess: false,
       importSuccessMessage: '',
       isDragging: false,
-      visibleColumnNames: ['selection', 'barcode', 'name', 'category', 'show_catalog', 'cost', 'price', 'stock'],
+      visibleColumnNames: ['barcode', 'name', 'category', 'show_catalog', 'cost', 'price', 'stock'],
       filters: {
         name: null,
         description: null,
@@ -2601,13 +2589,6 @@ export default {
       openEditProduct: null,
       loadingDownload: 0,
       columns: [
-        {
-          name: 'selection',
-          align: 'center',
-          label: '',
-          field: '',
-          sortable: false
-        },
         {
           name: 'barcode',
           align: 'left',
@@ -2839,10 +2820,10 @@ export default {
     toggleMultipleSelection () {
       console.log('toggleMultipleSelection called')
       console.log('Current multipleSelected:', this.multipleSelected)
-      
+
       this.multipleSelected = !this.multipleSelected
       console.log('New multipleSelected:', this.multipleSelected)
-      
+
       // Clear selection when disabling multiple selection
       if (!this.multipleSelected) {
         this.selection = []
@@ -2855,7 +2836,7 @@ export default {
     handleCardClick (product) {
       console.log('handleCardClick called with:', product)
       console.log('handleCardClick - multipleSelected:', this.multipleSelected)
-      
+
       if (this.multipleSelected) {
         console.log('Calling toggleProductSelection')
         this.toggleProductSelection(product)
@@ -2876,7 +2857,7 @@ export default {
     toggleProductSelection (product) {
       console.log('toggleProductSelection called with:', product)
       console.log('Current selection before:', this.selection)
-      
+
       const index = this.selection.findIndex(p => p.id === product.id)
       if (index > -1) {
         this.selection.splice(index, 1)
@@ -2885,7 +2866,7 @@ export default {
         this.selection.push(product)
         console.log('Product added to selection')
       }
-      
+
       console.log('Current selection after:', this.selection)
       console.log('Selection length:', this.selection.length)
     },
@@ -2902,7 +2883,7 @@ export default {
       console.log('forceSelectionUpdate called')
       console.log('Current selection:', this.selection)
       console.log('Current products:', this.products)
-      
+
       // Force Vue reactivity by creating a new array
       this.selection = [...this.selection]
       console.log('Forced selection update:', this.selection)
@@ -3855,13 +3836,13 @@ export default {
       console.log('editProduct called')
       console.log('editProduct - multipleSelected:', this.multipleSelected)
       console.log('editProduct - event:', event)
-      
+
       // Si estamos en modo de selección múltiple, no abrir el diálogo de edición
       if (this.multipleSelected) {
         console.log('Multiple selection mode active, not opening edit dialog')
         return
       }
-      
+
       // Guardar el producto original antes de cualquier modificación
       this.originalProduct = this.deepCloneProduct(row)
 
@@ -3957,13 +3938,6 @@ export default {
      * Generate QR for selected products
      */
     async generateQrSelected () {
-      console.log('=== GENERATE QR SELECTED ===')
-      console.log('generateQrSelected - selection:', this.selection)
-      console.log('generateQrSelected - selection.length:', this.selection.length)
-      console.log('generateQrSelected - multipleSelected:', this.multipleSelected)
-      console.log('generateQrSelected - products:', this.products)
-      console.log('generateQrSelected - products.length:', this.products.length)
-      
       if (!this.selection.length) {
         notify('Selecciona al menos un producto', 'warning', 'warning')
         return
@@ -4288,6 +4262,11 @@ export default {
     openBarcodeDialog () {
       this.barcodeDialog = true
       this.barcodeCodes = []
+      
+      // Auto-generate if products are already selected
+      if (this.selection.length > 0) {
+        this.generateBarcodeSelected()
+      }
     },
     /**
      * Close Barcode dialog
@@ -4300,10 +4279,6 @@ export default {
      * Generate Barcode for selected products
      */
     async generateBarcodeSelected () {
-      console.log('generateBarcodeSelected - selection:', this.selection)
-      console.log('generateBarcodeSelected - selection.length:', this.selection.length)
-      console.log('generateBarcodeSelected - multipleSelected:', this.multipleSelected)
-      
       if (!this.selection.length) {
         notify('Selecciona al menos un producto', 'warning', 'warning')
         return
@@ -4368,21 +4343,31 @@ export default {
      */
     async shareBarcodeWhatsApp (barcode) {
       try {
-        const link = document.createElement('a')
-        link.href = `data:image/png;base64,${barcode.barcode_image}`
-        link.download = `Barcode-${barcode.product_name.replace(/[^a-z0-9]/gi, '_')}.png`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
+        // Convert base64 to blob
+        const base64Response = await fetch(`data:image/png;base64,${barcode.barcode_image}`)
+        const blob = await base64Response.blob()
 
-        // Try to share via WhatsApp
-        const message = `Código de barra para ${barcode.product_name}: ${barcode.barcode}`
-        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
-        window.open(whatsappUrl, '_blank')
+        // Create file from blob
+        const file = new File([blob], `Barcode-${barcode.product_name}.png`, { type: 'image/png' })
 
-        notify('Código de barra preparado para compartir en WhatsApp', 'positive', 'check_circle')
+        // Check if Web Share API is available
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: `Barcode - ${barcode.product_name}`,
+            text: `Código de barra del producto: ${barcode.product_name}${barcode.barcode ? ` (${barcode.barcode})` : ''}`,
+            files: [file]
+          })
+          notify('Compartido exitosamente', 'positive', 'check_circle')
+        } else {
+          // Fallback: Open WhatsApp Web with text
+          const text = encodeURIComponent(`Código de barra del producto: ${barcode.product_name}${barcode.barcode ? ` (${barcode.barcode})` : ''}`)
+          window.open(`https://wa.me/?text=${text}`, '_blank')
+          notify('Abre WhatsApp para compartir. Descarga el código de barras y envíalo manualmente.', 'info', 'info')
+        }
       } catch (error) {
-        notify('Error al compartir el código de barra', 'negative', 'warning')
+        if (error.name !== 'AbortError') {
+          notify('Error al compartir por WhatsApp', 'negative', 'warning')
+        }
       }
     },
     /**
@@ -4470,31 +4455,6 @@ export default {
         notify(error.message || 'Error al generar PDF', 'negative', 'warning')
       } finally {
         this.loadingPdf = false
-      }
-    },
-    /**
-     * Test barcode backend with fixed product IDs
-     */
-    async testBarcodeBackend () {
-      console.log('=== TESTING BACKEND WITH FIXED IDS ===')
-      try {
-        this.loadingBarcode = true
-        // Usar IDs fijos que sabemos que existen (4 y 5)
-        const productIds = [4, 5]
-        console.log('Testing with product IDs:', productIds)
-        
-        const { data } = await this.$api.post('products/generate-barcode', {
-          product_ids: productIds
-        })
-        
-        console.log('Backend response:', data)
-        this.barcodeCodes = data.barcode_codes
-        notify('✅ Backend funciona! Códigos generados: ' + data.barcode_codes.length, 'positive', 'check_circle')
-      } catch (error) {
-        console.error('Backend error:', error)
-        notify('❌ Error backend: ' + (error.response?.data?.message || error.message), 'negative', 'warning')
-      } finally {
-        this.loadingBarcode = false
       }
     },
     /**
