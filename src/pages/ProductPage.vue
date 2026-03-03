@@ -4464,8 +4464,19 @@ export default {
      */
     getBarcodeImage (barcode) {
       if (!barcode) return ''
-      const img = barcode.barcode_image || barcode.image || barcode.base64 || barcode.qr_code || barcode.barcode_base64
+      let img = barcode.barcode_image || barcode.image || barcode.base64 || barcode.qr_code || barcode.barcode_base64
       if (!img) return ''
+
+      // Detect double base64 encoding (e.g. starts with 'aVZC' which decodes to 'iVB')
+      if (img.startsWith('aVZ')) {
+        try {
+          // Decode one layer if it looks like it was double encoded
+          img = atob(img)
+        } catch (e) {
+          // If decoding fails, keep the original string
+        }
+      }
+
       return img.startsWith('data:') ? img : `data:image/png;base64,${img}`
     },
     /**
