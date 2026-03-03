@@ -1,10 +1,28 @@
 <template>
   <q-page padding>
     <div class="q-gutter-sm">
-      <div class="row justify-between items-center">
+      <div class="row justify-between items-center q-gutter-x-sm">
         <span class="text-h6">
           Lista de compras
         </span>
+        <div class="text-right q-gutter-x-sm">
+          <q-btn
+            icon="download"
+            color="teal"
+            round
+            @click="downloadPurchaseExcel"
+          >
+            <q-tooltip>Exportar Excel</q-tooltip>
+          </q-btn>
+          <q-btn
+            round
+            icon="filter_alt"
+            color="primary"
+            @click="dialogFilter = true"
+          >
+            <q-tooltip>Filtros Avanzados</q-tooltip>
+          </q-btn>
+        </div>
       </div>
       <q-table
         title="Lista de compras"
@@ -379,6 +397,121 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+    <q-dialog
+      v-model="dialogFilter"
+      :position="$q.screen.lt.sm ? 'standard' : 'right'"
+      :seamless="!$q.screen.lt.sm"
+      :maximized="$q.screen.lt.sm"
+    >
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column' : ''"
+        :style="$q.screen.lt.sm ? 'width: 100%;' : 'width: 500px; max-width: 80vw;'"
+      >
+        <q-card-section class="bg-primary text-white row items-center justify-between">
+          <div class="text-h6">Filtros Avanzados</div>
+          <q-btn icon="close" flat round dense @click="dialogFilter = false" />
+        </q-card-section>
+
+        <q-card-section
+          :class="$q.screen.lt.sm ? 'col scroll q-pt-sm' : 'q-pt-sm scroll'"
+          :style="$q.screen.lt.sm ? '' : 'max-height: calc(100vh - 200px);'"
+        >
+          <div class="column q-gutter-y-md">
+            <div class="text-subtitle2 text-grey-7">Rango de Fecha</div>
+            <q-option-group
+              v-model="datePanel"
+              inline
+              dense
+              :options="[
+                { label: 'Día', value: 'day' },
+                { label: 'Entre fechas', value: 'between' }
+              ]"
+            />
+            <q-tab-panels v-model="datePanel" animated class="q-pa-none bg-transparent">
+              <q-tab-panel name="between" class="q-gutter-y-sm q-pa-none">
+                <q-input filled dense v-model="advanceFilters.from" hint="Desde" type="date"/>
+                <q-input filled dense v-model="advanceFilters.to" hint="Hasta" type="date"/>
+              </q-tab-panel>
+              <q-tab-panel name="day" class="q-gutter-y-sm q-pa-none">
+                <q-input filled dense v-model="advanceFilters.day" hint="Fecha del día" type="date"/>
+              </q-tab-panel>
+            </q-tab-panels>
+
+            <q-separator />
+
+            <div class="text-subtitle2 text-grey-7">Información del Documento</div>
+            <q-input
+              filled
+              dense
+              v-model="advanceFilters.purchase_code"
+              label="Código de factura"
+              clearable
+            />
+            <q-input
+              filled
+              dense
+              v-model="advanceFilters.purchase_number"
+              label="Número de comprobante"
+              clearable
+            />
+
+            <q-separator />
+
+            <div class="text-subtitle2 text-grey-7">Entidades</div>
+            <q-select
+              filled
+              dense
+              use-input
+              label="Proveedor"
+              v-model="advanceFilters.provider"
+              :options="providersOptions"
+              @filter="filterProviders"
+              option-label="name"
+              option-value="id"
+              clearable
+              input-debounce="500"
+            >
+              <template v-slot:no-option>
+                <q-item>
+                  <q-item-section class="text-grey">No se encontraron resultados</q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+
+            <q-select
+              filled
+              dense
+              v-model="advanceFilters.coin"
+              label="Moneda"
+              :options="coins"
+              option-label="name"
+              option-value="id"
+              clearable
+              @filter="filterCoins"
+            />
+          </div>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn
+            flat
+            label="Limpiar"
+            color="negative"
+            icon="filter_alt_off"
+            @click="clearFilters"
+          />
+          <q-btn
+            unelevated
+            label="Aplicar Filtros"
+            color="primary"
+            icon="filter_alt"
+            @click="applyFilters"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
     <q-inner-loading :showing="visibleLoading">
       <q-knob
         :step="10"
@@ -406,10 +539,38 @@ export default {
       formatDate,
       loadingDownload: 0,
       /**
-       * Value knob
-       * @type {Number}
+       * Dialog filter status
+       * @type {Boolean}
        */
       dialogFilter: false,
+      /**
+       * Date panel selection
+       * @type {String}
+       */
+      datePanel: 'day',
+      /**
+       * Advanced filters object
+       * @type {Object}
+       */
+      advanceFilters: {
+        from: null,
+        to: null,
+        day: null,
+        purchase_code: '',
+        purchase_number: '',
+        provider: null,
+        coin: null
+      },
+      /**
+       * Providers list for filter
+       * @type {Array}
+       */
+      providersOptions: [],
+      /**
+       * Coins list for filter
+       * @type {Array}
+       */
+      coins: [],
       /**
        * Loading provider status
        * @type {Boolean}
@@ -708,16 +869,115 @@ export default {
       this.getPurchases(this.params)
     },
     /**
+     * Clear all advanced filters
+     */
+    clearFilters () {
+      this.advanceFilters = {
+        from: null,
+        to: null,
+        day: null,
+        purchase_code: '',
+        purchase_number: '',
+        provider: null,
+        coin: null
+      }
+      this.datePanel = 'day'
+      this.applyFilters()
+    },
+    /**
+     * Apply advanced filters and refresh list
+     */
+    applyFilters () {
+      this.dialogFilter = false
+      this.params.page = 1
+      this.getPurchases(this.params)
+    },
+    /**
+     * Filter providers for select
+     */
+    filterProviders (val, update) {
+      this.$api.get('providers', {
+        params: {
+          paginate: true,
+          perPage: 20,
+          dataSearch: {
+            name: val,
+            document_number: val
+          }
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            // Se usa data.data porque el endpoint es paginado
+            this.providersOptions = Array.isArray(data) ? data : (data.data || [])
+          })
+        })
+        .catch(err => {
+          console.error('Error fetching providers:', err)
+        })
+    },
+    /**
+     * Filter coins for select
+     */
+    filterCoins (val, update) {
+      this.$api.get('coins', {
+        params: {
+          paginate: true,
+          perPage: 20,
+          dataSearch: {
+            name: val
+          }
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            // Se usa data.data porque el endpoint es paginado
+            this.coins = Array.isArray(data) ? data : (data.data || [])
+          })
+        })
+    },
+    /**
      * Get all purchases
      */
     getPurchases (params = this.params) {
       this.visible = true
+
+      // Construct advanced filters
+      const dataEqualFilter = {
+        branch_office_id: this.branchOffice?.id
+      }
+
+      const dataSearch = { ...params.dataSearch }
+
+      // Add advanced filters if they exist
+      if (this.advanceFilters.purchase_code) {
+        dataSearch.purchase_code = this.advanceFilters.purchase_code
+      }
+      if (this.advanceFilters.purchase_number) {
+        dataSearch.purchase_number = this.advanceFilters.purchase_number
+      }
+      if (this.advanceFilters.provider) {
+        dataEqualFilter.provider_id = this.advanceFilters.provider.id
+      }
+      if (this.advanceFilters.coin) {
+        dataEqualFilter.coin_id = this.advanceFilters.coin.id
+      }
+
+      // Date Filters
+      const dateFilter = {}
+      if (this.datePanel === 'day' && this.advanceFilters.day) {
+        dateFilter.day = this.advanceFilters.day
+      } else if (this.datePanel === 'between' && this.advanceFilters.from && this.advanceFilters.to) {
+        dateFilter.from = this.advanceFilters.from
+        dateFilter.to = this.advanceFilters.to
+      }
+
       this.$api.get('purchases', {
         params: {
           ...params,
-          dataEqualFilter: {
-            branch_office_id: this.branchOffice?.id
-          }
+          dataSearch,
+          dataEqualFilter,
+          ...dateFilter
         }
       })
         .then(({ data }) => {

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page class="q-pa-none">
     <q-form ref="saveBill" @submit.prevent="saveBill">
       <div class="billing-panel-container q-pa-sm">
@@ -302,7 +302,6 @@
                     <q-td key="taxe" :props="props">
                       {{ formatNumber(props.row.taxe) }}
                       <q-popup-edit
-                        v-if="invoiceType?.acronym_serie === 'B'"
                         v-model.number="props.row.taxe"
                         auto-save
                         v-slot="scope"
@@ -397,7 +396,7 @@
                                   />
                                 </q-popup-edit>
                               </span>
-                              <div v-if="invoiceType?.acronym_serie === 'B'" class="cart-item-price-label text-orange-9 text-weight-bold">
+                              <div class="cart-item-price-label text-orange-9 text-weight-bold">
                                 Impuesto: {{ coin?.symbol }} {{ formatNumber(product.taxe) }}
                                 <q-popup-edit
                                   v-model.number="product.taxe"
@@ -530,7 +529,7 @@
               </div>
 
               <!-- Impuestos y Descuentos -->
-              <div class="col-12" v-if="$q.screen.gt.sm">
+              <div class="col-12">
                 <q-card style="border-radius: 10px;" class="shadow-1">
                   <q-card-section class="q-pa-sm">
                     <div class="text-subtitle2 text-weight-medium q-mb-sm">Impuestos y Descuentos</div>
@@ -3178,7 +3177,12 @@ export default {
         delivery_date: this.deliveryDate,
         branch_office_id: this.branchOffice?.id,
         products: this.products,
-        status: this.purchase?.status || this.typeOfService.code === 4 ? 'delivered' : 'pending',
+        taxes: this.taxes,
+        discounts: this.discounts,
+        total: this.totalBill + this.totalTaxes - this.totalDiscounts,
+        total_taxes: this.totalTaxes,
+        total_discounts: this.totalDiscounts,
+        status: this.purchase?.status || (this.typeOfService?.code === 4 ? 'delivered' : 'pending'),
         payments: this.payments.filter(payment => payment.amount > 0)
       }
 
