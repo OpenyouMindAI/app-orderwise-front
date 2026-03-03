@@ -249,6 +249,34 @@ const form = ref({
 // Country code selector
 const selectedCountry = ref(countryOptions[0])
 
+/**
+ * Reinicia el formulario a su estado inicial
+ */
+const resetFormInternally = () => {
+  form.value = {
+    company_name: '',
+    company_document: '',
+    company_email: props.userEmail || '',
+    company_phone: '',
+    company_address: '',
+    country_id: null,
+    copy_test_products: false
+  }
+  companyAddressData.value = {
+    name: '',
+    street: '',
+    city: '',
+    state: '',
+    country: '',
+    zipCode: '',
+    latitude: null,
+    longitude: null,
+    formattedAddress: '',
+    placeId: '',
+    types: []
+  }
+}
+
 // Phone validation rule
 const phoneRule = computed(() => {
   return [
@@ -439,6 +467,9 @@ watch(() => props.initialBusinessData, (newVal) => {
 watch(() => props.modelValue, (val) => {
   if (val && countries.value.length === 0) {
     filterCountries('', (cb) => cb())
+  }
+  if (!val) {
+    resetFormInternally()
   }
 })
 

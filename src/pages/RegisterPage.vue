@@ -248,7 +248,8 @@ const {
   loadingGoogle,
   register: registerUser,
   registerWithGoogle: registerWithGoogleUser,
-  initializeGoogleAuthMobile
+  initializeGoogleAuthMobile,
+  resetForm
 } = useRegistration()
 
 // UI state específico de la página
@@ -315,6 +316,37 @@ const registrationFormData = ref({
 })
 
 /**
+ * Limpia todos los formularios y estados de la página
+ */
+const clearAllForms = () => {
+  resetForm()
+  demoBusinessType.value = null
+  businessTypeSearch.value = ''
+  copyTestProductsDemo.value = true
+  companyForm.value = {
+    company_name: '',
+    company_document: '',
+    company_email: '',
+    company_phone: '',
+    company_address: '',
+    business_type: null,
+    country_id: null,
+    copy_test_products: false
+  }
+  registrationFormData.value = {
+    name: '',
+    last_name: '',
+    email: '',
+    phone_number: '',
+    country_code: ''
+  }
+  registeredCredentials.value = {
+    email: '',
+    password: ''
+  }
+}
+
+/**
  * Handle business type next step (Step 1 -> Step 2)
  */
 const handleBusinessTypeNext = async (businessData) => {
@@ -373,9 +405,10 @@ const handleCompanySetupSuccess = (data) => {
   // Notificar éxito
   notify('¡Bienvenido a Qbits!', 'positive', 'celebration')
 
-  console.log('🏁 handleCompanySetupSuccess - Evitando redirección para inspección:', data)
-  // Redirigir a la página principal
-  // router.push('/')
+  // Limpiar formularios
+  clearAllForms()
+
+  router.push('/')
 }
 
 const businessTypeSearch = ref('')
@@ -1020,8 +1053,10 @@ const assignDemo = async () => {
 
     showDemoBusinessTypeSelection.value = false
 
-    console.log('🏁 assignDemo - Evitando redirección para inspección')
-    // router.push('/')
+    // Limpiar formularios
+    clearAllForms()
+
+    router.push('/')
   } catch (error) {
     console.error('❌ Error al asignar demo:', error)
     const errorMessage = error.response?.data?.message || 'No se pudo activar la demo del sistema.'
