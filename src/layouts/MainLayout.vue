@@ -59,7 +59,7 @@
               enter-active-class="animated fadeIn"
               leave-active-class="animated fadeOut"
             >
-              <div v-if="store.isDemo" class="demo-badge-floating">
+              <div v-if="store.isDemo || isClientDemo" class="demo-badge-floating">
                 <span>Demo</span>
                 <div class="demo-badge-dot"></div>
               </div>
@@ -107,12 +107,12 @@
             enter-active-class="animated fadeIn"
             leave-active-class="animated fadeOut"
           >
-            <div v-if="store.isDemo && !$q.screen.xs">
+            <div v-if="(store.isDemo || isClientDemo) && !$q.screen.xs">
               <q-btn
                 outline
                 dense
                 class="create-btn-v0"
-                @click="showCreateCompanyDialog = true"
+                @click="handleCreateCompanyClick"
               >
                 <q-icon
                   name="rocket_launch"
@@ -415,11 +415,11 @@
                 <!-- Plan Info / Demo Action -->
                 <div>
                   <q-item
-                    v-if="store.isDemo"
+                    v-if="store.isDemo || isClientDemo"
                     clickable
                     v-ripple
                     class="demo-action-item"
-                    @click="showCreateCompanyDialog = true"
+                    @click="handleCreateCompanyClick"
                     v-close-popup
                   >
                     <q-item-section avatar class="min-width-auto">
@@ -673,7 +673,7 @@
     />
 
     <subscription-expiration-banner
-      :is-demo="isDemo"
+      :is-demo="isDemo || isClientDemo"
       @open-subscription-dialog="showSubscriptionDialog = true"
       @banner-dismissed="handleBannerDismissed"
     />
@@ -683,13 +683,13 @@
       v-model="showSubscriptionDialog"
       :show-contact-option="false"
       @subscription-updated="onSubscriptionUpdated"
-      @open-register="showCreateCompanyDialog = true"
+      @open-register="handleCreateCompanyClick"
     />
 
     <subscription-expiration-modal
       :is-expired="isExpired"
       :plan-name="store.subscriptionPlan"
-      :is-demo="store.isDemo"
+      :is-demo="store.isDemo || isClientDemo"
       @open-subscription="showSubscriptionDialog = true"
     />
 
@@ -743,7 +743,7 @@
       leave-active-class="animated fadeOut"
     >
       <div
-        v-if="store.isDemo && $q.screen.xs"
+        v-if="(store.isDemo || isClientDemo) && $q.screen.xs"
         class="float-create-btn-mobile"
       >
         <div v-if="showDemoMessage" class="demo-info-message">
@@ -753,7 +753,7 @@
           outline
           dense
           class="create-btn-v0"
-          @click="showCreateCompanyDialog = true"
+          @click="handleCreateCompanyClick"
         >
           <q-icon
             name="rocket_launch"
@@ -977,6 +977,7 @@ export default {
       'userSession',
       'branchOffice',
       'isDemo',
+      'isClientDemo',
       'setBranchOffice',
       'access_token',
       'refresh_token',
@@ -1151,7 +1152,7 @@ export default {
       if (oldVal === true && newVal === false) {
         // Si el usuario cierra el modal de planes y no tiene empresa configurada,
         // lo llevamos al siguiente paso del flujo (Setup de empresa)
-        if (this.userSession && !this.userSession.company_session?.id && !this.store.isDemo) {
+        if (this.userSession && !this.userSession.company_session?.id && !this.store.isDemo && !this.isClientDemo) {
           this.showBusinessTypeSetup = true
         }
       }
@@ -1199,7 +1200,7 @@ export default {
     window.addEventListener('keydown', this.handleGlobalKeyDown)
 
     eventBus.on('open-create-company', () => {
-      this.showCreateCompanyDialog = true
+      this.handleCreateCompanyClick()
     })
 
     eventBus.on('open-subscription-dialog', () => {
@@ -1210,7 +1211,7 @@ export default {
       this.leftDrawerOpen = !this.leftDrawerOpen
     })
 
-    if (this.store.isDemo) {
+    if (this.store.isDemo || this.isClientDemo) {
       this.showDemoMessage = true
       setTimeout(() => {
         this.showDemoMessage = false
@@ -1257,6 +1258,16 @@ export default {
     this.loadSubscriptionInfo()
   },
   methods: {
+    /**
+     * Handle "Mi Empresa" button click
+     */
+    handleCreateCompanyClick () {
+      if (this.isClientDemo) {
+        this.showBusinessTypeSetup = true
+      } else {
+        this.showCreateCompanyDialog = true
+      }
+    },
     /**
      * Verifica si el usuario vuelve de un pago exitoso y necesita configurar su empresa
      */
@@ -1525,6 +1536,7 @@ export default {
         if (data?.user) {
           Object.assign(this.store.userSession, data.user)
           this.store.isDemo = false
+          this.store.isClientDemo = false
 
           // Actualizar branch office si viene
           if (data.branch_office) {
@@ -2197,7 +2209,7 @@ export default {
       ]
 
       // Check if company is demo or plan is free
-      const isDemo = this.store.isDemo
+      const isDemo = this.store.isDemo || this.isClientDemo
       const isFree = this.currentSubscription?.plan && this.currentSubscription?.plan?.slug === 'free'
 
       // If demo or free plan, hide premium modules
@@ -2331,7 +2343,7 @@ export default {
      */
     startDemoReminder () {
       // Solo iniciar si es cuenta demo
-      if (!this.isDemo || this.userSession?.is_root) {
+      if ((!this.isDemo && !this.isClientDemo) || this.userSession?.is_root) {
         return
       }
 
@@ -2341,8 +2353,8 @@ export default {
       // Configurar intervalo de 5 minutos (300000 ms)
       this.demoReminderInterval = setInterval(() => {
         // Verificar nuevamente si sigue siendo demo (por si cambió)
-        if (this.isDemo) {
-          this.showCreateCompanyDialog = true
+        if (this.isDemo || this.isClientDemo) {
+          this.handleCreateCompanyClick()
         } else {
           // Si ya no es demo, detener el intervalo
           this.stopDemoReminder()

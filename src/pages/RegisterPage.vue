@@ -1048,6 +1048,7 @@ const assignDemo = async () => {
     console.log('✅ assignDemo - Respuesta recibida:', data)
 
     store.setSessionData(data)
+    store.isClientDemo = true
 
     notify('¡Bienvenido a la demo!', 'positive', 'check_circle')
 
