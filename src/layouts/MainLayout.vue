@@ -1451,6 +1451,14 @@ export default {
      */
     async handleGoogleRegisterSuccess (data) {
       try {
+        // Si no necesita setup de empresa, significa que ya tiene una cuenta activa y configurada
+        if (!data.needsCompanySetup) {
+          this.showCreateCompanyDialog = false
+          notify('Ya existe una cuenta vinculada a este Gmail. Por favor, inicia sesión para continuar.', 'warning', 'info')
+          this.$router.push('/login')
+          return
+        }
+
         this.showCreateCompanyDialog = false
 
         await this.$nextTick()

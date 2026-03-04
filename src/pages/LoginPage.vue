@@ -359,12 +359,10 @@ export default {
       }
       document.head.appendChild(script)
     },
-    /**
-     * Initialize Google Sign-In
-     */
     initializeGoogleSignIn () {
       if (window.google && window.google.accounts) {
         try {
+          console.log('Initializing Google GSI with Client ID:', process.env.GOOGLE_CLIENT_ID)
           // Inicializar Google Identity Services
           window.google.accounts.id.initialize({
             client_id: process.env.GOOGLE_CLIENT_ID,
@@ -377,6 +375,17 @@ export default {
           this.googleClient = window.google.accounts.oauth2.initTokenClient({
             client_id: process.env.GOOGLE_CLIENT_ID,
             scope: 'email profile',
+            error_callback: (error) => {
+              console.error('Google OAuth Error (Details):', error)
+              // NOTA: 'popup_failed_to_open' es un error falso de GSI en localhost
+              // cuando el popup SÍ se abre. Solo resetear si el navegador lo bloquea realmente.
+              if (error.type === 'popup_blocked_by_browser') {
+                this.googleLoading = false
+                notify('El navegador bloqueó la ventana de Google. Permite los popups e intenta de nuevo.', 'negative', 'warning')
+              }
+              // Para popup_failed_to_open: no hacemos nada, la ventana sí se abrió.
+              // El handleGoogleTokenResponse o su error/cierre manejara el loading.
+            },
             callback: this.handleGoogleTokenResponse
           })
         } catch (error) {
@@ -388,35 +397,27 @@ export default {
      * Handle Google login button click
      */
     async handleGoogleLogin () {
+      console.log('Google login button clicked')
       this.googleLoading = true
 
       try {
         // Detectar si es móvil nativo (Capacitor)
         if (this.$q.platform.is.nativeMobile && window.Capacitor) {
+          console.log('Starting mobile Google login flow')
           await this.handleGoogleLoginMobile()
         } else if (window.google && window.google.accounts) {
-          // Web: Usar Google Identity Services
-          try {
-            // Intentar con One Tap primero
-            window.google.accounts.id.prompt((notification) => {
-              if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                // Si One Tap no funciona, usar OAuth2 popup
-                console.log('One Tap not available, using OAuth2 popup')
-                this.openGoogleOAuthPopup()
-              }
-            })
-          } catch (error) {
-            console.error('Error with Google One Tap:', error)
-            // Fallback a OAuth2 popup
-            this.openGoogleOAuthPopup()
-          }
+          console.log('Starting web Google login flow (OAuth Popup)')
+          // Abrir popup OAuth directamente — el One Tap no funciona en localhost
+          // El spinner se mantiene hasta que el usuario elige cuenta o cierra la ventana
+          this.openGoogleOAuthPopup()
         } else {
+          console.error('Google GSI not available')
           this.googleLoading = false
           notify('Google Sign-In no está disponible', 'negative', 'warning')
         }
       } catch (error) {
         this.googleLoading = false
-        console.error('Google login error:', error)
+        console.error('Google login error (Initial):', error)
         notify('Error al iniciar sesión con Google', 'negative', 'warning')
       }
     },
@@ -488,6 +489,24 @@ export default {
       if (this.googleClient) {
         try {
           this.googleClient.requestAccessToken()
+
+          // Detectar cuando el usuario cierra la ventana de Google sin seleccionar cuenta.
+          // Google no dispara ningún evento en ese caso, pero la ventana principal recupera el foco.
+          const handleWindowFocus = () => {
+            // Dar un pequeño margen para que el callback de éxito se ejecute primero
+            setTimeout(() => {
+              if (this.googleLoading) {
+                console.log('Google popup closed without account selection')
+                this.googleLoading = false
+              }
+            }, 500)
+            window.removeEventListener('focus', handleWindowFocus)
+          }
+
+          // Escuchar el foco un tick después de abrir el popup
+          setTimeout(() => {
+            window.addEventListener('focus', handleWindowFocus)
+          }, 100)
         } catch (error) {
           this.googleLoading = false
           notify('Error al abrir Google Sign-In', 'negative', 'warning')
@@ -502,6 +521,13 @@ export default {
      * @param {Object} tokenResponse - OAuth2 token response object
      */
     async handleGoogleTokenResponse (tokenResponse) {
+      console.log('Google Token Response received:', tokenResponse)
+      if (tokenResponse && tokenResponse.error) {
+        console.error('Google Token Response Error:', tokenResponse.error)
+        this.googleLoading = false
+        return
+      }
+
       if (tokenResponse && tokenResponse.access_token) {
         try {
           // Obtener información del usuario con el access token
@@ -534,17 +560,22 @@ export default {
     async authenticateWithGoogle (email, name, googleId, picture) {
       try {
         // Crear un credential con toda la información
-        const credential = btoa(JSON.stringify({
+        const payload = {
           email,
           name,
           google_id: googleId,
           picture
-        }))
+        }
+        console.log('Google Manual Payload details:', payload)
+        const credential = btoa(JSON.stringify(payload))
 
+        console.log('Authenticating with Google (Manual Payload):', { email, name, google_id: googleId })
         const result = await this.$api.post('/authentication/google', {
-          credential
-          // NO enviar email y name por separado, ya están en el credential
+          credential,
+          email,
+          name
         })
+        console.log('Google Auth Result:', result.data)
 
         if (result.data.access_token) {
           // Usar el mismo método que el login normal para guardar la sesión
@@ -553,15 +584,20 @@ export default {
           if (result.data.user?.roles?.length === 0) {
             notify('Usuario no tiene permisos', 'negative', 'warning')
           } else {
+            console.log('Login successful, redirecting home')
             this.$router.push({ name: 'Home' })
           }
         }
       } catch (error) {
-        console.error('Google authentication error:', error)
+        console.error('Google authentication error (Manual):', error)
+        console.error('Status:', error.response?.status)
+        console.error('Data:', error.response?.data)
 
         if (error.response?.status === 404) {
+          console.error('User not found (404) for email:', email)
           notify('No hay un usuario registrado con ese email', 'negative', 'warning')
         } else if (error.response?.status === 401) {
+          console.error('Access denied (401). Possible token/payload issue.')
           notify('No pudimos validar tu cuenta de Google. Inténtalo de nuevo.', 'negative', 'warning')
         } else {
           notify('Error al iniciar sesión con Google.', 'negative', 'warning')
@@ -575,45 +611,47 @@ export default {
      * @param {Object} response - Google authentication response
      */
     async handleGoogleCallback (response) {
+      console.log('Google handling callback. Response:', !!response.credential)
+      this.googleLoading = true
+
       if (!response.credential) {
+        this.googleLoading = false
         notify('No se pudo obtener las credenciales de Google', 'negative', 'warning')
         return
       }
 
-      this.googleLoading = true
-
       try {
-        const result = await this.$axios.post('/authentication/google', {
-          credential: response.credential
-        })
+        // En lugar de enviar el JWT crudo, vamos a decodificarlo y usar el flujo de authenticateWithGoogle
+        // que es más consistente con lo que se usa en registro y móvil.
+        console.log('Decoding Google JWT...')
+        const base64Url = response.credential.split('.')[1]
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+        }).join(''))
 
-        if (result.data.access_token) {
-          // Guardar token en localStorage
-          localStorage.setItem('access_token', result.data.access_token)
-          localStorage.setItem('token_type', result.data.token_type)
-          localStorage.setItem('user', JSON.stringify(result.data.user))
+        const userInfo = JSON.parse(jsonPayload)
+        console.log('Decoded User Info:', userInfo)
 
-          notify('Inicio de sesión exitoso', 'positive', 'check_circle')
-
-          // Redirigir según el tipo de usuario
-          if (result.data.user?.roles?.length === 0) {
-            notify('Usuario no tiene permisos', 'negative', 'warning')
-          } else {
-            this.$router.push({ name: 'Home' })
-          }
+        if (userInfo && userInfo.email) {
+          await this.authenticateWithGoogle(
+            userInfo.email,
+            userInfo.name,
+            userInfo.sub,
+            userInfo.picture
+          )
+        } else {
+          throw new Error('Información de usuario incompleta en el token')
         }
       } catch (error) {
-        console.error('Google login error:', error)
+        console.error('Google login error (Callback):', error)
 
         if (error.response?.status === 404) {
-          // Usuario no existe
           notify('No hay un usuario registrado con ese email', 'negative', 'warning')
         } else if (error.response?.status === 401) {
-          // Token inválido
           notify('No pudimos validar tu cuenta de Google. Inténtalo de nuevo.', 'negative', 'warning')
         } else {
-          // Error genérico
-          notify('Error al iniciar sesión con Google.', 'negative', 'warning')
+          notify('Error al procesar la cuenta de Google.', 'negative', 'warning')
         }
       } finally {
         this.googleLoading = false

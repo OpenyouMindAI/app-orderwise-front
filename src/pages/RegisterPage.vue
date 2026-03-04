@@ -1073,6 +1073,13 @@ const assignDemo = async () => {
 const handleGoogleRegister = async () => {
   await registerWithGoogleUser({
     onSuccess: (data, userInfo) => {
+      // Si no necesita setup de empresa, significa que ya tiene una cuenta activa y configurada
+      if (!data.needs_company_setup) {
+        notify('Ya existe una cuenta vinculada a este Gmail. Por favor, inicia sesión para continuar.', 'warning', 'info')
+        router.push('/login')
+        return
+      }
+
       // Guardar datos del usuario de Google para usar en el modal de setup
       registrationFormData.value = {
         name: userInfo.name?.split(' ')[0] || userInfo.name || '',
@@ -1093,13 +1100,9 @@ const handleGoogleRegister = async () => {
       }
 
       // Mostrar opciones para elegir el rubro de la empresa
-      if (data.needs_company_setup) {
-        isGoogleRegister.value = true
-        companyForm.value.company_email = userInfo.email
-        showCompanyOptions.value = true
-      } else {
-        router.push('/')
-      }
+      isGoogleRegister.value = true
+      companyForm.value.company_email = userInfo.email
+      showCompanyOptions.value = true
     }
   })
 }

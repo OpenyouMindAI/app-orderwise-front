@@ -74,7 +74,21 @@ const handleGoogleRegister = async () => {
     const client = window.google.accounts.oauth2.initTokenClient({
       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
       scope: 'email profile',
+      error_callback: (error) => {
+        console.error('Google OAuth Error:', error)
+        // NOTA: 'popup_failed_to_open' es un error falso de GSI en localhost
+        // cuando el popup SÍ se abre. Solo resetear si el navegador lo bloquea realmente.
+        if (error.type === 'popup_blocked_by_browser') {
+          loading.value = false
+          notify('El navegador bloqueó la ventana de Google.', 'negative', 'warning')
+        }
+      },
       callback: async (response) => {
+        if (response.error) {
+          console.error('Google response error:', response.error)
+          loading.value = false
+          return
+        }
         try {
           if (response.access_token) {
             // Obtener información del usuario
@@ -97,17 +111,19 @@ const handleGoogleRegister = async () => {
               name: userInfo.name,
               email: userInfo.email
             })
+            // Si no necesita setup de empresa, significa que ya existe la cuenta
+            if (!data.needs_company_setup) {
+              notify('Ya existe una cuenta vinculada a este Gmail. Por favor, inicia sesión para continuar.', 'warning', 'info')
+              router.push('/login')
+              return
+            }
+
             notify('Registro exitoso con Google', 'positive', 'check_circle')
             emit('success', {
               user: data,
               userInfo,
               needsCompanySetup: data.needs_company_setup
             })
-
-            // Si no necesita setup de empresa, redirigir
-            if (!data.needs_company_setup) {
-              router.push('/')
-            }
           }
         } catch (error) {
           const message = error.response?.data?.message || 'Error al registrar con Google'
@@ -120,6 +136,20 @@ const handleGoogleRegister = async () => {
     })
 
     client.requestAccessToken()
+
+    // Detectar cuando el usuario cierra la ventana de Google sin seleccionar cuenta.
+    const handleWindowFocus = () => {
+      setTimeout(() => {
+        if (loading.value) {
+          console.log('Google popup closed without account selection (button)')
+          loading.value = false
+        }
+      }, 500)
+      window.removeEventListener('focus', handleWindowFocus)
+    }
+    setTimeout(() => {
+      window.addEventListener('focus', handleWindowFocus)
+    }, 100)
   } catch (error) {
     notify('Error al iniciar registro con Google', 'negative', 'warning')
     emit('error', 'Error al iniciar registro')
