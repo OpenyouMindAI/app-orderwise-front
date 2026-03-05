@@ -2720,7 +2720,7 @@ export default {
         })
 
         this.importSuccess = true
-        this.importSuccessMessage = `${response.data.imported} productos importados exitosamente`
+        this.importSuccessMessage = response.data.message
 
         if (response.data.errors && response.data.errors.length > 0) {
           this.importErrors = response.data.errors
@@ -2737,7 +2737,7 @@ export default {
           if (this.importErrors.length === 0) {
             this.closeImportDialog()
           }
-        }, 2000)
+        }, 4000)
       } catch (error) {
         notify(error?.message || 'Error al importar productos', 'negative', 'error')
         if (error?.errors) {
