@@ -151,7 +151,10 @@
                   >
                     <q-tab-panel name="menu" class="q-pa-none">
                       <CatalogView
-                        :loading="loadingPage"
+                        ref="catalogViewRef"
+                        :categories="categories"
+                        :company-id="route.params.company_id"
+                        :branch-office-id="route.params.branch_office_id"
                         @open-product="openProductDetail"
                         @view-cart="currentTab = 'cart'"
                         @checkout="goToCheckout"
@@ -445,7 +448,8 @@ const authStore = authentication()
 const orderStore = useOrderStore()
 const cart = useCart()
 
-const { company } = storeToRefs(catalogStore)
+const { company, categories } = storeToRefs(catalogStore)
+const catalogViewRef = ref(null)
 const { userSession, profilePhoto } = storeToRefs(authStore)
 const { orderCount } = storeToRefs(orderStore)
 
@@ -721,15 +725,25 @@ onMounted(async () => {
   try {
     loadingPage.value = true
 
+    // Cargamos company, categorías y métodos de pago en paralelo.
+    // Los productos SE CARGAN PROGRESIVAMENTE por categoría desde CatalogView.
     await Promise.all([
       catalogStore.fetchCompany(route.params.company_id),
       catalogStore.fetchCategories(route.params.company_id),
-      catalogStore.fetchProducts(route.params.company_id, route.params.branch_office_id),
       catalogStore.fetchPaymentMethods(route.params.company_id)
     ])
 
     if (isAuthenticated.value) {
       orderStore.fetchOrders()
+    }
+
+    // Inicializar la carga progresiva en CatalogView una vez que las categorías llegaron
+    if (catalogViewRef.value) {
+      catalogViewRef.value.initLoader(
+        categories.value,
+        route.params.company_id,
+        route.params.branch_office_id
+      )
     }
   } catch (error) {
     console.error('Error loading catalog:', error)

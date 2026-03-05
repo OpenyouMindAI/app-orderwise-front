@@ -29,9 +29,14 @@
           </template>
         </q-input>
 
-        <div class="category-scroll" v-show="categories.length" role="tablist" aria-label="Categorías">
+        <div
+          class="category-scroll"
+          v-show="loader.orderedCategories.value.length"
+          role="tablist"
+          aria-label="Categorías"
+        >
           <div
-            v-for="cat in categories"
+            v-for="cat in loader.orderedCategories.value"
             :key="cat.id"
             class="category-chip"
             v-ripple
@@ -43,117 +48,160 @@
             {{ cat.name }}
           </div>
         </div>
-        <q-skeleton type="text" height="52px" v-show="!categories.length" class="q-mx-sm q-mb-sm" />
+        <q-skeleton
+          type="text"
+          height="52px"
+          v-show="!loader.orderedCategories.value.length"
+          class="q-mx-sm q-mb-sm"
+        />
       </div>
     </div>
 
     <!-- Products Grid -->
     <div class="full-width q-pa-md">
-      <!-- Loading State -->
-      <div v-show="loading" class="row q-col-gutter-sm">
-        <div class="col-12" v-for="i in 8" :key="i">
-          <SkeletonCard class="full-width" />
+
+      <!-- Estado vacío global (búsqueda sin resultados) -->
+      <div
+        v-if="searchQuery && visibleCategories.length === 0 && loader.isFullyLoaded.value"
+        class="empty-state text-center q-pa-xl"
+      >
+        <div class="empty-state-icon-wrapper">
+          <q-icon name="search_off" size="48px" color="grey-4" />
         </div>
+        <div class="empty-state-title q-mt-md">Sin resultados</div>
+        <div class="empty-state-subtitle q-mt-xs">
+          No encontramos productos que coincidan con tu búsqueda
+        </div>
+        <q-btn flat rounded no-caps color="primary" class="q-mt-md" @click="searchQuery = ''">
+          Limpiar búsqueda
+        </q-btn>
       </div>
 
-      <!-- Products Grouped by Category -->
-      <div v-show="!loading">
+      <!-- Secciones por categoría -->
+      <template v-else>
         <div
-          v-for="cat in groupedProducts"
+          v-for="cat in loader.categoriesWithState.value"
           :key="cat.id"
           :id="'category-' + cat.id"
           class="category-section q-mb-lg"
+          :class="{ 'category-section--hidden': isCategoryEmpty(cat) }"
+          :ref="el => registerSectionRef(el, cat.id)"
         >
-          <div class="category-title q-pa-sm q-mb-sm">
-            {{ cat.name }}
-          </div>
+          <div class="category-title q-pa-sm q-mb-sm">{{ cat.name }}</div>
 
-          <div class="row q-col-gutter-y-md">
-            <div class="col-12" v-for="product in cat.products" :key="product.id">
-              <q-card
-                flat
-                bordered
-                class="product-horizontal-card"
-                :class="{
-                  'product-in-cart': isInCart(product.id),
-                  'product-out-of-stock': !hasStock(product)
-                }"
-                @click="$emit('open-product', product)"
-                role="button"
-                :aria-label="`Ver ${product.name}`"
-                tabindex="0"
-                @keyup.enter="$emit('open-product', product)"
-              >
-                <q-card-section horizontal class="items-center">
-                  <q-card-section class="q-pa-md col">
-                    <div class="product-title">{{ product.name }}</div>
-                    <div
-                      v-if="product.description"
-                      class="text-content q-mt-xs ellipsis-2-lines"
-                      v-html="product.description"
-                    />
-                    <div class="price-text q-mt-sm">
-                      $ {{ formatNumber(product.price) }}
-                    </div>
-                    <div v-if="isInCart(product.id)" class="in-cart-badge q-mt-xs">
-                      <q-icon name="check_circle" size="14px" class="q-mr-xs" />
-                      En tu pedido
-                    </div>
-                  </q-card-section>
-
-                  <q-card-section class="col-auto q-pa-md">
-                    <div class="relative-position product-image-wrapper">
-                      <q-img
-                        :src="product.images[0]?.url || defaultImage"
-                        class="product-image"
-                        :alt="product.name"
-                        loading="lazy"
-                      />
-                      <div
-                        v-if="!hasStock(product)"
-                        class="out-of-stock-overlay flex flex-center"
-                        aria-label="Producto agotado"
-                      >
-                        <span class="out-of-stock-text">AGOTADO</span>
-                      </div>
-                    </div>
-                  </q-card-section>
-                </q-card-section>
-              </q-card>
+          <!-- Error con opción de reintentar -->
+          <div v-if="cat.status === 'error'">
+            <div class="error-state-card row items-center q-gutter-sm q-pa-md">
+              <q-icon name="wifi_off" size="24px" color="grey-5" />
+              <span class="error-state-text">No se pudieron cargar los productos</span>
+              <q-btn
+                flat dense no-caps
+                color="primary"
+                icon="refresh"
+                label="Reintentar"
+                @click="loader.retry(cat.id)"
+              />
             </div>
           </div>
-        </div>
 
-        <!-- Empty State -->
-        <div v-if="groupedProducts.length === 0 && !loading" class="empty-state text-center q-pa-xl">
-          <div class="empty-state-icon-wrapper">
-            <q-icon name="search_off" size="48px" color="grey-4" />
+          <!--
+            Contenedor relativo: el skeleton saliente pasa a position:absolute
+            mientras los productos reales ya ocupan el layout debajo.
+            La Transition opera sobre el CONTENEDOR de la grilla completa,
+            así los productos reales siempre se muestran en su totalidad.
+          -->
+          <div v-else class="category-content">
+            <Transition name="cat-fade">
+
+              <!-- Grilla de skeletons (idle | loading) -->
+              <div
+                v-if="cat.status !== 'loaded'"
+                :key="'sk-' + cat.id"
+                class="row q-col-gutter-y-md"
+              >
+                <div
+                  v-for="i in cat.skeletonCount"
+                  :key="'skel-' + cat.id + '-' + i"
+                  class="col-12"
+                >
+                  <ProductSkeletonCard />
+                </div>
+              </div>
+
+              <!-- Grilla de productos reales (loaded) -->
+              <div
+                v-else
+                :key="'pr-' + cat.id"
+                class="row q-col-gutter-y-md"
+              >
+                <div
+                  v-for="product in filteredProducts(cat)"
+                  :key="product.id"
+                  class="col-12"
+                >
+                  <q-card
+                    flat
+                    bordered
+                    class="product-horizontal-card"
+                    :class="{
+                      'product-in-cart': isInCart(product.id),
+                      'product-out-of-stock': !hasStock(product)
+                    }"
+                    @click="$emit('open-product', product)"
+                    role="button"
+                    :aria-label="`Ver ${product.name}`"
+                    tabindex="0"
+                    @keyup.enter="$emit('open-product', product)"
+                  >
+                    <q-card-section horizontal class="items-center">
+                      <q-card-section class="q-pa-md col">
+                        <div class="product-title">{{ product.name }}</div>
+                        <div
+                          v-if="product.description"
+                          class="text-content q-mt-xs ellipsis-2-lines"
+                          v-html="product.description"
+                        />
+                        <div class="price-text q-mt-sm">
+                          $ {{ formatNumber(product.price) }}
+                        </div>
+                        <div v-if="isInCart(product.id)" class="in-cart-badge q-mt-xs">
+                          <q-icon name="check_circle" size="14px" class="q-mr-xs" />
+                          En tu pedido
+                        </div>
+                      </q-card-section>
+
+                      <q-card-section class="col-auto q-pa-md">
+                        <div class="relative-position product-image-wrapper">
+                          <q-img
+                            :src="product.images[0]?.url || defaultImage"
+                            class="product-image"
+                            :alt="product.name"
+                            loading="lazy"
+                          />
+                          <div
+                            v-if="!hasStock(product)"
+                            class="out-of-stock-overlay flex flex-center"
+                            aria-label="Producto agotado"
+                          >
+                            <span class="out-of-stock-text">AGOTADO</span>
+                          </div>
+                        </div>
+                      </q-card-section>
+                    </q-card-section>
+                  </q-card>
+                </div>
+              </div>
+
+            </Transition>
           </div>
-          <div class="empty-state-title q-mt-md">Sin resultados</div>
-          <div class="empty-state-subtitle q-mt-xs">
-            No encontramos productos que coincidan con tu búsqueda
-          </div>
-          <q-btn
-            v-if="searchQuery"
-            flat
-            rounded
-            no-caps
-            color="primary"
-            class="q-mt-md"
-            @click="searchQuery = ''"
-          >
-            Limpiar búsqueda
-          </q-btn>
         </div>
-      </div>
+      </template>
     </div>
 
     <!-- Floating Cart Button -->
     <div class="cart-sticky-footer" v-if="cart.itemCount.value > 0">
       <q-btn
-        unelevated
-        rounded
-        no-caps
+        unelevated rounded no-caps
         class="continuar-btn full-width shadow-4"
         @click="handleCartButtonClick"
       >
@@ -175,90 +223,132 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useCatalogStore } from 'src/stores/catalog'
+import { ref, computed, nextTick, onBeforeUnmount } from 'vue'
 import { useCart } from 'src/composables/useCart'
+import { useCatalogLoader } from 'src/composables/useCatalogLoader'
 import { formatNumber } from 'src/const/mixins'
 import { useQuasar } from 'quasar'
-import SkeletonCard from 'src/components/SkeletonCard.vue'
+import ProductSkeletonCard from 'src/components/Catalog/ProductSkeletonCard.vue'
 import { noProductImage as defaultImage } from 'src/const/images'
 
-// Props
+// ─── Props ────────────────────────────────────────────────────────────────────
 defineProps({
-  loading: {
-    type: Boolean,
-    default: false
-  }
+  /** Categorías ordenadas. Formato: [{ id, name, order, product_count? }] */
+  categories: { type: Array, default: () => [] },
+  companyId: { type: [String, Number], default: null },
+  branchOfficeId: { type: [String, Number], default: null }
 })
-// Stores y composables
-const catalogStore = useCatalogStore()
+
+// ─── Emits ────────────────────────────────────────────────────────────────────
+const emit = defineEmits(['open-product', 'view-cart', 'checkout'])
+
+// ─── Composables ──────────────────────────────────────────────────────────────
 const cart = useCart()
 const $q = useQuasar()
-const { categories, products } = storeToRefs(catalogStore)
+const loader = useCatalogLoader()
 
-// Estado local
+// ─── Estado local ─────────────────────────────────────────────────────────────
 const searchQuery = ref('')
-const selectedCategory = ref('all')
+const selectedCategory = ref(null)
 
-// Computed
-const groupedProducts = computed(() => {
-  let filtered = products.value || []
+// ─── IntersectionObserver ─────────────────────────────────────────────────────
+const _observers = new Map()
 
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(p =>
-      p.name.toLowerCase().includes(query) ||
-      (p.description && p.description.toLowerCase().includes(query))
-    )
+function _observeSection (el, catId) {
+  if (_observers.has(catId)) return
+  const obs = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting) {
+        loader.loadCategory(catId)
+        obs.disconnect()
+        _observers.delete(catId)
+      }
+    },
+    { rootMargin: '400px 0px', threshold: 0 }
+  )
+  obs.observe(el)
+  _observers.set(catId, obs)
+}
+
+function registerSectionRef (el, catId) {
+  if (!el) {
+    const obs = _observers.get(catId)
+    if (obs) { obs.disconnect(); _observers.delete(catId) }
+    return
+  }
+  // Primera categoría ya carga en init()
+  const firstCatId = loader.orderedCategories.value[0]?.id
+  if (catId === firstCatId) return
+
+  const state = loader.categoryState.value[catId]
+  if (!state || state.status === 'idle') {
+    _observeSection(el, catId)
+  }
+}
+
+// ─── API expuesta al padre ────────────────────────────────────────────────────
+function initLoader (categories, companyId, branchOfficeId) {
+  loader.init(categories, companyId, branchOfficeId)
+}
+defineExpose({ initLoader })
+
+// ─── Computed ─────────────────────────────────────────────────────────────────
+const filteredProducts = (cat) => {
+  if (!searchQuery.value) return cat.products
+  const q = searchQuery.value.toLowerCase()
+  return cat.products.filter(p =>
+    p.name.toLowerCase().includes(q) ||
+    (p.description && p.description.toLowerCase().includes(q))
+  )
+}
+
+const visibleCategories = computed(() =>
+  loader.categoriesWithState.value.filter(cat =>
+    cat.status === 'loaded' && filteredProducts(cat).length > 0
+  )
+)
+
+const isCategoryEmpty = (cat) =>
+  cat.status === 'loaded' && filteredProducts(cat).length === 0
+
+// ─── Métodos ──────────────────────────────────────────────────────────────────
+const isInCart = (productId) => cart.isInCart(productId)
+const hasStock = (product) => cart.hasStock(product, 1)
+
+const selectCategory = async (categoryId) => {
+  selectedCategory.value = categoryId
+
+  const state = loader.categoryState.value[categoryId]
+  if (!state || (state.status !== 'loaded' && state.status !== 'loading')) {
+    const obs = _observers.get(categoryId)
+    if (obs) { obs.disconnect(); _observers.delete(categoryId) }
+    loader.jumpToCategory(categoryId)
   }
 
-  return categories.value
-    .map(cat => ({
-      ...cat,
-      products: filtered.filter(p => p.category_id === cat.id)
-    }))
-    .filter(cat => cat.products.length > 0)
-})
-
-// Métodos
-const isInCart = (productId) => {
-  return cart.isInCart(productId)
-}
-
-const hasStock = (product) => {
-  return cart.hasStock(product, 1)
-}
-
-const selectCategory = (categoryId) => {
-  selectedCategory.value = categoryId
-  scrollToCategory(categoryId)
+  await scrollToCategory(categoryId)
 
   setTimeout(() => {
-    if (selectedCategory.value === categoryId) {
-      selectedCategory.value = null
-    }
+    if (selectedCategory.value === categoryId) selectedCategory.value = null
   }, 400)
 }
 
 const scrollToCategory = async (categoryId) => {
   await nextTick()
   const el = document.getElementById(`category-${categoryId}`)
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-// En desktop el carrito es siempre visible → ir directo a checkout
-// En móvil/tablet → abrir la vista de carrito
-const emit = defineEmits(['open-product', 'view-cart', 'checkout'])
 const handleCartButtonClick = () => {
-  if ($q.screen.lt.md) {
-    emit('view-cart')
-  } else {
-    emit('checkout')
-  }
+  if ($q.screen.lt.md) emit('view-cart')
+  else emit('checkout')
 }
+
+// ─── Limpieza ─────────────────────────────────────────────────────────────────
+onBeforeUnmount(() => {
+  _observers.forEach(obs => obs.disconnect())
+  _observers.clear()
+  loader.destroy()
+})
 </script>
 
 <style scoped>
@@ -266,6 +356,7 @@ const handleCartButtonClick = () => {
 .catalog-view {
   background: #fff;
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  overflow: visible;
 }
 
 /* ===== Sticky Filter ===== */
@@ -277,14 +368,9 @@ const handleCartButtonClick = () => {
   width: 100%;
   background: #ffffff;
   padding: 8px 0;
-  /* Transición suave */
   transition: all 0.3s ease;
 }
-
-.filter-wrapper {
-  width: 100%;
-  padding: 0 8px;
-}
+.filter-wrapper { width: 100%; padding: 0 8px; }
 
 /* ===== Search Input ===== */
 .search-input :deep(.q-field__control) {
@@ -292,11 +378,7 @@ const handleCartButtonClick = () => {
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   transition: box-shadow 0.2s ease;
 }
-
-.search-input :deep(.q-field__control:hover) {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
+.search-input :deep(.q-field__control:hover) { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 .search-input :deep(.q-field--focused .q-field__control) {
   box-shadow: 0 0 0 2px var(--q-primary), 0 2px 8px rgba(0,0,0,0.08);
 }
@@ -310,10 +392,7 @@ const handleCartButtonClick = () => {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-
-.category-scroll::-webkit-scrollbar {
-  display: none;
-}
+.category-scroll::-webkit-scrollbar { display: none; }
 
 .category-chip {
   flex-shrink: 0;
@@ -330,34 +409,26 @@ const handleCartButtonClick = () => {
   transition: all 0.18s ease;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
-
-.category-chip:hover {
-  border-color: var(--q-primary);
-  color: var(--q-primary);
-  background: #fafafe;
-}
-
-.category-chip:active {
-  transform: scale(0.93);
-}
-
+.category-chip:hover { border-color: var(--q-primary); color: var(--q-primary); background: #fafafe; }
+.category-chip:active { transform: scale(0.93); }
 .category-chip--active {
   background: var(--q-primary) !important;
   color: #ffffff !important;
   border-color: var(--q-primary) !important;
   animation: chip-press 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
 @keyframes chip-press {
   0%   { transform: scale(1); }
   45%  { transform: scale(0.94); }
   100% { transform: scale(1); }
 }
 
+/* ===== Category Section ===== */
 .category-section {
   scroll-margin-top: 130px;
   animation: fadeInUp 0.3s ease both;
 }
+.category-section--hidden { display: none; }
 
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(10px); }
@@ -373,6 +444,35 @@ const handleCartButtonClick = () => {
   line-height: 1.3;
 }
 
+/* ===== Fade skeleton-grid → products-grid =====================================
+   .category-content: position relative para que el skeleton saliente
+   pueda ir a position:absolute y "flotar" encima de los productos
+   que ya toman el espacio del layout.
+
+   Resultado: los productos reales se muestran en su totalidad desde
+   el primer frame de la transición, sin ningún salto de scroll.
+   El skeleton simplemente se disuelve encima de ellos.
+============================================================================ */
+.category-content {
+  position: relative;
+}
+
+/* Grilla saliente (skeletons): flota sobre la nueva grilla */
+.cat-fade-leave-active {
+  transition: opacity 0.3s ease;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.cat-fade-leave-to { opacity: 0; }
+
+/* Grilla entrante (productos): fade in */
+.cat-fade-enter-active { transition: opacity 0.3s ease; }
+.cat-fade-enter-from   { opacity: 0; }
+
 /* ===== Product Card ===== */
 .product-horizontal-card {
   border-radius: 14px !important;
@@ -382,50 +482,21 @@ const handleCartButtonClick = () => {
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   overflow: hidden;
 }
-
 .product-horizontal-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0,0,0,0.09) !important;
   border-color: #d0d9e3 !important;
 }
-
-.product-horizontal-card:focus-visible {
-  outline: 2.5px solid var(--q-primary);
-  outline-offset: 2px;
-}
-
-.product-in-cart {
-  border:2px solid var(--q-primary) !important;
-}
-
-.product-out-of-stock {
-  background: #fafafa;
-  opacity: 0.82;
-}
-
-.product-out-of-stock .product-image {
-  filter: grayscale(1) opacity(0.6);
-}
-
+.product-horizontal-card:focus-visible { outline: 2.5px solid var(--q-primary); outline-offset: 2px; }
+.product-in-cart { border: 2px solid var(--q-primary) !important; }
+.product-out-of-stock { background: #fafafa; opacity: 0.82; }
+.product-out-of-stock .product-image { filter: grayscale(1) opacity(0.6); }
 .product-out-of-stock .product-title,
-.product-out-of-stock .price-text {
-  color: #a0aec0;
-}
+.product-out-of-stock .price-text { color: #a0aec0; }
 
 /* ===== Product Card Content ===== */
-.product-title {
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: #1a202c;
-  line-height: 1.35;
-}
-
-.text-content {
-  font-size: 0.82rem;
-  line-height: 1.5;
-  color: #718096;
-}
-
+.product-title { font-weight: 600; font-size: 0.95rem; color: #1a202c; line-height: 1.35; }
+.text-content { font-size: 0.82rem; line-height: 1.5; color: #718096; }
 .ellipsis-2-lines {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -433,13 +504,7 @@ const handleCartButtonClick = () => {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
-.price-text {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--q-primary);
-}
-
+.price-text { font-size: 1.05rem; font-weight: 700; color: var(--q-primary); }
 .in-cart-badge {
   display: inline-flex;
   align-items: center;
@@ -452,25 +517,14 @@ const handleCartButtonClick = () => {
 }
 
 /* ===== Product Image ===== */
-.product-image-wrapper {
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.product-image {
-  width: 96px;
-  height: 96px;
-  border-radius: 10px;
-  object-fit: cover;
-}
-
+.product-image-wrapper { border-radius: 10px; overflow: hidden; }
+.product-image { width: 96px; height: 96px; border-radius: 10px; object-fit: cover; }
 .out-of-stock-overlay {
   position: absolute;
   inset: 0;
   background: rgba(0,0,0,0.38);
   border-radius: 10px;
 }
-
 .out-of-stock-text {
   color: #ffffff;
   font-weight: 800;
@@ -481,6 +535,15 @@ const handleCartButtonClick = () => {
   border-radius: 6px;
 }
 
+/* ===== Error State ===== */
+.error-state-card {
+  border-radius: 12px;
+  border: 1px dashed #e2e8f0;
+  background: #fafafa;
+  color: #718096;
+}
+.error-state-text { font-size: 0.88rem; color: #718096; }
+
 /* ===== Empty State ===== */
 .empty-state {
   min-height: 280px;
@@ -489,59 +552,34 @@ const handleCartButtonClick = () => {
   align-items: center;
   justify-content: center;
 }
-
 .empty-state-icon-wrapper {
-  width: 80px;
-  height: 80px;
+  width: 80px; height: 80px;
   border-radius: 50%;
   background: #f0f2f5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   margin: 0 auto;
 }
-
-.empty-state-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #2d3748;
-}
-
-.empty-state-subtitle {
-  font-size: 0.85rem;
-  color: #a0aec0;
-}
+.empty-state-title { font-size: 1.05rem; font-weight: 700; color: #2d3748; }
+.empty-state-subtitle { font-size: 0.85rem; color: #a0aec0; }
 
 /* ===== Responsive ===== */
 @media (max-width: 480px) {
-  .product-image {
-    width: 80px;
-    height: 80px;
-  }
+  .product-image { width: 80px; height: 80px; }
 }
 
-.catalog-view {
-  overflow: visible;
-}
-
-.q-page {
-  overflow: visible;
-}
+.q-page { overflow: visible; }
 
 /* ===== Floating Cart Sticky ===== */
 .cart-sticky-footer {
   position: -webkit-sticky;
   position: sticky;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: 0; left: 0; right: 0;
   z-index: 1001;
   width: 100%;
   pointer-events: none;
   padding: 16px;
   background: transparent;
 }
-
 .continuar-btn {
   pointer-events: auto;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
@@ -553,15 +591,10 @@ const handleCartButtonClick = () => {
   border: none !important;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
 }
-
 .continuar-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(102, 126, 234, 0.45) !important;
   background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
 }
-
-.continuar-btn:active {
-  transform: translateY(0) scale(0.98);
-  filter: brightness(0.95);
-}
+.continuar-btn:active { transform: translateY(0) scale(0.98); filter: brightness(0.95); }
 </style>
