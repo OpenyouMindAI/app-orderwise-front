@@ -932,7 +932,6 @@ const formattedAddress = ref('')
 // Load branch office config into the form on component mount
 onMounted(async () => {
   if (branchOffice.value) {
-    companyConfig.value.point_of_sale = branchOffice.value.point_of_sale
     companyConfig.value.other.default_price_list = branchOffice.value.default_price_list
   }
 

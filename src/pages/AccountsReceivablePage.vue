@@ -868,7 +868,7 @@
 
         <q-card-section class="scroll col q-pa-md">
           <div class="text-subtitle2 q-mb-md">
-            Saldo pendiente: <strong class="text-negative">{{ formatNumber(paymentClient?.balance || 0) }}</strong>
+            Saldo pendiente: <strong class="text-negative">{{ formatCurrency(paymentClient?.balance || 0) }}</strong>
           </div>
 
           <q-input
@@ -2290,9 +2290,16 @@ export default {
      * @param {Object} client - Client to receive the payment
      */
     openGlobalPaymentDialog (client) {
-      this.paymentClient = client
+      // Use statement's balance if viewing the statement, else use client's balance
+      const balance = this.selectedClient && this.statement?.summary
+        ? this.statement.summary.current_balance
+        : client.balance
+
+      // Assign to paymentClient but update its balance to the computed one
+      this.paymentClient = { ...client, balance }
+
       this.paymentForm = {
-        amount: client.balance,
+        amount: balance,
         payment_method_id: this.paymentMethods[0]?.id || null,
         date: this.getTodayDate(),
         reference: ''
@@ -2320,7 +2327,9 @@ export default {
 
         const { data } = await this.$api.post(`client-statement/clients/${this.paymentClient.id}/payments`, {
           ...this.paymentForm,
-          branch_office_id: this.selectedBranchOffice || this.branchOffice?.id
+          branch_office_id: this.selectedBranchOffice || this.branchOffice?.id,
+          date_from: this.dateFilters?.from || null,
+          date_to: this.dateFilters?.to || null
         })
 
         notify('Pago registrado y distribuido exitosamente', 'positive', 'check_circle')
@@ -2360,6 +2369,13 @@ export default {
           this.statement = updatedStatement
           this.filteredTransactions = updatedStatement.transactions
           this.transactionFilter = 'all'
+
+          // Update selected client balance to correctly reflect the new statement
+          if (updatedStatement.summary) {
+            this.selectedClient.balance = updatedStatement.summary.current_balance
+            this.selectedClient.total_owed = updatedStatement.summary.total_owed
+            this.selectedClient.total_paid = updatedStatement.summary.total_paid
+          }
         } else {
           // If in list view, just reload the list
           this.loadClients()
