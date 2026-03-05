@@ -3292,15 +3292,17 @@ export default {
      * Select a product by index for keyboard navigation
      * @param {Number} index - Product index
      */
-    selectProduct (index) {
+    selectProduct (index, shouldFocus = true) {
       this.selectedProductIndex = index
       this.keyboardNavigationActive = true
       // Focus the table to ensure keyboard events are captured
-      this.$nextTick(() => {
-        if (this.$refs.productsTable && this.$refs.productsTable.$el) {
-          this.$refs.productsTable.$el.focus()
-        }
-      })
+      if (shouldFocus) {
+        this.$nextTick(() => {
+          if (this.$refs.productsTable && this.$refs.productsTable.$el) {
+            this.$refs.productsTable.$el.focus()
+          }
+        })
+      }
     },
     /**
      * Move to next product (TAB key)
@@ -3393,11 +3395,11 @@ export default {
      * Auto-select the last added product in the cart
      * Reusable function for keyboard navigation enhancement
      */
-    selectLastAddedProduct () {
+    selectLastAddedProduct (shouldFocus = true) {
       this.$nextTick(() => {
         const newProductIndex = this.products.length - 1
         if (newProductIndex >= 0) {
-          this.selectProduct(newProductIndex)
+          this.selectProduct(newProductIndex, shouldFocus)
         }
       })
     },
@@ -3647,15 +3649,24 @@ export default {
           this.validateProduct(product, false)
 
           this.barcode = null
+          this.$nextTick(() => {
+            this.$refs.barcode?.focus()
+          })
           return
         }
 
         // No es balanza
-        this.getOneProduct(barcode)
+        await this.getOneProduct(barcode)
+        this.$nextTick(() => {
+          this.$refs.barcode?.focus()
+        })
       } catch (error) {
         console.error('Error procesando código de balanza:', error)
         notify('Error procesando producto', 'negative', 'warning')
-        this.getOneProduct(barcode)
+        await this.getOneProduct(barcode)
+        this.$nextTick(() => {
+          this.$refs.barcode?.focus()
+        })
       }
     },
     /**
@@ -4551,8 +4562,8 @@ export default {
         cartProduct
       ]
 
-      // Seleccionar automáticamente el producto recién agregado
-      this.selectLastAddedProduct()
+      // Seleccionar automáticamente el producto recién agregado (sin quitar el foco del buscador)
+      this.selectLastAddedProduct(false)
     },
     /**
      * Valida y agrega productos al carrito con cálculos precisos
