@@ -137,11 +137,21 @@ export const authentication = defineStore('authentication', {
         const showThemeSelector = localStorage.getItem('show-theme-selector')
         const hasSeenBillingTour = localStorage.getItem('has_seen_billing_tour')
         const orderwiseQuickAccess = localStorage.getItem('orderwise_quick_access')
+        const hasSeenCompanyConfigTour = localStorage.getItem('has_seen_company_config_tour')
+        const hasSeenProductMainTour = localStorage.getItem('has_seen_product_main_tour')
 
         localStorage.clear()
 
         if (savedTheme) {
           localStorage.setItem('app-theme', savedTheme)
+        }
+
+        if (hasSeenCompanyConfigTour) {
+          localStorage.setItem('has_seen_company_config_tour', hasSeenCompanyConfigTour)
+        }
+
+        if (hasSeenProductMainTour) {
+          localStorage.setItem('has_seen_product_main_tour', hasSeenProductMainTour)
         }
 
         if (showThemeSelector) {
