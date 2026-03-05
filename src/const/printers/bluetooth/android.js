@@ -6,9 +6,16 @@ function separatorLine (length = 29) {
   return '-'.repeat(length) + '\n'
 }
 
+const addressFormat = (address) => {
+  if (typeof address === 'string') {
+    return address?.toUpperCase()
+  }
+  return address?.formattedAddress?.toUpperCase() || ''
+}
+
 const header = (invoice, lineWidth) => {
   return `Razon social: ${invoice?.company?.name}\n` +
-    `Direccion: ${invoice?.company?.address}\n` +
+    `Direccion: ${addressFormat(invoice?.company?.address)}\n` +
     `C.U.I.T: ${invoice?.company?.document_number}\n` +
     separatorLine(lineWidth)
 }
