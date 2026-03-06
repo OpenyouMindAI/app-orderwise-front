@@ -847,22 +847,63 @@ export default {
 
         this.btnDisable = false
       } catch (error) {
-        Notify.create({
-          message: this.messageError[error?.data?.message] || error.message,
-          color: 'negative',
-          position: 'top',
-          icon: 'warning',
-          timeout: 5000,
-          actions: [
-            {
-              label: 'OK',
-              color: 'white',
-              handler: () => {
-                this.btnDisable = false
+        // Handle company blocking errors specifically
+        if (error.response?.status === 403 && error.response?.data?.code === 'COMPANY_BLOCKED') {
+          const status = error.response.data.status
+          const reason = error.response.data.reason
+          
+          let blockingMessage = 'Acceso denegado'
+          if (status === 'suspended') {
+            blockingMessage = `Empresa suspendida: ${reason}`
+          } else if (status === 'blocked') {
+            blockingMessage = `Empresa bloqueada: ${reason}`
+          } else if (status === 'expired') {
+            blockingMessage = `Suscripción vencida: ${reason}`
+          }
+          
+          Notify.create({
+            message: blockingMessage,
+            color: 'negative',
+            position: 'top',
+            icon: 'block',
+            timeout: 10000,
+            actions: [
+              {
+                label: 'Contactar Soporte',
+                color: 'white',
+                handler: () => {
+                  // Redirigir a soporte o abrir email
+                  window.location.href = 'mailto:soporte@orderwise.com'
+                }
+              },
+              {
+                label: 'OK',
+                color: 'white',
+                handler: () => {
+                  this.btnDisable = false
+                }
               }
-            }
-          ]
-        })
+            ]
+          })
+        } else {
+          // Handle other errors normally
+          Notify.create({
+            message: this.messageError[error?.data?.message] || error.message,
+            color: 'negative',
+            position: 'top',
+            icon: 'warning',
+            timeout: 5000,
+            actions: [
+              {
+                label: 'OK',
+                color: 'white',
+                handler: () => {
+                  this.btnDisable = false
+                }
+              }
+            ]
+          })
+        }
       } finally {
         this.btnDisable = false
       }
