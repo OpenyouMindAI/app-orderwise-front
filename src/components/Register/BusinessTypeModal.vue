@@ -285,9 +285,21 @@ const handleSubmit = () => {
   })
 }
 
+/**
+ * Reinicia el estado interno
+ */
+const resetState = () => {
+  businessType.value = null
+  copyTestProducts.value = false
+  searchQuery.value = ''
+}
+
 watch(() => props.modelValue, (val) => {
   if (val && businessTypes.value.length === 0) {
     loadBusinessTypes()
+  }
+  if (!val) {
+    resetState()
   }
 })
 

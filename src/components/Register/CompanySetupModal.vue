@@ -249,6 +249,34 @@ const form = ref({
 // Country code selector
 const selectedCountry = ref(countryOptions[0])
 
+/**
+ * Reinicia el formulario a su estado inicial
+ */
+const resetFormInternally = () => {
+  form.value = {
+    company_name: '',
+    company_document: '',
+    company_email: props.userEmail || '',
+    company_phone: '',
+    company_address: '',
+    country_id: null,
+    copy_test_products: false
+  }
+  companyAddressData.value = {
+    name: '',
+    street: '',
+    city: '',
+    state: '',
+    country: '',
+    zipCode: '',
+    latitude: null,
+    longitude: null,
+    formattedAddress: '',
+    placeId: '',
+    types: []
+  }
+}
+
 // Phone validation rule
 const phoneRule = computed(() => {
   return [
@@ -391,15 +419,15 @@ const skipSetup = async () => {
       company_address: null, // Dejar en null
       business_type_id: props.initialBusinessData?.business_type_id || null,
       country_id: null, // Dejar en null
-      copy_test_products: false
+      copy_test_products: props.initialBusinessData?.copy_test_products || false
     }
 
-    console.log('📤 Enviando setup con datos de registro:', payload)
+    console.log('🚀 skipSetup - Enviando payload:', payload)
 
     // Enviar directamente al backend sin validaciones del formulario
     const { data } = await api.post('authentication/setup-company', payload)
 
-    console.log('✅ Setup completado exitosamente:', data)
+    console.log('✅ skipSetup - Respuesta recibida:', data)
 
     notify('Configuración completada exitosamente', 'positive', 'check_circle')
 
@@ -430,9 +458,18 @@ watch(() => props.userEmail, (newVal) => {
   if (newVal) form.value.company_email = newVal
 })
 
+watch(() => props.initialBusinessData, (newVal) => {
+  if (newVal && newVal.copy_test_products !== undefined) {
+    form.value.copy_test_products = newVal.copy_test_products
+  }
+}, { immediate: true, deep: true })
+
 watch(() => props.modelValue, (val) => {
   if (val && countries.value.length === 0) {
     filterCountries('', (cb) => cb())
+  }
+  if (!val) {
+    resetFormInternally()
   }
 })
 

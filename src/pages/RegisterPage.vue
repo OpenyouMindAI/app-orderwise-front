@@ -161,6 +161,20 @@
             <div class="text-h6 text-grey-6 q-mt-md">No se encontraron rubros</div>
             <div class="text-caption text-grey-5">Intenta con otra búsqueda</div>
           </div>
+
+          <!-- Checkbox de copiar productos (Demo) -->
+          <div class="q-mt-md q-px-sm" v-if="demoBusinessType">
+            <q-checkbox
+              v-model="copyTestProductsDemo"
+              label="Cargar productos y categorías de ejemplo"
+              color="primary"
+              class="text-grey-8"
+            >
+              <q-tooltip class="bg-grey-8">
+                La demo incluirá datos de prueba para que explores el sistema rápidamente
+              </q-tooltip>
+            </q-checkbox>
+          </div>
         </q-card-section>
 
         <q-separator />
@@ -220,6 +234,7 @@ import RegistrationForm from 'src/components/Auth/RegistrationForm.vue'
 import OtpVerificationForm from 'src/components/Auth/OtpVerificationForm.vue'
 import { useRegistration } from 'src/composables/useRegistration'
 import { usePixel } from 'src/composables/usePixel'
+import { useCompanySetup } from 'src/composables/useCompanySetup'
 
 const router = useRouter()
 const store = authentication()
@@ -233,14 +248,17 @@ const {
   loadingGoogle,
   register: registerUser,
   registerWithGoogle: registerWithGoogleUser,
-  initializeGoogleAuthMobile
+  initializeGoogleAuthMobile,
+  resetForm
 } = useRegistration()
 
 // UI state específico de la página
 const showCompanySetup = ref(false)
 const showBusinessTypeSetup = ref(false)
 const tempCompanyData = ref(null)
-const loadingCompanySetup = ref(false)
+
+// Composable de configuración de empresa
+const { loading: loadingCompanySetup, autoSetupCompany } = useCompanySetup()
 
 // OTP Verification
 const currentTab = ref('register')
@@ -281,6 +299,7 @@ const isGoogleRegister = ref(false)
 const showCompanyOptions = ref(false)
 const showDemoBusinessTypeSelection = ref(false)
 const demoBusinessType = ref(null)
+const copyTestProductsDemo = ref(true)
 const loadingDemo = ref(false)
 const registeredCredentials = ref({
   email: '',
@@ -297,13 +316,59 @@ const registrationFormData = ref({
 })
 
 /**
+ * Limpia todos los formularios y estados de la página
+ */
+const clearAllForms = () => {
+  resetForm()
+  demoBusinessType.value = null
+  businessTypeSearch.value = ''
+  copyTestProductsDemo.value = true
+  companyForm.value = {
+    company_name: '',
+    company_document: '',
+    company_email: '',
+    company_phone: '',
+    company_address: '',
+    business_type: null,
+    country_id: null,
+    copy_test_products: false
+  }
+  registrationFormData.value = {
+    name: '',
+    last_name: '',
+    email: '',
+    phone_number: '',
+    country_code: ''
+  }
+  registeredCredentials.value = {
+    email: '',
+    password: ''
+  }
+}
+
+/**
  * Handle business type next step (Step 1 -> Step 2)
  */
 const handleBusinessTypeNext = async (businessData) => {
   tempCompanyData.value = businessData
-  // En lugar de abrir el modal manual, hacemos el auto-setup con los datos del registro
-  await autoSetupCompany()
   showBusinessTypeSetup.value = false
+
+  await autoSetupCompany({
+    registrationData: registrationFormData.value,
+    businessData,
+    onSuccess: handleCompanySetupSuccess,
+    onError: () => {
+      showCompanyOptions.value = true
+    },
+    trackPixel: fbq?.event
+      ? ({ company_name: companyName }) => fbq.event('CrearEmpresa', {
+          business_type: 'auto-skipped',
+          country: 'not_specified',
+          company_name: companyName,
+          setup_method: 'auto'
+        })
+      : undefined
+  })
 }
 
 /**
@@ -340,7 +405,9 @@ const handleCompanySetupSuccess = (data) => {
   // Notificar éxito
   notify('¡Bienvenido a Qbits!', 'positive', 'celebration')
 
-  // Redirigir a la página principal
+  // Limpiar formularios
+  clearAllForms()
+
   router.push('/')
 }
 
@@ -434,65 +501,6 @@ const getBusinessIcon = (name) => {
 
   // Icono por defecto
   return 'store'
-}
-
-/**
- * Crea la empresa automáticamente con los datos del registro (Skip Setup)
- */
-const autoSetupCompany = async () => {
-  try {
-    loadingCompanySetup.value = true
-
-    // Obtener datos del usuario desde el store
-    const user = store.userGetter || {}
-
-    // Priorizar datos del formulario de registro si están disponibles
-    const registrationData = registrationFormData.value || {}
-
-    // Construir nombre completo de la empresa desde datos de registro
-    const firstName = registrationData.name || user.name || ''
-    const lastName = registrationData.last_name || user.last_name || ''
-    const companyName = `${firstName} ${lastName}`.trim() || 'Mi Empresa'
-
-    // Obtener email desde datos de registro o store
-    const email = registrationData.email || user.email || ''
-
-    // Obtener teléfono completo (con código de país) desde datos de registro
-    const phoneNumber = registrationData.phone_number || user.phone_number || user.phone || null
-
-    // Construir payload con datos del formulario de registro
-    const payload = {
-      company_name: companyName,
-      company_document: null,
-      company_email: email,
-      company_phone: phoneNumber,
-      company_address: null,
-      business_type_id: tempCompanyData.value?.business_type_id || null,
-      country_id: null,
-      copy_test_products: false
-    }
-
-    const { data } = await api.post('authentication/setup-company', payload)
-
-    handleCompanySetupSuccess(data)
-
-    if (fbq?.event) {
-      fbq.event('CrearEmpresa', {
-        business_type: 'auto-skipped',
-        country: 'not_specified',
-        company_name: payload.company_name,
-        setup_method: 'auto'
-      })
-    }
-  } catch (error) {
-    console.error('❌ Error en auto-setup:', error)
-    // Si falla el auto-setup, mostramos las opciones para que lo haga manual
-    showCompanyOptions.value = true
-    const errorMessage = error.response?.data?.message || 'No se pudo completar la configuración automática.'
-    notify(errorMessage, 'negative', 'warning')
-  } finally {
-    loadingCompanySetup.value = false
-  }
 }
 
 /**
@@ -1027,15 +1035,27 @@ const assignDemo = async () => {
   try {
     loadingDemo.value = true
 
-    const { data } = await api.post('authentication/assign-demo', {
-      business_type_id: demoBusinessType.value.id
+    console.log('🚀 assignDemo - Enviando payload:', {
+      business_type_id: demoBusinessType.value.id,
+      copy_test_products: copyTestProductsDemo.value
     })
 
+    const { data } = await api.post('authentication/assign-demo', {
+      business_type_id: demoBusinessType.value.id,
+      copy_test_products: copyTestProductsDemo.value
+    })
+
+    console.log('✅ assignDemo - Respuesta recibida:', data)
+
     store.setSessionData(data)
+    store.isClientDemo = true
 
     notify('¡Bienvenido a la demo!', 'positive', 'check_circle')
 
     showDemoBusinessTypeSelection.value = false
+
+    // Limpiar formularios
+    clearAllForms()
 
     router.push('/')
   } catch (error) {
@@ -1053,6 +1073,13 @@ const assignDemo = async () => {
 const handleGoogleRegister = async () => {
   await registerWithGoogleUser({
     onSuccess: (data, userInfo) => {
+      // Si no necesita setup de empresa, significa que ya tiene una cuenta activa y configurada
+      if (!data.needs_company_setup) {
+        notify('Ya existe una cuenta vinculada a este Gmail. Por favor, inicia sesión para continuar.', 'warning', 'info')
+        router.push('/login')
+        return
+      }
+
       // Guardar datos del usuario de Google para usar en el modal de setup
       registrationFormData.value = {
         name: userInfo.name?.split(' ')[0] || userInfo.name || '',
@@ -1073,13 +1100,9 @@ const handleGoogleRegister = async () => {
       }
 
       // Mostrar opciones para elegir el rubro de la empresa
-      if (data.needs_company_setup) {
-        isGoogleRegister.value = true
-        companyForm.value.company_email = userInfo.email
-        showCompanyOptions.value = true
-      } else {
-        router.push('/')
-      }
+      isGoogleRegister.value = true
+      companyForm.value.company_email = userInfo.email
+      showCompanyOptions.value = true
     }
   })
 }
