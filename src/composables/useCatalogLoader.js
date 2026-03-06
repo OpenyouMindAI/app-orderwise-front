@@ -1,188 +1,186 @@
 /**
- * useCatalogLoader
+ * useCatalogLoader - Lógica de Activadores por Bloques de 50
  *
- * Carga bajo demanda de productos por categoría.
+ * En lugar de cargar por categoría, dividimos todo el catálogo en bloques
+ * virtuales de 50 productos (basados en el product_count de cada categoría).
  *
- * Estrategia:
- *  - La primera categoría se carga de inmediato al inicializar.
- *  - El resto se carga SOLO cuando el usuario llega a esa sección
- *    (via IntersectionObserver en CatalogView) o cuando hace click
- *    en una categoría del menú (jumpToCategory).
- *  - Nunca se pre-cargan categorías que el usuario no ha visitado.
- *  - Tamaño de página: 50 productos por categoría.
+ * Esto permite:
+ *  - Carga predecible de 50 en 50 productos.
+ *  - Minimizar peticiones agrupando categorías pequeñas en un solo bloque.
+ *  - Manejar categorías gigantes dividiéndolas en varios bloques.
  */
 
 import { ref, computed } from 'vue'
 import { api } from 'boot/axios'
 
-const PAGE_SIZE = 50 // productos a mostrar por categoría
-const DEFAULT_SKELETON = 5 // skeletons si product_count no está disponible
+const BLOCK_SIZE = 50
+const DEFAULT_SKELETON = 5
 
 export function useCatalogLoader () {
-  // ─── Estado reactivo ────────────────────────────────────────────────────────
-
-  /**
-   * Mapa categoríaId → { status, products, error, skeletonCount }
-   * status: 'idle' | 'loading' | 'loaded' | 'error'
-   */
+  // ─── Estado ────────────────────────────────────────────────────────────────
   const categoryState = ref({})
-
-  /** Lista de categorías ordenada por `order` */
+  const blockState = ref({}) // blockId -> 'idle' | 'loading' | 'loaded' | 'error'
   const orderedCategories = ref([])
 
-  /** Parámetros de la empresa para cada fetch */
   let _companyId = null
   let _branchOfficeId = null
+  let _totalProducts = 0
 
-  // ─── Helpers internos ───────────────────────────────────────────────────────
+  // Mapa para saber en qué global index empieza cada categoría
+  // catId -> firstGlobalIndex
+  const _catOffsets = new Map()
 
-  /** Inicializa el estado de una categoría si no existe aún */
-  function _ensureState (cat) {
+  // ─── Helpers ───────────────────────────────────────────────────────────────
+
+  function _ensureCategoryState (cat) {
     if (!categoryState.value[cat.id]) {
-      const count = cat.product_count
-        ? Math.min(cat.product_count, PAGE_SIZE)
-        : DEFAULT_SKELETON
+      const apiCount = cat.product_count ?? cat.products_count
+      const count = typeof apiCount === 'number' ? apiCount : DEFAULT_SKELETON
       categoryState.value[cat.id] = {
         status: 'idle',
-        products: [],
-        error: null,
+        // Array de tamaño fijo para mantener la posición exacta
+        products: new Array(count).fill(null),
         skeletonCount: count
       }
     }
-    return categoryState.value[cat.id]
   }
-
-  /** Fetch real de productos para una categoría */
-  async function _fetchCategory (catId) {
-    const { data } = await api.get(`public/products/${_companyId}`, {
-      params: {
-        stock: true,
-        withStock: true,
-        sortOrder: 'desc',
-        sortBy: 'sold',
-        branch_office_id: _branchOfficeId,
-        dataEqualFilter: {
-          show_catalog: 1,
-          'category.show_catalog': 1,
-          category_id: catId
-        }
-      }
-    })
-    const raw = Array.isArray(data) ? data : (data?.data ?? [])
-    return raw.slice(0, PAGE_SIZE)
-  }
-
-  // ─── API pública ─────────────────────────────────────────────────────────────
 
   /**
-   * Carga una categoría si no está ya cargada o en progreso.
-   * Es idempotente: llamarla múltiples veces es seguro.
+   * Carga un bloque específico (página de la API global)
    */
-  async function loadCategory (catId) {
-    const state = categoryState.value[catId]
-    if (!state || state.status === 'loading' || state.status === 'loaded') return
+  async function loadBlock (blockId) {
+    if (blockState.value[blockId] === 'loading' || blockState.value[blockId] === 'loaded') return
 
-    state.status = 'loading'
-    state.error = null
+    blockState.value[blockId] = 'loading'
+
+    // TEST: Retraso de 1s para ver las transiciones
+    await new Promise(resolve => setTimeout(resolve, 1000))
+
     try {
-      state.products = await _fetchCategory(catId)
-      state.status = 'loaded'
+      const { data } = await api.get(`public/products/${_companyId}`, {
+        params: {
+          stock: true,
+          withStock: true,
+          sortOrder: 'asc',
+          sortBy: 'category.sort_order',
+          page: blockId + 1,
+          rowsPerPage: BLOCK_SIZE,
+          branch_office_id: _branchOfficeId,
+          dataEqualFilter: {
+            show_catalog: 1,
+            'category.show_catalog': 1
+          }
+        }
+      })
+
+      const products = Array.isArray(data) ? data : (data?.data ?? [])
+
+      // Distribuir productos a sus posiciones exactas
+      products.forEach((p, indexInPage) => {
+        const globalIndex = (blockId * BLOCK_SIZE) + indexInPage
+        const catId = p.category_id
+        const state = categoryState.value[catId]
+        const offset = _catOffsets.get(catId)
+
+        if (state && offset !== undefined) {
+          const localIndex = globalIndex - offset
+          // Solo asignamos si el índice cae dentro de la categoría
+          if (localIndex >= 0 && localIndex < state.skeletonCount) {
+            state.products[localIndex] = p
+            state.status = 'loaded'
+          }
+        }
+      })
+
+      blockState.value[blockId] = 'loaded'
     } catch (err) {
-      state.status = 'error'
-      state.error = err?.message ?? 'Error desconocido'
+      console.error(`Error cargando bloque ${blockId}:`, err)
+      blockState.value[blockId] = 'error'
     }
   }
 
-  /**
-   * Inicializa el loader con las categorías y parámetros de empresa.
-   * Solo carga la PRIMERA categoría de inmediato.
-   * El resto queda en 'idle' hasta que el IntersectionObserver los active.
-   */
+  // ─── API pública ──────────────────────────────────────────────────────────
+
   function init (categories, companyId, branchOfficeId) {
     _companyId = companyId
     _branchOfficeId = branchOfficeId ?? null
 
-    // Ordenar por order y guardar referencia
+    // 1. Ordenar categorías
     orderedCategories.value = [...categories].sort(
-      (a, b) => (a.order ?? 0) - (b.order ?? 0)
+      (a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.sort_order ?? 0) - (b.sort_order ?? 0)
     )
 
-    // Inicializar estado de todas las categorías (idle + skeletons)
-    orderedCategories.value.forEach(cat => _ensureState(cat))
+    // 2. Calcular offsets y total
+    _totalProducts = 0
+    _catOffsets.clear()
+    categoryState.value = {}
+    blockState.value = {}
 
-    // Cargar solo la primera categoría de forma inmediata
-    if (orderedCategories.value.length > 0) {
-      loadCategory(orderedCategories.value[0].id)
+    orderedCategories.value.forEach(cat => {
+      _catOffsets.set(cat.id, _totalProducts)
+      _ensureCategoryState(cat)
+      _totalProducts += categoryState.value[cat.id].skeletonCount
+    })
+
+    // 3. Inicializar estados de bloques
+    const numBlocks = Math.ceil(_totalProducts / BLOCK_SIZE)
+    for (let i = 0; i < numBlocks; i++) {
+      blockState.value[i] = 'idle'
     }
+
+    // Cargar primer bloque inmediatamente
+    if (numBlocks > 0) loadBlock(0)
   }
 
   /**
-   * Navegación directa a una categoría (click en el menú).
-   * Carga inmediata de esa categoría; el resto sigue bajo demanda.
+   * Navegación por chips: calcula qué bloque(s) contienen a la categoría
    */
-  async function jumpToCategory (targetCategoryId) {
-    await loadCategory(targetCategoryId)
+  async function jumpToCategory (catId) {
+    const offset = _catOffsets.get(catId)
+    if (offset === undefined) return
+
+    const startBlock = Math.floor(offset / BLOCK_SIZE)
+    // Una categoría puede estar en varios bloques, cargamos al menos el primero
+    await loadBlock(startBlock)
   }
 
-  /**
-   * Reintentar la carga de una categoría que falló.
-   */
-  async function retry (categoryId) {
-    const state = categoryState.value[categoryId]
-    if (!state || state.status !== 'error') return
-    state.status = 'idle'
-    await loadCategory(categoryId)
-  }
-
-  /**
-   * Liberar recursos (llamar en onBeforeUnmount).
-   */
   function destroy () {
-    // El IntersectionObserver se limpia en CatalogView; aquí solo
-    // reseteamos las referencias internas.
     _companyId = null
     _branchOfficeId = null
   }
 
-  // ─── Computed de conveniencia ────────────────────────────────────────────────
+  // ─── Computed ──────────────────────────────────────────────────────────────
 
-  /** Categorías enriquecidas con estado de carga, listas para el template */
+  const blocks = computed(() => {
+    const numBlocks = Math.ceil(_totalProducts / BLOCK_SIZE)
+    const result = []
+    for (let i = 0; i < numBlocks; i++) {
+      result.push({
+        id: i,
+        status: blockState.value[i] || 'idle'
+      })
+    }
+    return result
+  })
+
   const categoriesWithState = computed(() =>
-    orderedCategories.value.map(cat => {
-      const state = categoryState.value[cat.id] ?? {
-        status: 'idle',
-        products: [],
-        error: null,
-        skeletonCount: DEFAULT_SKELETON
-      }
-      return {
-        ...cat,
-        status: state.status,
-        products: state.products,
-        error: state.error,
-        skeletonCount: state.skeletonCount
-      }
-    })
+    orderedCategories.value.map(cat => ({
+      ...cat,
+      ...categoryState.value[cat.id]
+    }))
   )
 
-  /** true cuando todas las categorías terminaron de cargar (o fallaron) */
   const isFullyLoaded = computed(() =>
-    orderedCategories.value.length > 0 &&
-    orderedCategories.value.every(cat => {
-      const s = categoryState.value[cat.id]
-      return s?.status === 'loaded' || s?.status === 'error'
-    })
+    Object.values(blockState.value).every(s => s === 'loaded' || s === 'error')
   )
-
   return {
-    categoryState,
     orderedCategories,
+    blocks,
     categoriesWithState,
     isFullyLoaded,
     init,
-    loadCategory,
+    loadBlock,
     jumpToCategory,
-    retry,
     destroy
   }
 }
