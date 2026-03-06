@@ -798,6 +798,24 @@
                 <q-icon name="cancel" @click.stop.prevent="filters.branchOfficeSelect = []" class="cursor-pointer" />
               </template>
             </q-select>
+            <q-select
+              v-model="filters.paymentMethod"
+              :options="paymentMethods"
+              style="min-width: 300px;"
+              label="Método de pago"
+              option-value="id"
+              option-label="name"
+              dense
+              filled
+              multiple
+              use-input
+              input-debounce="0"
+              @filter="filterPaymentMethods"
+            >
+              <template v-if="filters.paymentMethod.length" v-slot:append>
+                <q-icon name="cancel" @click.stop.prevent="filters.paymentMethod = []" class="cursor-pointer" />
+              </template>
+            </q-select>
           </div>
         </q-card-section>
 
@@ -884,13 +902,15 @@ export default {
       categories: [],
       branchOffices: [],
       typeOfServices: [],
+      paymentMethods: [],
       filters: {
         code: '',
         seller: null,
         deliveryPerson: null,
         invoiceType: [],
         typeOfService: [],
-        branchOfficeSelect: []
+        branchOfficeSelect: [],
+        paymentMethod: []
       },
       loadingDownload: 0,
       /**
@@ -1297,7 +1317,8 @@ export default {
         ...this.params.whereIn,
         invoice_type_id: this.filters.invoiceType.map(item => item.id),
         type_of_service_id: this.filters.typeOfService.map(item => item.id),
-        branch_office_id: this.filters.branchOfficeSelect.map(item => item.id)
+        branch_office_id: this.filters.branchOfficeSelect.map(item => item.id),
+        'invoicePayments.payment_method_id': this.filters.paymentMethod.map(item => item.id)
       }
       this.params.dataEqualFilter = {
         ...this.params.dataEqualFilter,
@@ -1365,7 +1386,8 @@ export default {
         deliveryPerson: null,
         invoiceType: [],
         typeOfService: [],
-        branchOfficeSelect: []
+        branchOfficeSelect: [],
+        paymentMethod: []
       }
       await this.getBranchOffices()
       this.filterInvoice()
@@ -1394,6 +1416,27 @@ export default {
         })
         update(() => {
           this.typeOfServices = data
+        })
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      }
+    },
+    /**
+     * Get all payment methods
+     * @param {String} value
+     * @param {Callback} update update options
+     */
+    async filterPaymentMethods (value, update) {
+      try {
+        const { data } = await this.$api.get('payment-methods', {
+          params: {
+            dataSearch: {
+              name: value
+            }
+          }
+        })
+        update(() => {
+          this.paymentMethods = data
         })
       } catch (error) {
         notify(error.message, 'negative', 'warning')
