@@ -64,7 +64,8 @@ export function useCatalogLoader () {
           sortOrder: 'asc',
           sortBy: 'category.sort_order',
           page: blockId + 1,
-          rowsPerPage: BLOCK_SIZE,
+          perPage: BLOCK_SIZE,
+          paginate: true,
           branch_office_id: _branchOfficeId,
           dataEqualFilter: {
             show_catalog: 1,

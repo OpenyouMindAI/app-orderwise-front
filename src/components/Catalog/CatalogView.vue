@@ -58,35 +58,14 @@
             -->
             <div class="row q-col-gutter-y-md">
               <template v-for="index in cat.skeletonCount" :key="'prod-slot-' + cat.id + '-' + index">
-
                 <div
                   class="col-12"
                   :ref="el => registerBlockRef(el, getBlockId(cat.id, index))"
                 >
-                  <Transition name="cat-fade" mode="out-in">
-                    <!-- Si el producto para este índice ya cargó, lo mostramos -->
-                    <div v-if="cat.products[index - 1]">
-                      <q-card
-                        flat bordered
-                        class="product-horizontal-card"
-                        @click="$emit('open-product', cat.products[index - 1])"
-                      >
-                        <q-card-section horizontal class="items-center">
-                          <q-card-section class="q-pa-md col">
-                            <div class="product-title">{{ cat.products[index - 1].name }}</div>
-                            <div class="text-content q-mt-xs ellipsis-2-lines" v-html="cat.products[index - 1].description" />
-                            <div class="price-text q-mt-sm">$ {{ formatNumber(cat.products[index - 1].price) }}</div>
-                          </q-card-section>
-                          <q-card-section class="col-auto q-pa-md">
-                            <q-img :src="cat.products[index - 1].images[0]?.url || defaultImage" class="product-image" />
-                          </q-card-section>
-                        </q-card-section>
-                      </q-card>
-                    </div>
-
-                    <!-- Si no, mostramos el skeleton -->
-                    <ProductSkeletonCard v-else />
-                  </Transition>
+                  <ProductCard
+                    :product="cat.products[index - 1] || null"
+                    @click="cat.products[index - 1] && $emit('open-product', cat.products[index - 1])"
+                  />
                 </div>
               </template>
             </div>
@@ -100,9 +79,7 @@
 <script setup>
 import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import { useCatalogLoader } from 'src/composables/useCatalogLoader'
-import { formatNumber } from 'src/const/mixins'
-import ProductSkeletonCard from 'src/components/Catalog/ProductSkeletonCard.vue'
-import { noProductImage as defaultImage } from 'src/const/images'
+import ProductCard from 'src/components/Catalog/ProductCard.vue'
 
 const {
   orderedCategories,
@@ -191,16 +168,17 @@ const selectCategory = async (categoryId) => {
   selectedCategory.value = categoryId
   isJumping.value = true
 
-  // Cargar el bloque que contiene esta categoría inmediatamente
-  await jumpToCategory(categoryId)
-
+  // 1. Iniciamos el scroll de inmediato (sin esperar a la API)
   await nextTick()
   const el = document.getElementById(`category-${categoryId}`)
   if (el) {
     el.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  // Después de que termine el scroll (aprox 1s), permitimos triggers de nuevo
+  // 2. Lanzamos la carga en segundo plano (sin await)
+  jumpToCategory(categoryId)
+
+  // 3. Después de que termine el scroll (aprox 1s), permitimos triggers de nuevo
   setTimeout(() => {
     isJumping.value = false
     if (selectedCategory.value === categoryId) {
@@ -291,7 +269,23 @@ onBeforeUnmount(() => {
   position: absolute;
 }
 
+.product-slot-wrapper {
+  position: relative;
+  min-height: 125px; /* Altura estable para evitar saltos de scroll */
+}
+
 /* Transiciones */
-.cat-fade-enter-active, .cat-fade-leave-active { transition: opacity 0.3s ease; }
-.cat-fade-enter-from, .cat-fade-leave-to { opacity: 0; }
+.cat-fade-enter-active, .cat-fade-leave-active {
+  transition: opacity 0.4s ease;
+}
+.cat-fade-leave-active {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 0;
+}
+.cat-fade-enter-from, .cat-fade-leave-to {
+  opacity: 0;
+}
 </style>
