@@ -3589,7 +3589,9 @@ export default {
      */
     async processBarcode (barcode) {
       try {
-        if (!barcode || typeof barcode !== 'string' || barcode.length < 13) {
+        if (!barcode) return
+
+        if (typeof barcode !== 'string' || barcode.length < 13) {
           this.getOneProduct(barcode)
           return
         }
@@ -4580,7 +4582,7 @@ export default {
         return
       }
 
-      const isWeightProduct = data?.unit_of_measure?.acronym === 'KG'
+      const isWeightProduct = data?.unit_of_measure?.acronym !== 'U'
       const quantity = this.quantity || 1
 
       // Manejo especial para productos por peso
