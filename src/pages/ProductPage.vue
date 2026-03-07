@@ -113,6 +113,19 @@
                 </q-item>
 
                 <q-item
+                  clickable
+                  v-close-popup
+                  @click="openBarcodeDialog"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="qr_code_scanner" color="primary" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Códigos de Barra</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item
                   id="tour-btn-lista-precios"
                   clickable
                   v-close-popup
@@ -289,6 +302,19 @@
                 </q-item>
 
                 <q-item
+                  clickable
+                  v-close-popup
+                  @click="openBarcodeDialog"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="qr_code_scanner" color="primary" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Códigos de Barra</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item
                   id="tour-btn-lista-precios-desktop"
                   clickable
                   v-close-popup
@@ -428,6 +454,21 @@
             </q-input>
           </template>
 
+          <template v-slot:body-cell-selection="props">
+            <q-td :props="props" class="text-center">
+              <q-checkbox
+                v-model="props.selected"
+                @update:model-value="val => {
+                  console.log('Checkbox changed:', props.row.name, 'selected:', val)
+                  props.selected = val
+                  this.forceSelectionUpdate()
+                  console.log('Selection after change:', this.selection)
+                }"
+                dense
+              />
+            </q-td>
+          </template>
+
           <template v-slot:item="props">
             <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4">
               <q-card
@@ -438,6 +479,22 @@
                 :id="props.rowIndex === 0 ? 'tour-first-product-card' : ''"
               >
                 <span class="q-focus-helper"></span>
+
+                <!-- Checkbox for selection mode -->
+                <q-checkbox
+                  v-if="multipleSelected"
+                  v-model="props.selected"
+                  @update:model-value="val => {
+                    console.log('Mobile checkbox changed:', props.row.name, 'selected:', val)
+                    props.selected = val
+                    this.forceSelectionUpdate()
+                    console.log('Mobile selection after change:', this.selection)
+                  }"
+                  class="absolute-top-right q-ma-sm"
+                  style="z-index: 10"
+                  dense
+                  color="primary"
+                />
 
                 <q-card-section class="row justify-between items-start compact-card-header">
                   <div class="col-9" style="max-width: 70%">
@@ -2032,6 +2089,130 @@
       </q-card>
     </q-dialog>
 
+    <!-- Barcode Dialog -->
+    <q-dialog v-model="barcodeDialog" persistent :maximized="$q.screen.lt.sm">
+      <q-card
+        :style="$q.screen.lt.sm ? '' : 'width: 900px; max-width: 95vw;'"
+        :class="$q.screen.lt.sm ? 'column full-height' : ''"
+      >
+        <q-card-section class="row items-center bg-primary text-white q-py-sm col-auto">
+          <q-icon name="qr_code_scanner" size="sm" class="q-mr-sm" />
+          <div class="text-h6">Códigos de Barra de Productos</div>
+          <q-space />
+          <q-btn icon="close" flat round dense @click="closeBarcodeDialog" />
+        </q-card-section>
+
+        <q-card-section
+          v-if="!barcodeCodes.length"
+          :class="$q.screen.lt.sm ? 'col scroll flex flex-center' : ''"
+        >
+          <div class="text-center q-pa-lg">
+            <q-icon name="qr_code_scanner" size="4rem" color="grey-5" class="q-mb-md" />
+            <div class="text-h6 text-grey-7 q-mb-sm">
+              Selecciona productos para generar códigos de barra
+            </div>
+            <div class="text-body2 text-grey-6">
+              Puedes seleccionar productos específicos o generar códigos para todos
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-section
+          v-else
+          :class="$q.screen.lt.sm ? 'col scroll' : 'scroll'"
+          :style="$q.screen.lt.sm ? '' : 'max-height: 60vh;'"
+        >
+          <div class="row q-col-gutter-md">
+            <div
+              v-for="barcode in barcodeCodes"
+              :key="barcode.product_id"
+              class="col-xs-12 col-sm-6 col-md-4"
+            >
+              <q-card flat bordered class="q-pa-md text-center" style="border-radius: 12px;">
+                <div class="text-subtitle2 text-weight-bold q-mb-sm text-primary">
+                  {{ barcode.product_name }}
+                </div>
+                <div class="text-caption text-grey-7 q-mb-sm" v-if="barcode.barcode">
+                  Código: {{ barcode.barcode }}
+                </div>
+                <q-img
+                  :src="getBarcodeImage(barcode)"
+                  style="max-width: 200px; margin: 0 auto;"
+                  class="q-mb-md"
+                />
+                <div class="q-gutter-sm">
+                  <q-btn
+                    size="sm"
+                    color="positive"
+                    icon="download"
+                    label="Descargar"
+                    @click="downloadBarcode(barcode)"
+                    unelevated
+                  />
+                  <q-btn
+                    size="sm"
+                    color="green"
+                    icon="share"
+                    label="WhatsApp"
+                    @click="shareBarcodeWhatsApp(barcode)"
+                    unelevated
+                  />
+                </div>
+              </q-card>
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md q-gutter-sm col-auto bg-white">
+          <q-btn
+            color="secondary"
+            label="Cerrar"
+            @click="closeBarcodeDialog"
+            v-if="barcodeCodes.length"
+            flat
+          />
+          <q-btn
+            color="green"
+            label="Compartir PDF"
+            icon="share"
+            @click="shareAllBarcodeAsPdf"
+            :loading="loadingPdf"
+            v-if="barcodeCodes.length"
+            unelevated
+          />
+          <q-btn
+            color="orange"
+            label="Descargar PDF"
+            icon="picture_as_pdf"
+            @click="downloadAllBarcodeAsPdf"
+            :loading="loadingPdf"
+            v-if="barcodeCodes.length"
+            unelevated
+          />
+          <q-btn
+            color="primary"
+            icon="qr_code_scanner"
+            @click="generateBarcodeSelected"
+            :loading="loadingBarcode"
+            :disable="!selection.length"
+            v-if="!barcodeCodes.length"
+            unelevated
+          >
+            <span>Generar seleccionados ({{ selection.length }})</span>
+          </q-btn>
+          <q-btn
+            color="primary"
+            label="Generar códigos de todos"
+            icon="qr_code_scanner"
+            @click="generateBarcodeAll"
+            :loading="loadingBarcode"
+            v-if="!barcodeCodes.length"
+            unelevated
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <!-- Tour Overlay -->
     <!-- Tour System (Teleported to body for Z-Index supremacy) -->
     <teleport to="body">
@@ -2303,6 +2484,9 @@ export default {
       qrCodes: [],
       loadingQr: false,
       loadingPdf: false,
+      barcodeDialog: false,
+      barcodeCodes: [],
+      loadingBarcode: false,
       originalProduct: null,
       listPriceDialog: false,
       dialogFilter: false,
@@ -2634,19 +2818,30 @@ export default {
      * Toggle multiple selection mode
      */
     toggleMultipleSelection () {
+      console.log('toggleMultipleSelection called')
+      console.log('Current multipleSelected:', this.multipleSelected)
+
       this.multipleSelected = !this.multipleSelected
+      console.log('New multipleSelected:', this.multipleSelected)
+
       // Clear selection when disabling multiple selection
       if (!this.multipleSelected) {
         this.selection = []
+        console.log('Selection cleared')
       }
     },
     /**
      * Handle card click in mobile view
      */
     handleCardClick (product) {
+      console.log('handleCardClick called with:', product)
+      console.log('handleCardClick - multipleSelected:', this.multipleSelected)
+
       if (this.multipleSelected) {
+        console.log('Calling toggleProductSelection')
         this.toggleProductSelection(product)
       } else {
+        console.log('Calling editProduct')
         this.editProduct(null, product)
       }
     },
@@ -2660,18 +2855,38 @@ export default {
      * Toggle product selection
      */
     toggleProductSelection (product) {
+      console.log('toggleProductSelection called with:', product)
+      console.log('Current selection before:', this.selection)
+
       const index = this.selection.findIndex(p => p.id === product.id)
       if (index > -1) {
         this.selection.splice(index, 1)
+        console.log('Product removed from selection')
       } else {
         this.selection.push(product)
+        console.log('Product added to selection')
       }
+
+      console.log('Current selection after:', this.selection)
+      console.log('Selection length:', this.selection.length)
     },
     /**
      * Select all columns
      */
     selectAllColumns () {
       this.visibleColumnNames = this.columns.map(col => col.name)
+    },
+    /**
+     * Force selection update (workaround for Quasar table selection issues)
+     */
+    forceSelectionUpdate () {
+      console.log('forceSelectionUpdate called')
+      console.log('Current selection:', this.selection)
+      console.log('Current products:', this.products)
+
+      // Force Vue reactivity by creating a new array
+      this.selection = [...this.selection]
+      console.log('Forced selection update:', this.selection)
     },
     /**
      * Download import template
@@ -3623,6 +3838,16 @@ export default {
      * View product
      */
     editProduct (event, row, index) {
+      console.log('editProduct called')
+      console.log('editProduct - multipleSelected:', this.multipleSelected)
+      console.log('editProduct - event:', event)
+
+      // Si estamos en modo de selección múltiple, no abrir el diálogo de edición
+      if (this.multipleSelected) {
+        console.log('Multiple selection mode active, not opening edit dialog')
+        return
+      }
+
       // Guardar el producto original antes de cualquier modificación
       this.originalProduct = this.deepCloneProduct(row)
 
@@ -4035,6 +4260,229 @@ export default {
       } finally {
         this.loadingPdf = false
       }
+    },
+    /**
+     * Open Barcode dialog
+     */
+    openBarcodeDialog () {
+      this.barcodeDialog = true
+      this.barcodeCodes = []
+      
+      // Auto-generate if products are already selected
+      if (this.selection.length > 0) {
+        this.generateBarcodeSelected()
+      }
+    },
+    /**
+     * Close Barcode dialog
+     */
+    closeBarcodeDialog () {
+      this.barcodeDialog = false
+      this.barcodeCodes = []
+    },
+    /**
+     * Generate Barcode for selected products
+     */
+    async generateBarcodeSelected () {
+      if (!this.selection.length) {
+        notify('Selecciona al menos un producto', 'warning', 'warning')
+        return
+      }
+
+      try {
+        this.loadingBarcode = true
+        const productIds = this.selection.map(p => p.id)
+        const { data } = await this.$api.post('products/generate-barcode', {
+          product_ids: productIds
+        })
+        console.log('Barcode generation response:', data)
+        this.barcodeCodes = data.barcode_codes
+        notify('Códigos de barra generados exitosamente', 'positive', 'check_circle')
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        this.loadingBarcode = false
+      }
+    },
+    /**
+     * Generate Barcode for all products
+     */
+    async generateBarcodeAll () {
+      try {
+        this.loadingBarcode = true
+        const productIds = this.products.map(p => p.id)
+
+        if (!productIds.length) {
+          notify('No hay productos para generar códigos de barra', 'warning', 'warning')
+          return
+        }
+
+        const { data } = await this.$api.post('products/generate-barcode', {
+          product_ids: productIds
+        })
+        console.log('Barcode generation (all) response:', data)
+        this.barcodeCodes = data.barcode_codes
+        notify('Códigos de barra generados exitosamente', 'positive', 'check_circle')
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        this.loadingBarcode = false
+      }
+    },
+    /**
+     * Download Barcode code
+     */
+    downloadBarcode (barcode) {
+      try {
+        const link = document.createElement('a')
+        link.href = this.getBarcodeImage(barcode)
+        link.download = `Barcode-${barcode.product_name.replace(/[^a-z0-9]/gi, '_')}.png`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        notify('Código de barra descargado exitosamente', 'positive', 'check_circle')
+      } catch (error) {
+        notify('Error al descargar el código de barra', 'negative', 'warning')
+      }
+    },
+    /**
+     * Share Barcode via WhatsApp
+     */
+    async shareBarcodeWhatsApp (barcode) {
+      try {
+        // Convert base64 to blob
+        const base64Response = await fetch(this.getBarcodeImage(barcode))
+        const blob = await base64Response.blob()
+
+        // Create file from blob
+        const file = new File([blob], `Barcode-${barcode.product_name}.png`, { type: 'image/png' })
+
+        // Check if Web Share API is available
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: `Barcode - ${barcode.product_name}`,
+            text: `Código de barra del producto: ${barcode.product_name}${barcode.barcode ? ` (${barcode.barcode})` : ''}`,
+            files: [file]
+          })
+          notify('Compartido exitosamente', 'positive', 'check_circle')
+        } else {
+          // Fallback: Open WhatsApp Web with text
+          const text = encodeURIComponent(`Código de barra del producto: ${barcode.product_name}${barcode.barcode ? ` (${barcode.barcode})` : ''}`)
+          window.open(`https://wa.me/?text=${text}`, '_blank')
+          notify('Abre WhatsApp para compartir. Descarga el código de barras y envíalo manualmente.', 'info', 'info')
+        }
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          notify('Error al compartir por WhatsApp', 'negative', 'warning')
+        }
+      }
+    },
+    /**
+     * Download all Barcode codes as PDF
+     */
+    async downloadAllBarcodeAsPdf () {
+      try {
+        this.loadingPdf = true
+        const productIds = this.barcodeCodes.map(barcode => barcode.product_id)
+
+        const response = await this.$api.post('products/generate-barcode-pdf', {
+          product_ids: productIds
+        }, {
+          responseType: 'blob'
+        })
+
+        // Create download link
+        const blob = new Blob([response.data], { type: 'application/pdf' })
+        const link = document.createElement('a')
+        link.href = window.URL.createObjectURL(blob)
+        link.download = `codigos-barra-productos-${new Date().getTime()}.pdf`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(link.href)
+
+        notify('PDF descargado exitosamente', 'positive', 'check_circle')
+      } catch (error) {
+        notify(error.message || 'Error al generar PDF', 'negative', 'warning')
+      } finally {
+        this.loadingPdf = false
+      }
+    },
+    /**
+     * Share all Barcode codes as PDF via WhatsApp
+     */
+    async shareAllBarcodeAsPdf () {
+      try {
+        this.loadingPdf = true
+        const productIds = this.barcodeCodes.map(barcode => barcode.product_id)
+
+        const response = await this.$api.post('products/generate-barcode-pdf', {
+          product_ids: productIds
+        }, {
+          responseType: 'blob'
+        })
+
+        const blob = new Blob([response.data], { type: 'application/pdf' })
+        const file = new File([blob], 'codigos-barra-productos.pdf', { type: 'application/pdf' })
+
+        // Try to share using Web Share API
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: 'Códigos de Barra de Productos',
+              text: `PDF con ${this.barcodeCodes.length} códigos de barra de productos`,
+              files: [file]
+            })
+            notify('PDF compartido exitosamente', 'positive', 'check_circle')
+          } catch (shareError) {
+            // If share fails or is cancelled, download instead
+            if (shareError.name !== 'AbortError') {
+              const link = document.createElement('a')
+              link.href = window.URL.createObjectURL(blob)
+              link.download = `codigos-barra-productos-${new Date().getTime()}.pdf`
+              document.body.appendChild(link)
+              link.click()
+              document.body.removeChild(link)
+              window.URL.revokeObjectURL(link.href)
+              notify('PDF descargado. Compártelo manualmente', 'info', 'info')
+            }
+          }
+        } else {
+          // Fallback: Download
+          const link = document.createElement('a')
+          link.href = window.URL.createObjectURL(blob)
+          link.download = `codigos-barra-productos-${new Date().getTime()}.pdf`
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          window.URL.revokeObjectURL(link.href)
+          notify('PDF descargado. Compártelo manualmente por WhatsApp', 'info', 'info')
+        }
+      } catch (error) {
+        notify(error.message || 'Error al generar PDF', 'negative', 'warning')
+      } finally {
+        this.loadingPdf = false
+      }
+    },
+    /**
+     * Get barcode image source with fallbacks
+     */
+    getBarcodeImage (barcode) {
+      if (!barcode) return ''
+      let img = barcode.barcode_image || barcode.image || barcode.base64 || barcode.qr_code || barcode.barcode_base64
+      if (!img) return ''
+
+      // Detect double base64 encoding (e.g. starts with 'aVZC' which decodes to 'iVB')
+      if (img.startsWith('aVZ')) {
+        try {
+          // Decode one layer if it looks like it was double encoded
+          img = atob(img)
+        } catch (e) {
+          // If decoding fails, keep the original string
+        }
+      }
+
+      return img.startsWith('data:') ? img : `data:image/png;base64,${img}`
     },
     /**
      * Open add product dialog
