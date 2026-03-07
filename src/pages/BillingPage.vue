@@ -4343,7 +4343,9 @@ export default {
         total_amount: this.totalBill,
         tables: this.tableSelected.map(table => table?.id || table),
         electronic_invoice: this.invoiceType?.bill,
-        voucherType: this.invoiceType?.bill ? this.voucherType : null
+        voucherType: this.invoiceType?.bill ? this.voucherType : null,
+        // Lógica de herencia: Si la sucursal tiene point_of_sale, incluirlo para que el backend lo use
+        point_of_sale: this.branchOffice?.point_of_sale || null
       }
       return invoiceModel
     },
