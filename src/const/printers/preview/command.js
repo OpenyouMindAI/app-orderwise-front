@@ -7,7 +7,7 @@ import { cutWords, header, sum } from '../common'
  * @param {Object} userSession user session
  * @returns {Object} jsPDF
  */
-export const previewCommand = async (data, userSession) => {
+export const previewCommand = async (data, userSession, branchOffice = null) => {
   let y = 5
   const { company_session: companySession } = userSession
 

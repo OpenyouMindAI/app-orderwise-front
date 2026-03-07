@@ -30,9 +30,9 @@ const getConfig = async () => {
 export const commandPrint = async (data, printer = null) => {
   try {
     const info = await Device.getInfo()
-    const { device, user, companyConfig } = await getConfig()
+    const { device, user, companyConfig, branchOffice } = await getConfig()
     if (!companyConfig?.other?.directPrint) {
-      await sendCommand(data, user)
+      await sendCommand(data, user, branchOffice)
       return
     }
     const printerSelected = printer || companyConfig.printer
@@ -63,9 +63,9 @@ export const commandPrint = async (data, printer = null) => {
 
 export const ticketPrint = async (data, printer = null) => {
   try {
-    const { device, user, companyConfig } = await getConfig()
+    const { device, user, companyConfig, branchOffice } = await getConfig()
     if (!companyConfig?.other?.directPrint) {
-      await sendTicket(data, user)
+      await sendTicket(data, user, branchOffice)
       return
     }
     const printerSelected = printer || companyConfig.printer

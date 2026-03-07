@@ -99,6 +99,58 @@
                 label="Nombre"
               />
             </div>
+            <!-- Campos Fiscales -->
+            <div class="col-12">
+              <div class="text-subtitle2 text-weight-medium text-grey-8 q-mb-sm">
+                <q-icon name="receipt_long" class="q-mr-sm" />
+                Datos Fiscales (Opcional)
+              </div>
+            </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                v-model="branchOffice.business_name"
+                filled
+                label="Razón Social"
+                hint="Razón Social específica de la sucursal"
+              />
+            </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                v-model="branchOffice.document_number"
+                filled
+                label="CUIT/CUIL"
+                mask="##-########-#"
+                hint="CUIT/CUIL específico de la sucursal (formato: 00-00000000-0)"
+              />
+            </div>
+            <div class="col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
+              <q-input
+                v-model.number="branchOffice.point_of_sale"
+                type="number"
+                filled
+                label="Punto de Venta (AFIP)"
+                hint="Punto de Venta fijo para esta sucursal"
+                min="1"
+                max="9999"
+              />
+            </div>
+            <div class="col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
+              <q-input
+                v-model="branchOffice.income_brut"
+                filled
+                label="Ingresos Brutos"
+                hint="Número de Ingresos Brutos (IIBB) de la sucursal"
+              />
+            </div>
+            <div class="col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
+              <q-input
+                v-model="branchOffice.activity_start_date"
+                type="date"
+                filled
+                label="Inicio de Actividades"
+                hint="Fecha de inicio de actividades fiscales"
+              />
+            </div>
             <!-- Sección de Dirección para Editar -->
             <div class="col-12">
               <AddressComponent
@@ -203,6 +255,58 @@
                 filled
                 autofocus
                 label="Nombre"
+              />
+            </div>
+            <!-- Campos Fiscales -->
+            <div class="col-12">
+              <div class="text-subtitle2 text-weight-medium text-grey-8 q-mb-sm">
+                <q-icon name="receipt_long" class="q-mr-sm" />
+                Datos Fiscales (Opcional)
+              </div>
+            </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                v-model="branchOffice.business_name"
+                filled
+                label="Razón Social"
+                hint="Razón Social específica de la sucursal"
+              />
+            </div>
+            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
+              <q-input
+                v-model="branchOffice.document_number"
+                filled
+                label="CUIT/CUIL"
+                mask="##-########-#"
+                hint="CUIT/CUIL específico de la sucursal (formato: 00-00000000-0)"
+              />
+            </div>
+            <div class="col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
+              <q-input
+                v-model.number="branchOffice.point_of_sale"
+                type="number"
+                filled
+                label="Punto de Venta (AFIP)"
+                hint="Punto de Venta fijo para esta sucursal"
+                min="1"
+                max="9999"
+              />
+            </div>
+            <div class="col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
+              <q-input
+                v-model="branchOffice.income_brut"
+                filled
+                label="Ingresos Brutos"
+                hint="Número de Ingresos Brutos (IIBB) de la sucursal"
+              />
+            </div>
+            <div class="col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
+              <q-input
+                v-model="branchOffice.activity_start_date"
+                type="date"
+                filled
+                label="Inicio de Actividades"
+                hint="Fecha de inicio de actividades fiscales"
               />
             </div>
             <!-- Sección de Dirección para Agregar -->

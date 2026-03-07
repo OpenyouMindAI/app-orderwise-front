@@ -10,8 +10,8 @@ import {
 /**
  * Preview
  */
-export const sendTicket = async (data, userSession) => {
-  const doc = await previewTicket(data, userSession)
+export const sendTicket = async (data, userSession, branchOffice = null) => {
+  const doc = await previewTicket(data, userSession, branchOffice)
   const pdfUrl = doc.output('bloburl')
   const newWindow = window.open(pdfUrl, '_blank')
 
@@ -26,16 +26,16 @@ export const sendTicket = async (data, userSession) => {
 /**
  * Preview
  */
-export const sendInvoice = async (data, userSession) => {
-  const doc = await previewInvoice(data, userSession)
+export const sendInvoice = async (data, userSession, branchOffice = null) => {
+  const doc = await previewInvoice(data, userSession, branchOffice)
   const pdfUrl = doc.output('bloburl')
   window.open(pdfUrl, '_blank')
 }
 /**
  * Preview
  */
-export const sendCommand = async (data, userSession) => {
-  const doc = await previewCommand(data, userSession)
+export const sendCommand = async (data, userSession, branchOffice = null) => {
+  const doc = await previewCommand(data, userSession, branchOffice)
   const pdfUrl = doc.output('bloburl')
   window.open(pdfUrl, '_blank')
 }

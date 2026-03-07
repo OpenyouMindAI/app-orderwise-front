@@ -99,7 +99,7 @@ export const header = (data, companySession, pageWidth = 80) => {
  * @returns {String} qr image
  */
 
-export const setQrImage = async (data, fields, companySession) => {
+export const setQrImage = async (data, fields, companySession, branchOffice = null) => {
   if (!data.billing) {
     const img = JSON.stringify({
       cliente: data.client.name,
@@ -111,8 +111,9 @@ export const setQrImage = async (data, fields, companySession) => {
   const docQr = {
     ver: 1,
     fecha: formatDate(data.date, 'YYYY-MM-DD'),
-    cuit: Number(companySession.document_number),
-    ptoVta: fields.point_of_sale,
+    // Lógica de herencia: La sucursal manda, si no hay, manda la compañía
+    cuit: Number(branchOffice?.document_number || companySession.document_number),
+    ptoVta: branchOffice?.point_of_sale || fields.point_of_sale,
     tipoCmp: fields?.voucher_type?.Id,
     nroCmp: fields.cbte_hasta,
     importe: data.total,

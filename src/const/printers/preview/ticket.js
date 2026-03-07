@@ -14,7 +14,7 @@ const addressFormat = (address) => {
  * Print invoice
  * @param {Object} data invoice saved
  */
-export const previewTicket = async (data, userSession) => {
+export const previewTicket = async (data, userSession, branchOffice = null) => {
   let y = 10
   const { company_session: companySession } = userSession
   let fields = null
@@ -29,12 +29,12 @@ export const previewTicket = async (data, userSession) => {
     return valid ? (pageWidth - textWidth) / 2 : 5
   }
 
-  y = cutWords(`Razón social: ${companySession?.name?.toUpperCase() || ''}`, 65, doc, y, false, 95)
+  y = cutWords(`Razón social: ${(branchOffice?.business_name || companySession?.name || '').toUpperCase()}`, 65, doc, y, false, 95)
   y = cutWords(`Dirección: ${addressFormat(companySession?.address)}`, 65, doc, y, false, 95)
-  y = cutWords(`C.U.I.T: ${companySession?.document_number || ''}`, 65, doc, y, false, 95)
+  y = cutWords(`C.U.I.T: ${branchOffice?.document_number || companySession?.document_number || ''}`, 65, doc, y, false, 95)
   if (data.billing && fields) {
-    y = cutWords(`IIBB: ${fields?.income_brut || ''}`, 70, doc, y, false, 95)
-    y = cutWords(`Inicio de actividad: ${formatDate(fields?.activity_start_date, 'DD/MM/YYYY')}`, 70, doc, y, false, 95)
+    y = cutWords(`IIBB: ${branchOffice?.income_brut || fields?.income_brut || ''}`, 70, doc, y, false, 95)
+    y = cutWords(`Inicio de actividad: ${formatDate(branchOffice?.activity_start_date || fields?.activity_start_date, 'DD/MM/YYYY')}`, 70, doc, y, false, 95)
   }
   y += 2
   doc.text('----------------------------------------', 5, y)
@@ -138,7 +138,7 @@ export const previewTicket = async (data, userSession) => {
   y += 4
 
   if (data.billing && fields) {
-    const qrDataURL = await setQrImage(data, fields, companySession)
+    const qrDataURL = await setQrImage(data, fields, companySession, branchOffice)
     doc.text(`CAE: ${fields?.cae || ''}`, 5, y)
     y += 4
     doc.text(`Vto: ${formatDate(fields?.caef_ch_vto, 'DD/MM/YYYY')}`, 5, y)
@@ -149,7 +149,7 @@ export const previewTicket = async (data, userSession) => {
   return doc
 }
 
-export async function previewInvoice (invoice, userSession) {
+export async function previewInvoice (invoice, userSession, branchOffice = null) {
   const doc = new JsPdf()
   const companySession = invoice.company
   const voucherType = invoice.electronic_invoice?.fields?.voucher_type || {}
@@ -475,7 +475,7 @@ export async function previewInvoice (invoice, userSession) {
   const caeY = finalY + footerHeight + 4
 
   // QR
-  const qrBase64 = await setQrImage(invoice, invoice.electronic_invoice.fields, companySession)
+  const qrBase64 = await setQrImage(invoice, invoice.electronic_invoice.fields, companySession, branchOffice)
   if (qrBase64) {
     doc.addImage(qrBase64, 'PNG', MARGIN, caeY, 22, 22) // Smaller QR
   }
