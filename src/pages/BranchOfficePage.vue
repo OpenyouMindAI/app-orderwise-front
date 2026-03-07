@@ -82,88 +82,139 @@
       </div>
     </div>
     <q-dialog v-model="openEditBranchOffice" persistent>
-      <q-card style="width: 700px; max-width: 80vw;">
+      <q-card style="width: 800px; max-width: 90vw;" class="q-pa-none modern-modal">
         <q-form @submit="saveEdit">
-          <q-card-section class="row items-center bg-primary text-white">
-            <div class="text-h6">Modificar sucursal</div>
-            <q-space />
-            <q-btn icon="close" flat round dense @click="closeModal" />
-          </q-card-section>
-          <q-card-section class="row q-col-gutter-sm">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                v-model="branchOffice.name"
-                autofocus
-                label="Nombre"
-              />
+          <q-card-section class="row items-center q-pb-none doc-header bg-primary text-white">
+            <div class="text-h6 text-weight-bold flex items-center">
+              <q-icon name="storefront" size="md" color="white" class="q-mr-sm" />
+              Modificar sucursal
             </div>
-            <!-- Campos Fiscales -->
-            <div class="col-12">
-              <div class="text-subtitle2 text-weight-medium text-grey-8 q-mb-sm">
-                <q-icon name="receipt_long" class="q-mr-sm" />
-                Datos Fiscales (Opcional)
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup @click="closeModal" />
+          </q-card-section>
+
+          <q-card-section class="q-pt-md">
+            <div class="row q-col-gutter-lg">
+
+              <!-- Datos Principales -->
+              <div class="col-12">
+                <div class="text-subtitle2 text-primary text-weight-bold q-mb-sm text-uppercase">
+                  DATOS PRINCIPALES
+                </div>
+                <div class="row q-col-gutter-md">
+                  <div class="col-12">
+                    <q-input
+                      :rules="[val => !!val || 'El campo es requerido.']"
+                      outlined
+                      v-model="branchOffice.name"
+                      autofocus
+                      label="Nombre de la Sucursal *"
+                      hide-bottom-space
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="badge" color="grey-6" />
+                      </template>
+                    </q-input>
+                  </div>
+
+                  <div class="col-12">
+                    <AddressComponent
+                      :key="addressComponentKey"
+                      :initial-address="address"
+                      @address-selected="handleAddressSelected"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Separator -->
+              <div class="col-12 q-py-none">
+                <q-separator />
+              </div>
+
+              <!-- Datos Fiscales -->
+              <div class="col-12">
+                <div class="text-subtitle2 text-primary text-weight-bold q-mb-md text-uppercase">
+                  DATOS FISCALES (Opcional)
+                </div>
+                <div class="row q-col-gutter-md">
+                  <div class="col-12 col-md-6">
+                    <q-input
+                      v-model="branchOffice.business_name"
+                      outlined
+                      label="Razón Social"
+                      hint="Nombre legal"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="business" color="grey-6" />
+                      </template>
+                    </q-input>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <q-input
+                      v-model="branchOffice.document_number"
+                      outlined
+                      label="CUIT/CUIL"
+                      hint="Ej: 20123456789"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="assignment_ind" color="grey-6" />
+                      </template>
+                    </q-input>
+                  </div>
+
+                  <div class="col-12 col-md-4">
+                    <q-input
+                      v-model.number="branchOffice.point_of_sale"
+                      type="number"
+                      outlined
+                      label="Punto de Venta"
+                      hint="PDV asignado (AFIP)"
+                      min="1"
+                      max="9999"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="point_of_sale" color="grey-6" />
+                      </template>
+                    </q-input>
+                  </div>
+
+                  <div class="col-12 col-md-4">
+                    <q-input
+                      v-model="branchOffice.income_brut"
+                      outlined
+                      label="Ingresos Brutos"
+                      hint="Nro de IIBB"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="account_balance_wallet" color="grey-6" />
+                      </template>
+                    </q-input>
+                  </div>
+
+                  <div class="col-12 col-md-4">
+                    <q-input
+                      v-model="branchOffice.activity_start_date"
+                      type="date"
+                      outlined
+                      label="Inicio Actividades"
+                      hint="Fecha de alta"
+                      stack-label
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="event" color="grey-6" />
+                      </template>
+                    </q-input>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                v-model="branchOffice.business_name"
-                filled
-                label="Razón Social"
-                hint="Razón Social específica de la sucursal"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                v-model="branchOffice.document_number"
-                filled
-                label="CUIT/CUIL"
-                mask="##-########-#"
-                hint="CUIT/CUIL específico de la sucursal (formato: 00-00000000-0)"
-              />
-            </div>
-            <div class="col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
-              <q-input
-                v-model.number="branchOffice.point_of_sale"
-                type="number"
-                filled
-                label="Punto de Venta (AFIP)"
-                hint="Punto de Venta fijo para esta sucursal"
-                min="1"
-                max="9999"
-              />
-            </div>
-            <div class="col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
-              <q-input
-                v-model="branchOffice.income_brut"
-                filled
-                label="Ingresos Brutos"
-                hint="Número de Ingresos Brutos (IIBB) de la sucursal"
-              />
-            </div>
-            <div class="col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
-              <q-input
-                v-model="branchOffice.activity_start_date"
-                type="date"
-                filled
-                label="Inicio de Actividades"
-                hint="Fecha de inicio de actividades fiscales"
-              />
-            </div>
-            <!-- Sección de Dirección para Editar -->
-            <div class="col-12">
-              <AddressComponent
-                :key="addressComponentKey"
-                :initial-address="address"
-                @address-selected="handleAddressSelected"
-              />
-            </div>
           </q-card-section>
-          <q-card-actions align="right" class="text-primary">
-            <q-btn color="negative" label="Eliminar" @click="deleteBranchOffice" :loading="visible" />
-            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
-            <q-btn color="primary" label="Guardar" type="submit" :loading="visible"/>
+
+          <q-card-actions align="between" class="q-pa-md">
+            <q-btn flat color="negative" icon="delete" label="Eliminar" @click="deleteBranchOffice" :loading="visible" />
+            <q-btn color="primary" icon="save" label="Guardar Sucursal" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
@@ -240,87 +291,139 @@
       </q-card>
     </q-dialog>
     <q-dialog v-model="openAddBranchOffice" persistent>
-      <q-card style="width: 700px; max-width: 80vw;">
+      <q-card style="width: 800px; max-width: 90vw;" class="q-pa-none modern-modal">
         <q-form @submit="saveBranchOffice">
-          <q-card-section class="row items-center bg-primary text-white">
-            <div class="text-h6">Agregar sucursal</div>
-            <q-space />
-            <q-btn icon="close" flat round dense @click="closeModal" />
-          </q-card-section>
-          <q-card-section class="row q-col-gutter-sm">
-            <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-              <q-input
-                v-model="branchOffice.name"
-                :rules="[val => !!val || 'El campo es requerido.']"
-                filled
-                autofocus
-                label="Nombre"
-              />
+          <q-card-section class="row items-center q-pb-none doc-header">
+            <div class="text-h6 text-weight-bold flex items-center">
+              <q-icon name="add_business" size="md" color="primary" class="q-mr-sm" />
+              Agregar nueva sucursal
             </div>
-            <!-- Campos Fiscales -->
-            <div class="col-12">
-              <div class="text-subtitle2 text-weight-medium text-grey-8 q-mb-sm">
-                <q-icon name="receipt_long" class="q-mr-sm" />
-                Datos Fiscales (Opcional)
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup @click="closeModal" />
+          </q-card-section>
+          <q-card-section class="q-pt-md">
+            <div class="row q-col-gutter-lg">
+
+              <!-- Datos Principales -->
+              <div class="col-12">
+                <div class="text-subtitle2 text-primary text-weight-bold q-mb-sm text-uppercase">
+                  DATOS PRINCIPALES
+                </div>
+                <div class="row q-col-gutter-md">
+                  <div class="col-12">
+                    <q-input
+                      v-model="branchOffice.name"
+                      :rules="[val => !!val || 'El campo es requerido.']"
+                      outlined
+                      autofocus
+                      label="Nombre de la Sucursal *"
+                      hide-bottom-space
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="badge" color="grey-6" />
+                      </template>
+                    </q-input>
+                  </div>
+
+                  <div class="col-12">
+                    <AddressComponent
+                      :key="addressComponentKey"
+                      :initial-address="address"
+                      @address-selected="handleAddressSelected"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Separator -->
+              <div class="col-12 q-py-none">
+                <q-separator />
+              </div>
+
+              <!-- Datos Fiscales -->
+              <div class="col-12">
+                <div class="text-subtitle2 text-primary text-weight-bold q-mb-md text-uppercase">
+                  DATOS FISCALES (Opcional)
+                </div>
+                <div class="row q-col-gutter-md">
+                  <div class="col-12 col-md-6">
+                    <q-input
+                      v-model="branchOffice.business_name"
+                      outlined
+                      label="Razón Social"
+                      hint="Nombre legal"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="business" color="grey-6" />
+                      </template>
+                    </q-input>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <q-input
+                      v-model="branchOffice.document_number"
+                      outlined
+                      label="CUIT/CUIL"
+                      mask="##-########-#"
+                      hint="Ej: 20-12345678-9"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="assignment_ind" color="grey-6" />
+                      </template>
+                    </q-input>
+                  </div>
+
+                  <div class="col-12 col-md-4">
+                    <q-input
+                      v-model.number="branchOffice.point_of_sale"
+                      type="number"
+                      outlined
+                      label="Punto de Venta"
+                      hint="PDV asignado (AFIP)"
+                      min="1"
+                      max="9999"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="point_of_sale" color="grey-6" />
+                      </template>
+                    </q-input>
+                  </div>
+
+                  <div class="col-12 col-md-4">
+                    <q-input
+                      v-model="branchOffice.income_brut"
+                      outlined
+                      label="Ingresos Brutos"
+                      hint="Nro de IIBB"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="account_balance_wallet" color="grey-6" />
+                      </template>
+                    </q-input>
+                  </div>
+
+                  <div class="col-12 col-md-4">
+                    <q-input
+                      v-model="branchOffice.activity_start_date"
+                      type="date"
+                      outlined
+                      label="Inicio Actividades"
+                      hint="Fecha de alta"
+                      stack-label
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="event" color="grey-6" />
+                      </template>
+                    </q-input>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                v-model="branchOffice.business_name"
-                filled
-                label="Razón Social"
-                hint="Razón Social específica de la sucursal"
-              />
-            </div>
-            <div class="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-xs-12">
-              <q-input
-                v-model="branchOffice.document_number"
-                filled
-                label="CUIT/CUIL"
-                mask="##-########-#"
-                hint="CUIT/CUIL específico de la sucursal (formato: 00-00000000-0)"
-              />
-            </div>
-            <div class="col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
-              <q-input
-                v-model.number="branchOffice.point_of_sale"
-                type="number"
-                filled
-                label="Punto de Venta (AFIP)"
-                hint="Punto de Venta fijo para esta sucursal"
-                min="1"
-                max="9999"
-              />
-            </div>
-            <div class="col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
-              <q-input
-                v-model="branchOffice.income_brut"
-                filled
-                label="Ingresos Brutos"
-                hint="Número de Ingresos Brutos (IIBB) de la sucursal"
-              />
-            </div>
-            <div class="col-xl-4 col-lg-4 col-md-4 col-sm-12 col-xs-12">
-              <q-input
-                v-model="branchOffice.activity_start_date"
-                type="date"
-                filled
-                label="Inicio de Actividades"
-                hint="Fecha de inicio de actividades fiscales"
-              />
-            </div>
-            <!-- Sección de Dirección para Agregar -->
-            <div class="col-12">
-              <AddressComponent
-                :key="addressComponentKey"
-                :initial-address="address"
-                @address-selected="handleAddressSelected"
-              />
-            </div>
           </q-card-section>
-          <q-card-actions align="right" class="text-primary">
-            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
-            <q-btn color="primary" label="Agregar" type="submit" :loading="visible"/>
+
+          <q-card-actions align="right" class="bg-grey-1 q-pa-md">
+            <q-btn outline color="grey-8" label="Cancelar" @click="closeModal" class="q-mr-sm" />
+            <q-btn unelevated color="primary" icon="add" label="Crear Sucursal" type="submit" :loading="visible"/>
           </q-card-actions>
         </q-form>
       </q-card>
