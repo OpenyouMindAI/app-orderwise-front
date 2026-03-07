@@ -414,6 +414,12 @@ const routes = [
         component: () => import('src/pages/AiChatPage.vue')
       },
       {
+        path: 'deposit-management',
+        name: 'DepositManagement',
+        meta: { requiresAuth: true },
+        component: () => import('src/pages/DepositManagementPage.vue')
+      },
+      {
         path: 'integrations',
         name: 'Integrations',
         meta: { requiresAuth: true },

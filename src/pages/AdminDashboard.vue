@@ -295,7 +295,111 @@
                 <q-icon :name="props.row.billing ? 'check_circle' : 'cancel'" :color="props.row.billing ? 'positive' : 'grey-4'" size="20px" />
               </q-td>
             </template>
+            <template v-slot:body-cell-status="props">
+              <q-td :props="props">
+                <q-badge 
+                  :color="getStatusColor(props.row.status)" 
+                  :label="getStatusLabel(props.row.status)"
+                  class="text-weight-bold"
+                />
+              </q-td>
+            </template>
+            <template v-slot:body-cell-actions="props">
+              <q-td :props="props">
+                <div class="row q-gutter-xs justify-center">
+                  <q-btn
+                    v-if="props.row.status === 'active'"
+                    size="sm"
+                    color="negative"
+                    icon="block"
+                    round
+                    dense
+                    @click="openBlockCompanyDialog(props.row)"
+                    class="hover-scale"
+                  >
+                    <q-tooltip>Bloquear Empresa</q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    v-else
+                    size="sm"
+                    color="positive"
+                    icon="check_circle"
+                    round
+                    dense
+                    @click="unblockCompany(props.row)"
+                    class="hover-scale"
+                  >
+                    <q-tooltip>Desbloquear Empresa</q-tooltip>
+                  </q-btn>
+                </div>
+              </q-td>
+            </template>
           </q-table>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- Block Company Dialog -->
+    <q-dialog v-model="showBlockCompanyDialog" transition-show="fade" transition-hide="fade" no-refocus no-focus>
+      <q-card class="bento-dialog-card" style="width: 500px; max-width: 90vw;">
+        <q-toolbar class="q-px-lg q-py-sm border-bottom-soft">
+          <q-icon name="block" color="negative" size="20px" class="q-mr-sm" />
+          <q-toolbar-title class="text-subtitle2 text-weight-bold text-uppercase letter-spacing-1">Bloquear Empresa</q-toolbar-title>
+          <q-btn icon="close" flat round dense v-close-popup size="sm" color="grey-5" />
+        </q-toolbar>
+
+        <q-card-section class="q-pa-lg">
+          <div class="text-center q-mb-md">
+            <q-icon name="warning" color="negative" size="48px" class="q-mb-sm" />
+            <div class="text-h6 text-weight-bold text-negative">¿Estás seguro?</div>
+            <div class="text-grey-7 q-mt-sm">
+              Estás por bloquear la empresa <strong>{{ selectedCompany?.name }}</strong>
+            </div>
+          </div>
+
+          <q-form @submit="blockCompany" class="q-gutter-md">
+            <q-select
+              v-model="blockForm.status"
+              :options="blockStatusOptions"
+              label="Tipo de bloqueo"
+              outlined
+              dense
+              emit-value
+              map-options
+              options-dense
+              bg-color="grey-1"
+              class="q-mb-md"
+            />
+
+            <q-input
+              v-model="blockForm.blocking_reason"
+              label="Motivo del bloqueo"
+              outlined
+              dense
+              type="textarea"
+              rows="3"
+              bg-color="grey-1"
+              hint="Este motivo será visible para los usuarios al intentar iniciar sesión"
+              lazy-rules
+              :rules="[val => !!val && val.length > 0 || 'El motivo es requerido']"
+            />
+
+            <div class="row q-mt-lg justify-end q-gutter-sm">
+              <q-btn
+                flat
+                label="Cancelar"
+                color="grey-7"
+                v-close-popup
+              />
+              <q-btn
+                type="submit"
+                label="Bloquear Empresa"
+                color="negative"
+                :loading="blockingCompany"
+                class="q-px-md"
+              />
+            </div>
+          </q-form>
         </q-card-section>
       </q-card>
     </q-dialog>
@@ -583,6 +687,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { api } from 'src/boot/axios'
+import { Notify } from 'quasar'
 import Highcharts from 'highcharts'
 import { authentication } from 'src/stores/module-authentication'
 import { storeToRefs } from 'pinia'
@@ -616,6 +721,21 @@ const subscriptionsChartRef = ref(null)
 const showUsersDialog = ref(false)
 const showCompaniesDialog = ref(false)
 const showSubscriptionsDialog = ref(false)
+const showBlockCompanyDialog = ref(false)
+
+// Block Company Form
+const selectedCompany = ref(null)
+const blockingCompany = ref(false)
+const blockForm = ref({
+  status: 'suspended',
+  blocking_reason: ''
+})
+
+const blockStatusOptions = [
+  { label: 'Suspender (Manual)', value: 'suspended' },
+  { label: 'Bloquear (Falta de pago)', value: 'blocked' },
+  { label: 'Expirar (Suscripción vencida)', value: 'expired' }
+]
 
 // Lists
 const usersList = ref([])
@@ -692,7 +812,9 @@ const companiesColumns = [
   { name: 'name', label: 'Nombre', field: 'name', align: 'left', sortable: true },
   { name: 'business_type', label: 'Tipo', field: 'business_type', align: 'left', sortable: true },
   { name: 'subscription_plan', label: 'Plan', field: 'subscription_plan', align: 'left', sortable: true },
+  { name: 'status', label: 'Estado', field: 'status', align: 'center', sortable: true },
   { name: 'billing', label: 'Facturación', field: 'billing', align: 'center', sortable: true },
+  { name: 'actions', label: 'Acciones', field: 'actions', align: 'center', sortable: false },
   { name: 'created_at_human', label: 'Creada', field: 'created_at_human', align: 'left', sortable: true }
 ]
 
@@ -1033,7 +1155,13 @@ const getRoleColor = (role) => {
 }
 
 const getStatusColor = (status) => {
-  const colors = { active: 'positive', expired: 'negative', cancelled: 'grey' }
+  const colors = { 
+    active: 'positive', 
+    expired: 'negative', 
+    cancelled: 'grey',
+    suspended: 'negative',
+    blocked: 'negative'
+  }
   return colors[status] || 'grey'
 }
 
@@ -1060,6 +1188,90 @@ watch(() => $q.dark.isActive, () => {
 watch(showUsersDialog, (v) => v && loadUsersList())
 watch(showCompaniesDialog, (v) => v && loadCompaniesList())
 watch(showSubscriptionsDialog, (v) => v && loadSubscriptionsList())
+
+// Company Blocking Methods
+const openBlockCompanyDialog = (company) => {
+  selectedCompany.value = company
+  blockForm.value = {
+    status: 'suspended',
+    blocking_reason: ''
+  }
+  showBlockCompanyDialog.value = true
+}
+
+const blockCompany = async () => {
+  blockingCompany.value = true
+  
+  try {
+    const response = await api.put(`/companies/${selectedCompany.value.id}`, blockForm.value)
+    
+    // Update company in list
+    const index = companiesList.value.findIndex(c => c.id === selectedCompany.value.id)
+    if (index !== -1) {
+      companiesList.value[index] = response.data
+    }
+    
+    Notify.create({
+      message: `Empresa "${selectedCompany.value.name}" bloqueada exitosamente`,
+      color: 'positive',
+      icon: 'check_circle',
+      position: 'top'
+    })
+    
+    showBlockCompanyDialog.value = false
+  } catch (error) {
+    console.error('Error blocking company:', error)
+    Notify.create({
+      message: 'Error al bloquear la empresa',
+      color: 'negative',
+      icon: 'error',
+      position: 'top'
+    })
+  } finally {
+    blockingCompany.value = false
+  }
+}
+
+const unblockCompany = async (company) => {
+  try {
+    const response = await api.put(`/companies/${company.id}`, {
+      status: 'active',
+      blocking_reason: null
+    })
+    
+    // Update company in list
+    const index = companiesList.value.findIndex(c => c.id === company.id)
+    if (index !== -1) {
+      companiesList.value[index] = response.data
+    }
+    
+    Notify.create({
+      message: `Empresa "${company.name}" desbloqueada exitosamente`,
+      color: 'positive',
+      icon: 'check_circle',
+      position: 'top'
+    })
+  } catch (error) {
+    console.error('Error unblocking company:', error)
+    Notify.create({
+      message: 'Error al desbloquear la empresa',
+      color: 'negative',
+      icon: 'error',
+      position: 'top'
+    })
+  }
+}
+
+// Helper functions for status display
+const getStatusLabel = (status) => {
+  switch (status) {
+    case 'active': return 'Activa'
+    case 'suspended': return 'Suspendida'
+    case 'blocked': return 'Bloqueada'
+    case 'expired': return 'Expirada'
+    default: return status
+  }
+}
 
 onMounted(() => loadAllData())
 </script>

@@ -59,7 +59,7 @@
               enter-active-class="animated fadeIn"
               leave-active-class="animated fadeOut"
             >
-              <div v-if="store.isDemo" class="demo-badge-floating">
+              <div v-if="store.isDemo || isClientDemo" class="demo-badge-floating">
                 <span>Demo</span>
                 <div class="demo-badge-dot"></div>
               </div>
@@ -107,12 +107,12 @@
             enter-active-class="animated fadeIn"
             leave-active-class="animated fadeOut"
           >
-            <div v-if="store.isDemo && !$q.screen.xs">
+            <div v-if="(store.isDemo || isClientDemo) && !$q.screen.xs">
               <q-btn
                 outline
                 dense
                 class="create-btn-v0"
-                @click="showCreateCompanyDialog = true"
+                @click="handleCreateCompanyClick"
               >
                 <q-icon
                   name="rocket_launch"
@@ -415,11 +415,11 @@
                 <!-- Plan Info / Demo Action -->
                 <div>
                   <q-item
-                    v-if="store.isDemo"
+                    v-if="store.isDemo || isClientDemo"
                     clickable
                     v-ripple
                     class="demo-action-item"
-                    @click="showCreateCompanyDialog = true"
+                    @click="handleCreateCompanyClick"
                     v-close-popup
                   >
                     <q-item-section avatar class="min-width-auto">
@@ -483,9 +483,33 @@
                       </q-item-section>
                     </q-item>
 
-                    <!-- Subscription Plans (Solo para super_admin) -->
+                    <!-- Panel Admin (Solo para root o super_admin) -->
                     <q-item
-                      v-if="userSession.is_super_admin"
+                      v-if="isRootOrSuperAdmin()"
+                      v-ripple
+                      clickable
+                      dense
+                      class="profile-action-item-compact"
+                      @click="changeRoute('AdminDashboard', 'Panel de Administración')"
+                      v-close-popup
+                    >
+                      <q-item-section avatar class="min-width-auto">
+                        <div class="action-icon-wrapper">
+                          <q-icon name="dashboard" color="primary" size="20px" />
+                        </div>
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label class="text-body2 text-weight-medium">Panel Admin</q-item-label>
+                        <q-item-label caption class="text-caption action-caption">Gestionar sistema</q-item-label>
+                      </q-item-section>
+                      <q-item-section side>
+                        <q-icon name="chevron_right" size="16px" color="grey-6" />
+                      </q-item-section>
+                    </q-item>
+
+                    <!-- Subscription Plans (Solo para root o super_admin) -->
+                    <q-item
+                      v-if="isRootOrSuperAdmin()"
                       v-ripple
                       clickable
                       dense
@@ -673,7 +697,7 @@
     />
 
     <subscription-expiration-banner
-      :is-demo="isDemo"
+      :is-demo="isDemo || isClientDemo"
       @open-subscription-dialog="showSubscriptionDialog = true"
       @banner-dismissed="handleBannerDismissed"
     />
@@ -683,13 +707,13 @@
       v-model="showSubscriptionDialog"
       :show-contact-option="false"
       @subscription-updated="onSubscriptionUpdated"
-      @open-register="showCreateCompanyDialog = true"
+      @open-register="handleCreateCompanyClick"
     />
 
     <subscription-expiration-modal
       :is-expired="isExpired"
       :plan-name="store.subscriptionPlan"
-      :is-demo="store.isDemo"
+      :is-demo="store.isDemo || isClientDemo"
       @open-subscription="showSubscriptionDialog = true"
     />
 
@@ -743,7 +767,7 @@
       leave-active-class="animated fadeOut"
     >
       <div
-        v-if="store.isDemo && $q.screen.xs"
+        v-if="(store.isDemo || isClientDemo) && $q.screen.xs"
         class="float-create-btn-mobile"
       >
         <div v-if="showDemoMessage" class="demo-info-message">
@@ -753,7 +777,7 @@
           outline
           dense
           class="create-btn-v0"
-          @click="showCreateCompanyDialog = true"
+          @click="handleCreateCompanyClick"
         >
           <q-icon
             name="rocket_launch"
@@ -799,6 +823,7 @@ import {
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
 import { useDemoPersuasion } from 'src/composables/useDemoPersuasion'
+import { useCompanySetup } from 'src/composables/useCompanySetup'
 import ProPlanPromoBanner from 'src/components/ProPlanPromoBanner.vue'
 
 export default {
@@ -976,6 +1001,7 @@ export default {
       'userSession',
       'branchOffice',
       'isDemo',
+      'isClientDemo',
       'setBranchOffice',
       'access_token',
       'refresh_token',
@@ -1150,7 +1176,7 @@ export default {
       if (oldVal === true && newVal === false) {
         // Si el usuario cierra el modal de planes y no tiene empresa configurada,
         // lo llevamos al siguiente paso del flujo (Setup de empresa)
-        if (this.userSession && !this.userSession.company_session?.id && !this.store.isDemo) {
+        if (this.userSession && !this.userSession.company_session?.id && !this.store.isDemo && !this.isClientDemo) {
           this.showBusinessTypeSetup = true
         }
       }
@@ -1165,13 +1191,15 @@ export default {
   setup () {
     const router = useRouter()
     const { showDemoModal, trackDemoAction, initDemoPersuasion, stopDemoPersuasion } = useDemoPersuasion()
+    const { autoSetupCompany } = useCompanySetup()
 
     return {
       router,
       showDemoModal,
       trackDemoAction,
       initDemoPersuasion,
-      stopDemoPersuasion
+      stopDemoPersuasion,
+      autoSetupCompany
     }
   },
 
@@ -1196,7 +1224,7 @@ export default {
     window.addEventListener('keydown', this.handleGlobalKeyDown)
 
     eventBus.on('open-create-company', () => {
-      this.showCreateCompanyDialog = true
+      this.handleCreateCompanyClick()
     })
 
     eventBus.on('open-subscription-dialog', () => {
@@ -1207,7 +1235,7 @@ export default {
       this.leftDrawerOpen = !this.leftDrawerOpen
     })
 
-    if (this.store.isDemo) {
+    if (this.store.isDemo || this.isClientDemo) {
       this.showDemoMessage = true
       setTimeout(() => {
         this.showDemoMessage = false
@@ -1254,6 +1282,16 @@ export default {
     this.loadSubscriptionInfo()
   },
   methods: {
+    /**
+     * Handle "Mi Empresa" button click
+     */
+    handleCreateCompanyClick () {
+      if (this.isClientDemo) {
+        this.showBusinessTypeSetup = true
+      } else {
+        this.showCreateCompanyDialog = true
+      }
+    },
     /**
      * Verifica si el usuario vuelve de un pago exitoso y necesita configurar su empresa
      */
@@ -1437,6 +1475,14 @@ export default {
      */
     async handleGoogleRegisterSuccess (data) {
       try {
+        // Si no necesita setup de empresa, significa que ya tiene una cuenta activa y configurada
+        if (!data.needsCompanySetup) {
+          this.showCreateCompanyDialog = false
+          notify('Ya existe una cuenta vinculada a este Gmail. Por favor, inicia sesión para continuar.', 'warning', 'info')
+          this.$router.push('/login')
+          return
+        }
+
         this.showCreateCompanyDialog = false
 
         await this.$nextTick()
@@ -1471,6 +1517,9 @@ export default {
         await this.proceedToPaymentFirst()
 
         notify('Correo verificado.', 'positive', 'check_circle')
+
+        // Continuar al flujo de selección de rubro/configuración
+        this.showBusinessTypeSetup = true
       } catch (error) {
         console.error('Error al procesar verificación OTP:', error)
         notify('Error al procesar la verificación', 'negative', 'warning')
@@ -1496,7 +1545,16 @@ export default {
     handleBusinessTypeNext (businessData) {
       this.tempCompanyData = businessData
       this.showBusinessTypeSetup = false
-      this.showCompanySetup = true
+
+      // Usar el composable para la configuración automática
+      this.autoSetupCompany({
+        registrationData: this.registrationFormData || {},
+        businessData,
+        onSuccess: (data) => this.handleCompanySetupSuccess(data),
+        onError: () => {
+          this.showCompanySetup = true
+        }
+      })
     },
 
     /**
@@ -1510,6 +1568,7 @@ export default {
         if (data?.user) {
           Object.assign(this.store.userSession, data.user)
           this.store.isDemo = false
+          this.store.isClientDemo = false
 
           // Actualizar branch office si viene
           if (data.branch_office) {
@@ -1533,7 +1592,8 @@ export default {
         // Recargar los módulos y estados para que el menú se vea correctamente sin refrescar
         this.loadingPage()
 
-        this.$router.push('/')
+        console.log('🏁 handleCompanySetupSuccess (MainLayout) - Evitando redirección para inspección')
+        // this.$router.push('/')
       } catch (error) {
         console.error('Error al procesar configuración de empresa:', error)
         notify('Error al procesar la configuración', 'negative', 'warning')
@@ -1567,7 +1627,7 @@ export default {
       }
     },
     /**
-     * Create company
+     * Create company (from manual dialog flow)
      */
     async createCompany () {
       // Validar formulario
@@ -2135,6 +2195,13 @@ export default {
       return false
     },
     /**
+     * Check if user is root or super admin
+     * @returns {Boolean}
+     */
+    isRootOrSuperAdmin () {
+      return this.userSession?.is_root || this.userSession?.is_super_admin
+    },
+    /**
      * Validate business type
      * @param {Object} module - Module to validate
      * @returns {Boolean}
@@ -2181,7 +2248,7 @@ export default {
       ]
 
       // Check if company is demo or plan is free
-      const isDemo = this.store.isDemo
+      const isDemo = this.store.isDemo || this.isClientDemo
       const isFree = this.currentSubscription?.plan && this.currentSubscription?.plan?.slug === 'free'
 
       // If demo or free plan, hide premium modules
@@ -2315,7 +2382,7 @@ export default {
      */
     startDemoReminder () {
       // Solo iniciar si es cuenta demo
-      if (!this.isDemo || this.userSession?.is_root) {
+      if ((!this.isDemo && !this.isClientDemo) || this.userSession?.is_root) {
         return
       }
 
@@ -2325,8 +2392,8 @@ export default {
       // Configurar intervalo de 5 minutos (300000 ms)
       this.demoReminderInterval = setInterval(() => {
         // Verificar nuevamente si sigue siendo demo (por si cambió)
-        if (this.isDemo) {
-          this.showCreateCompanyDialog = true
+        if (this.isDemo || this.isClientDemo) {
+          this.handleCreateCompanyClick()
         } else {
           // Si ya no es demo, detener el intervalo
           this.stopDemoReminder()

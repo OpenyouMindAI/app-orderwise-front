@@ -199,7 +199,23 @@ export function useRegistration (options = {}) {
     const client = window.google.accounts.oauth2.initTokenClient({
       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
       scope: 'email profile',
+      error_callback: (error) => {
+        console.error('Google Auth Error:', error)
+        // NOTA: 'popup_failed_to_open' es un error falso de GSI en localhost
+        // cuando el popup SÍ se abre. Solo resetear si el navegador lo bloquea realmente.
+        if (error.type === 'popup_blocked_by_browser') {
+          loadingGoogle.value = false
+          notify('El navegador bloqueó la ventana de Google. Por favor, permite los popups.', 'negative', 'warning')
+        }
+        // Para popup_failed_to_open: no hacemos nada, la ventana sí se abrió.
+        // El listener de foco en handleWindowFocus manejará el cierre sin selección.
+      },
       callback: async (response) => {
+        if (response.error) {
+          console.error('Google Response Error:', response.error)
+          loadingGoogle.value = false
+          return
+        }
         try {
           if (response.access_token) {
             // Obtener información del usuario
@@ -228,6 +244,21 @@ export function useRegistration (options = {}) {
     })
 
     client.requestAccessToken()
+
+    // Detectar cuando el usuario cierra la ventana de Google sin seleccionar cuenta.
+    // Google no dispara ningún evento en ese caso, pero la ventana principal recupera el foco.
+    const handleWindowFocus = () => {
+      setTimeout(() => {
+        if (loadingGoogle.value) {
+          console.log('Google popup closed without account selection (register)')
+          loadingGoogle.value = false
+        }
+      }, 500)
+      window.removeEventListener('focus', handleWindowFocus)
+    }
+    setTimeout(() => {
+      window.addEventListener('focus', handleWindowFocus)
+    }, 100)
   }
 
   /**

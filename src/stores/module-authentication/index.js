@@ -55,6 +55,11 @@ export const authentication = defineStore('authentication', {
        */
       isDemo: false,
       /**
+       * Is registered user in demo account
+       * @type {Boolean}
+       */
+      isClientDemo: false,
+      /**
        * Current subscription plan name
        * @type {String}
        */
@@ -141,6 +146,7 @@ export const authentication = defineStore('authentication', {
         this.branchOffice = null
         this.setTimeOut = 0
         this.isDemo = false
+        this.isClientDemo = false
         this.profilePhoto = null
 
         // Limpiar headers de Axios para evitar que se use un token viejo
@@ -229,6 +235,7 @@ export const authentication = defineStore('authentication', {
       this.expires_In = data.expires_in
       this.refresh_token = data.refresh_token
       this.isDemo = data.is_demo || false
+      this.isClientDemo = data.is_client_demo || false
 
       if (data.expires_in) {
         this.setTimeOut = Date.now() + (data.expires_in * 1000)
@@ -365,6 +372,14 @@ export const authentication = defineStore('authentication', {
      */
     isDemoGetter (state) {
       return state.isDemo
+    },
+    /**
+     * Is client demo account getter
+     * @param {*} state
+     * @returns {Boolean} is client demo
+     */
+    isClientDemoGetter (state) {
+      return state.isClientDemo
     },
     /**
      * Get subscription plan name
