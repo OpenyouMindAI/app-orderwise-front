@@ -1027,110 +1027,110 @@
                       Datos básicos
                     </div>
                     <div class="row q-col-gutter-md">
-                        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
-                          <q-input
-                            id="tour-add-barcode"
-                            filled
-                            v-model="product.barcode"
-                            autofocus
-                            label="Código de barra"
-                            dense
-                            hide-bottom-space
-                            @keyup.enter="getOneProduct(product.barcode)"
-                          >
-                            <template v-slot:append v-if="$q.platform.is.nativeMobile">
-                              <q-icon name="qr_code_scanner" size="sm" class="cursor-pointer" @click.stop="startScanner" />
-                            </template>
-                          </q-input>
-                        </div>
-                        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
-                          <q-input
-                            id="tour-add-nombre"
-                            :rules="[val => !!val || 'El campo es requerido.']"
-                            filled
-                            v-model="product.name"
-                            label="Nombre"
-                            dense
-                            hide-bottom-space
-                          />
-                        </div>
-                        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
-                          <q-select
-                            id="tour-add-categoria"
-                            use-input
-                            filled
-                            label="Categoría"
-                            input-debounce="500"
-                            option-label="name"
-                            option-value="id"
-                            v-model="category"
-                            :options="categories"
-                            :rules="[val => !!val || 'El campo es requerido.']"
-                            @filter="filterCategories"
-                            @update:model-value="setCategory"
-                            dense
-                            hide-bottom-space
-                          />
-                        </div>
-                        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
-                            <q-select
-                              filled
-                              v-model="product.product_type"
-                              :options="productTypeOptions"
-                              label="Tipo de Producto"
-                              emit-value
-                              map-options
-                              dense
-                              hide-bottom-space
-                              :rules="[val => !!val || 'Requerido']"
-                            >
-                               <template v-slot:option="scope">
-                                 <q-item v-bind="scope.itemProps">
-                                   <q-item-section>
-                                     <q-item-label>{{ scope.opt.label }}</q-item-label>
-                                     <q-item-label caption>{{ scope.opt.description }}</q-item-label>
-                                   </q-item-section>
-                                 </q-item>
-                               </template>
-                            </q-select>
-                        </div>
-                        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                        <q-input
+                          id="tour-add-barcode"
+                          filled
+                          v-model="product.barcode"
+                          autofocus
+                          label="Código de barra"
+                          dense
+                          hide-bottom-space
+                          @keyup.enter="getOneProduct(product.barcode)"
+                        >
+                          <template v-slot:append v-if="$q.platform.is.nativeMobile">
+                            <q-icon name="qr_code_scanner" size="sm" class="cursor-pointer" @click.stop="startScanner" />
+                          </template>
+                        </q-input>
+                      </div>
+                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                        <q-input
+                          id="tour-add-nombre"
+                          :rules="[val => !!val || 'El campo es requerido.']"
+                          filled
+                          v-model="product.name"
+                          label="Nombre"
+                          dense
+                          hide-bottom-space
+                        />
+                      </div>
+                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                        <q-select
+                          id="tour-add-categoria"
+                          use-input
+                          filled
+                          label="Categoría"
+                          input-debounce="500"
+                          option-label="name"
+                          option-value="id"
+                          v-model="category"
+                          :options="categories"
+                          :rules="[val => !!val || 'El campo es requerido.']"
+                          @filter="filterCategories"
+                          @update:model-value="setCategory"
+                          dense
+                          hide-bottom-space
+                        />
+                      </div>
+                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                           <q-select
                             filled
+                            v-model="product.product_type"
+                            :options="productTypeOptions"
+                            label="Tipo de Producto"
+                            emit-value
+                            map-options
                             dense
-                            v-model="unitOfMeasure"
-                            :options="unitOfMeasures"
-                            option-label="name"
-                            option-value="id"
-                            label="Unidad de Medida"
                             hide-bottom-space
                             :rules="[val => !!val || 'Requerido']"
-                          />
-                        </div>
-                        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
-                          <q-input
-                            filled
-                            dense
-                            v-model.number="product.base_quantity"
-                            label="Cantidad de la unidad"
-                            type="number"
-                            step="0.01"
-                            min="0.01"
-                            hide-bottom-space
-                            hint="Cantidad del producto en gramos o mililitros"
-                          />
-                        </div>
-                        <div class="col-12">
-                          <q-input
-                            filled
-                            v-model="product.description"
-                            type="textarea"
-                            autogrow
-                            label="Descripción"
-                            dense
-                            hide-bottom-space
-                          />
-                        </div>
+                          >
+                              <template v-slot:option="scope">
+                                <q-item v-bind="scope.itemProps">
+                                  <q-item-section>
+                                    <q-item-label>{{ scope.opt.label }}</q-item-label>
+                                    <q-item-label caption>{{ scope.opt.description }}</q-item-label>
+                                  </q-item-section>
+                                </q-item>
+                              </template>
+                          </q-select>
+                      </div>
+                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                        <q-select
+                          filled
+                          dense
+                          v-model="unitOfMeasure"
+                          :options="unitOfMeasures"
+                          option-label="name"
+                          option-value="id"
+                          label="Unidad de Medida"
+                          hide-bottom-space
+                          :rules="[val => !!val || 'Requerido']"
+                        />
+                      </div>
+                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
+                        <q-input
+                          filled
+                          dense
+                          v-model.number="product.base_quantity"
+                          label="Cantidad de la unidad"
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          hide-bottom-space
+                          hint="Cantidad del producto en gramos o mililitros"
+                        />
+                      </div>
+                      <div class="col-12">
+                        <q-input
+                          filled
+                          v-model="product.description"
+                          type="textarea"
+                          autogrow
+                          label="Descripción"
+                          dense
+                          hide-bottom-space
+                        />
+                      </div>
                     </div>
                   </q-card>
                 </div>
@@ -3211,12 +3211,15 @@ export default {
      */
     async getOneProduct (barcode) {
       try {
+        loading(true)
         const { data } = await this.$api.get('products', {
           params: {
             dataEqualFilter: { barcode }
           }
         })
         if (data[0]) {
+          this.openEditProduct = true
+          this.openAddProduct = false
           this.product = data[0]
           notify('Producto ya se encuentra registrado', 'positive', 'check_circle')
         } else {
@@ -3234,6 +3237,8 @@ export default {
         }
       } catch (error) {
         notify(error.message, 'negative', 'warning')
+      } finally {
+        loading(false)
       }
     },
     /**

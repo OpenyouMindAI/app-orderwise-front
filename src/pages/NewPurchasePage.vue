@@ -497,7 +497,7 @@
                         unelevated
                         @click="openFileDialog"
                       >
-                        <q-tooltip>Agregar mí¡s archivos</q-tooltip>
+                        <q-tooltip>Agregar mis archivos</q-tooltip>
                       </q-btn>
                     </div>
 
@@ -1711,6 +1711,7 @@ import {
   CapacitorBarcodeScannerScanOrientation,
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 export default {
   name: 'NewPurchasePage',
   components: {
@@ -3662,11 +3663,49 @@ export default {
      * Programmatically opens the hidden file input dialog for attachments
      */
     openFileDialog () {
-      const input = this.$refs.fileInput
-      if (input) {
-        input.click()
+      if (this.$q.platform.is.nativeMobile) {
+        this.$q.dialog({
+          title: 'Agregar archivo',
+          message: '¿Desde dónde deseas agregar el archivo?',
+          options: {
+            type: 'radio',
+            model: 'camera',
+            items: [
+              { label: 'Tomar foto (Cámara)', value: 'camera' },
+              { label: 'Galería de fotos', value: 'gallery' },
+              { label: 'Archivos o Documentos', value: 'document' }
+            ]
+          },
+          cancel: true,
+          persistent: true
+        }).onOk(async data => {
+          if (data === 'document') {
+            const input = this.$refs.fileInput
+            if (input) input.click()
+          } else {
+            try {
+              const image = await Camera.getPhoto({
+                quality: 90,
+                allowEditing: false,
+                resultType: CameraResultType.Uri,
+                source: data === 'camera' ? CameraSource.Camera : CameraSource.Photos
+              })
+              const response = await fetch(image.webPath)
+              const blob = await response.blob()
+              const file = new File([blob], `photo_${Date.now()}.${image.format}`, { type: `image/${image.format}` })
+              this.processPurchaseFiles([file])
+            } catch (error) {
+              console.error('Camera error:', error)
+            }
+          }
+        })
       } else {
-        console.error('File input ref not found')
+        const input = this.$refs.fileInput
+        if (input) {
+          input.click()
+        } else {
+          console.error('File input ref not found')
+        }
       }
     },
     /**
