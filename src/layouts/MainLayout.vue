@@ -483,9 +483,33 @@
                       </q-item-section>
                     </q-item>
 
-                    <!-- Subscription Plans (Solo para super_admin) -->
+                    <!-- Panel Admin (Solo para root o super_admin) -->
                     <q-item
-                      v-if="userSession.is_super_admin"
+                      v-if="isRootOrSuperAdmin()"
+                      v-ripple
+                      clickable
+                      dense
+                      class="profile-action-item-compact"
+                      @click="changeRoute('AdminDashboard', 'Panel de Administración')"
+                      v-close-popup
+                    >
+                      <q-item-section avatar class="min-width-auto">
+                        <div class="action-icon-wrapper">
+                          <q-icon name="dashboard" color="primary" size="20px" />
+                        </div>
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label class="text-body2 text-weight-medium">Panel Admin</q-item-label>
+                        <q-item-label caption class="text-caption action-caption">Gestionar sistema</q-item-label>
+                      </q-item-section>
+                      <q-item-section side>
+                        <q-icon name="chevron_right" size="16px" color="grey-6" />
+                      </q-item-section>
+                    </q-item>
+
+                    <!-- Subscription Plans (Solo para root o super_admin) -->
+                    <q-item
+                      v-if="isRootOrSuperAdmin()"
                       v-ripple
                       clickable
                       dense
@@ -2169,6 +2193,13 @@ export default {
         return roles.some((element) => element.id === rol.id)
       }
       return false
+    },
+    /**
+     * Check if user is root or super admin
+     * @returns {Boolean}
+     */
+    isRootOrSuperAdmin () {
+      return this.userSession?.is_root || this.userSession?.is_super_admin
     },
     /**
      * Validate business type
