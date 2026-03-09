@@ -27,7 +27,6 @@ export default configure(function (/* ctx */) {
     // preFetch: true,
 
     boot: [
-      'msw',
       'i18n',
       'axios',
       'authorization',
