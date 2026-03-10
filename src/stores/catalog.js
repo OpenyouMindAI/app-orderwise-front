@@ -128,11 +128,5 @@ export const useCatalogStore = defineStore('catalog', {
       this.currentCompanyId = null
       this.currentBranchOfficeId = null
     }
-  },
-
-  persist: {
-    key: 'catalog-store',
-    storage: localStorage,
-    paths: ['company', 'categories', 'products', 'paymentMethods', 'lastFetchTime', 'currentCompanyId', 'currentBranchOfficeId']
   }
 })
