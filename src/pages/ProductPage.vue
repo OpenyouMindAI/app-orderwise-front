@@ -459,10 +459,8 @@
               <q-checkbox
                 v-model="props.selected"
                 @update:model-value="val => {
-                  console.log('Checkbox changed:', props.row.name, 'selected:', val)
                   props.selected = val
-                  this.forceSelectionUpdate()
-                  console.log('Selection after change:', this.selection)
+                  forceSelectionUpdate()
                 }"
                 dense
               />
@@ -485,10 +483,8 @@
                   v-if="multipleSelected"
                   v-model="props.selected"
                   @update:model-value="val => {
-                    console.log('Mobile checkbox changed:', props.row.name, 'selected:', val)
                     props.selected = val
-                    this.forceSelectionUpdate()
-                    console.log('Mobile selection after change:', this.selection)
+                    forceSelectionUpdate()
                   }"
                   class="absolute-top-right q-ma-sm"
                   style="z-index: 10"
