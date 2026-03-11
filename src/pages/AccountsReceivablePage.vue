@@ -707,7 +707,7 @@
                         <q-tooltip>Ver detalle</q-tooltip>
                       </q-btn>
                       <q-btn
-                        v-if="props.row.type === 'invoice' && props.row.balance > 0"
+                        v-if="props.row.type === 'invoice' && props.row.balance > 0.000000000000"
                         icon="payment"
                         size="xs"
                         round
@@ -2794,7 +2794,6 @@ export default {
       this.statementPagination.page = 1
       this.onStatementRequest({ pagination: this.statementPagination })
     },
-
 
     /**
      * Opens the dialog to register a payment for a specific invoice
