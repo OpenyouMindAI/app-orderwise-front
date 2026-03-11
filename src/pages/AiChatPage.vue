@@ -135,9 +135,12 @@
           </div>
 
           <!-- Mensajes -->
-          <div class="messages-area" ref="messagesContainer">
-            <q-scroll-area class="fit">
-              <div class="messages-wrapper">
+          <div class="messages-area">
+            <q-scroll-area class="fit" ref="messagesContainer">
+              <div
+                class="messages-wrapper"
+                :style="{ opacity: renderingChat ? 0 : 1, transition: 'opacity 0.2s ease-in-out' }"
+              >
                 <div
                   v-for="message in messages"
                   :key="message.id"
@@ -310,6 +313,7 @@ export default {
       newMessage: '',
       loading: false,
       isTyping: false,
+      renderingChat: false,
       showTutorialDialog: false,
       selectedTutorial: null
     }
@@ -323,6 +327,7 @@ export default {
       return this.branchOffice
     }
   },
+  // Scroll is managed exclusively in selectChat() — no watch needed.
   mounted () {
     this.loadChats()
   },
@@ -344,17 +349,26 @@ export default {
 
     async selectChat (chat) {
       this.selectedChat = chat
-      this.loading = true
+      this.messages = []
+      this.renderingChat = true // 1. Hide messages area
       try {
         const { data } = await api.get(`ai-chats/${chat.id}`)
         this.messages = data.messages || []
+
+        // 2. Wait for DOM to render messages (still invisible)
         await this.$nextTick()
+
+        // 3. Teleport to bottom silently
         this.scrollToBottom()
+
+        // 4. Brief settle time, then reveal
+        setTimeout(() => {
+          this.renderingChat = false // 5. Fade in — already at the bottom
+        }, 30)
       } catch (error) {
         console.error('Error loading chat:', error)
         this.$q.notify({ type: 'negative', message: 'Error al cargar el chat' })
-      } finally {
-        this.loading = false
+        this.renderingChat = false
       }
     },
 
@@ -496,11 +510,17 @@ export default {
     },
 
     scrollToBottom () {
-      const container = this.$refs.messagesContainer
-      if (container) {
-        const scrollArea = container.querySelector('.q-scrollarea__container')
-        if (scrollArea) scrollArea.scrollTop = scrollArea.scrollHeight
-      }
+      this.$nextTick(() => {
+        const scrollArea = this.$refs.messagesContainer
+        if (scrollArea) {
+          // Use a large number and 0 duration for immediate scroll on load
+          scrollArea.setScrollPosition('vertical', 999999, 0)
+          // Also call with a slight animation if it's a dynamic update
+          setTimeout(() => {
+            scrollArea.setScrollPosition('vertical', 999999, 0)
+          }, 50)
+        }
+      })
     },
 
     getVideoUrl (path) {

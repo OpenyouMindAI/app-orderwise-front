@@ -9,10 +9,13 @@ let demoTimer = null
 const CLICK_THRESHOLD = 10
 const TIMER_DURATION = 2 * 60 * 1000 // 2 minutos
 
+// Variable de entorno para habilitar/deshabilitar la persuasión de la demo
+const ENABLE_PERSUASION = import.meta.env.VITE_ENABLE_DEMO_PERSUASION !== 'false'
+
 export function useDemoPersuasion () {
   const store = authentication()
 
-  const isDemo = computed(() => store.isDemoGetter)
+  const isDemo = computed(() => store.isDemoGetter && ENABLE_PERSUASION)
 
   /**
    * Resets and restarts the inactivity/interval timer

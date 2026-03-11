@@ -75,73 +75,66 @@
             <!-- Content -->
             <div class="mini-chat-content">
               <div class="active-chat">
-                <!-- Messages -->
-                <q-scroll-area class="messages-area" ref="messagesArea">
-                  <div class="messages-list q-pa-md">
-                    <!-- Encryption Notice -->
-                    <div class="encryption-notice text-center q-mb-lg">
-                      <q-icon name="lock" size="14px" class="q-mr-xs" />
-                      <span>Los mensajes están protegidos con cifrado.</span>
-                    </div>
-
-                    <!-- Date Separator -->
-                    <div v-if="messages.length > 0" class="date-separator text-center q-mb-md">
-                      <span>{{ formatDateHeader(messages[0]?.created_at) }}</span>
-                    </div>
-
-                    <!-- Messages Looping -->
-                    <div
-                      v-for="(message, index) in messages"
-                      :key="message.id"
-                      class="message messenger-message"
-                      :class="[
-                        isOwnMessage(message) ? 'own' : 'other',
-                        isSequential(message, index) ? 'sequential' : '',
-                        isNextSameUser(message, index) ? 'next-same' : 'last-in-group'
-                      ]"
-                    >
-                      <!-- Other Message: Avatar on Left -->
-                      <template v-if="!isOwnMessage(message)">
-                        <div class="message-avatar-column">
-                          <q-avatar v-if="!isNextSameUser(message, index)" size="28px" class="message-avatar">
-                            <div class="ai-avatar-bg"><q-icon name="auto_awesome" size="14px" color="white" /></div>
-                          </q-avatar>
-                        </div>
-
-                        <div class="message-bubble-wrapper">
-                          <div class="message-bubble shadow-sm">
-                            <div v-if="message.content" class="message-text" v-html="formatMessageContent(message.content)"></div>
-                          </div>
-                          <div v-if="!isNextSameUser(message, index)" class="message-time-caption">
-                            {{ formatTimeShort(message.created_at) }}
-                          </div>
-                        </div>
-                      </template>
-
-                      <!-- Own Message: Content Aligned Right -->
-                      <template v-else>
-                        <div class="message-bubble-wrapper">
-                          <div class="message-bubble shadow-sm">
-                            <div v-if="message.content" class="message-text">{{ message.content }}</div>
-                          </div>
-                          <div v-if="!isNextSameUser(message, index)" class="message-time-caption">
-                            {{ formatTimeShort(message.created_at) }}
-                          </div>
-                        </div>
-                      </template>
-                    </div>
-
-                    <!-- Typing Indicator -->
-                    <div v-if="isTyping" class="message messenger-message other sequential">
-                      <div class="message-avatar-column"></div>
-                      <div class="message-bubble-wrapper">
-                        <div class="message-bubble shadow-sm typing-bubble">
-                          <div class="typing-animation"><span></span><span></span><span></span></div>
-                        </div>
+                <!-- Messages: native scroll with column-reverse (WhatsApp/Discord pattern) -->
+                <div class="messages-area" ref="messagesArea">
+                  <!-- Typing Indicator (first in DOM = bottom of screen) -->
+                  <div v-if="isTyping" class="message messenger-message other sequential">
+                    <div class="message-avatar-column"></div>
+                    <div class="message-bubble-wrapper">
+                      <div class="message-bubble shadow-sm typing-bubble">
+                        <div class="typing-animation"><span></span><span></span><span></span></div>
                       </div>
                     </div>
                   </div>
-                </q-scroll-area>
+
+                  <!-- Messages (reversed so newest is at bottom with column-reverse) -->
+                  <div
+                    v-for="(message, index) in [...messages].reverse()"
+                    :key="message.id"
+                    class="message messenger-message"
+                    :class="[
+                      isOwnMessage(message) ? 'own' : 'other',
+                      isSequential(message, messages.length - 1 - index) ? 'sequential' : '',
+                      isNextSameUser(message, messages.length - 1 - index) ? 'next-same' : 'last-in-group'
+                    ]"
+                  >
+                    <!-- Other Message: Avatar on Left -->
+                    <template v-if="!isOwnMessage(message)">
+                      <div class="message-avatar-column">
+                        <q-avatar v-if="!isNextSameUser(message, messages.length - 1 - index)" size="28px" class="message-avatar">
+                          <div class="ai-avatar-bg"><q-icon name="auto_awesome" size="14px" color="white" /></div>
+                        </q-avatar>
+                      </div>
+
+                      <div class="message-bubble-wrapper">
+                        <div class="message-bubble shadow-sm">
+                          <div v-if="message.content" class="message-text" v-html="formatMessageContent(message.content)"></div>
+                        </div>
+                        <div v-if="!isNextSameUser(message, messages.length - 1 - index)" class="message-time-caption">
+                          {{ formatTimeShort(message.created_at) }}
+                        </div>
+                      </div>
+                    </template>
+
+                    <!-- Own Message: Content Aligned Right -->
+                    <template v-else>
+                      <div class="message-bubble-wrapper">
+                        <div class="message-bubble shadow-sm">
+                          <div v-if="message.content" class="message-text">{{ message.content }}</div>
+                        </div>
+                        <div v-if="!isNextSameUser(message, messages.length - 1 - index)" class="message-time-caption">
+                          {{ formatTimeShort(message.created_at) }}
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+
+                  <!-- Encryption Notice (last in DOM = top of conversation) -->
+                  <div class="encryption-notice text-center q-mb-lg">
+                    <q-icon name="lock" size="14px" class="q-mr-xs" />
+                    <span>Los mensajes están protegidos con cifrado.</span>
+                  </div>
+                </div>
 
                 <!-- Footer -->
                 <q-separator />
@@ -188,7 +181,6 @@ import { authentication } from 'src/stores/module-authentication'
 import SupportFacebookCard from './SupportFacebookCard.vue'
 import { useQuasar } from 'quasar'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
 
 /**
  * Quasar instance
@@ -216,7 +208,6 @@ const chats = ref([])
  * Selected chat
  */
 const selectedChat = ref(null)
-
 /**
  * Messages
  */
@@ -268,12 +259,10 @@ const loadChats = async () => {
  */
 const selectChat = async (chat) => {
   selectedChat.value = chat
-  messages.value = [] // Clear immediately so UI updates
+  messages.value = []
   try {
     const { data } = await api.get(`ai-chats/${chat.id}`)
     messages.value = data.messages || []
-    await nextTick()
-    scrollToBottom()
   } catch (error) {
     console.error('Error loading AI chat:', error)
   }
@@ -371,10 +360,15 @@ const isOwnMessage = (message) => {
  * Scroll to bottom
  */
 const scrollToBottom = () => {
+  // With column-reverse, scrollTop = 0 is the visual bottom.
+  // Just reset to 0 to snap to the latest message.
   if (messagesArea.value) {
-    messagesArea.value.setScrollPosition('vertical', 9999, 300)
+    messagesArea.value.scrollTop = 0
   }
 }
+
+// NOTE: Scroll is managed exclusively inside selectChat() using the
+// visibility-masking pattern. No competing watchers here.
 
 const formatMessageContent = (content) => {
   if (!content) return ''
@@ -389,14 +383,6 @@ const formatMessageContent = (content) => {
 const formatTimeShort = (dateStr) => {
   if (!dateStr) return ''
   return format(new Date(dateStr), 'HH:mm')
-}
-
-/**
- * Format date header for message list
- */
-const formatDateHeader = (dateStr) => {
-  if (!dateStr) return ''
-  return format(new Date(dateStr), "d 'de' MMMM 'de' yyyy, HH:mm", { locale: es })
 }
 
 /**
@@ -429,15 +415,14 @@ const isNextSameUser = (message, index) => {
   return false
 }
 
-// Watch for chat selection
+// Watch for chat selection — only reload the list when going back to null
 watch(selectedChat, (newVal) => {
-  // If we select a chat from the list or any other way,
-  // we don't need to load THE LIST again.
-  // Only load chats if we've specifically gone BACK to the list.
   if (newVal === null) {
     loadChats()
   }
 })
+
+// No scroll watchers needed — scroll is handled in selectChat()
 
 // Expose methods for parent components
 defineExpose({
@@ -607,18 +592,27 @@ defineExpose({
   background: white;
 }
 
-/* Messages scroll area */
+/* Messages scroll — column-reverse is the WhatsApp/Discord/Telegram pattern.
+   Items overflow from the BOTTOM, so the browser always starts at the end.
+   No JS scrolling needed on load. */
 .messages-area {
   flex: 1;
-  min-height: 0; /* Critical: prevents messages from overflowing */
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column-reverse;
+  padding: 16px;
   background-color: #ffffff;
   position: relative;
   z-index: 1;
-}
 
-.messages-list {
-  display: flex;
-  flex-direction: column;
+  /* Smooth scrolling for new messages */
+  scroll-behavior: smooth;
+
+  /* Thin scrollbar */
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
 }
 
 .encryption-notice {

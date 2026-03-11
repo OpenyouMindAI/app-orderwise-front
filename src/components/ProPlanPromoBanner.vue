@@ -64,6 +64,7 @@ export default defineComponent({
     let timerInterval = null
 
     const isVisible = computed(() => {
+      if (import.meta.env.VITE_ENABLE_DEMO_PERSUASION === 'false') return false
       const currentPlan = store.subscriptionPlan || 'free'
       return currentPlan.toLocaleLowerCase() === 'free' || store.isDemo
     })

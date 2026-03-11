@@ -1157,7 +1157,7 @@ export default {
     },
     mustSelectPlan: {
       handler (val) {
-        if (val) {
+        if (val && import.meta.env.VITE_ENABLE_DEMO_PERSUASION !== 'false') {
           this.showSubscriptionDialog = true
         } else {
           this.showSubscriptionDialog = false
@@ -2383,8 +2383,8 @@ export default {
      * Shows create company dialog every 5 minutes for demo accounts
      */
     startDemoReminder () {
-      // Solo iniciar si es cuenta demo
-      if ((!this.isDemo && !this.isClientDemo) || this.userSession?.is_root) {
+      // Solo iniciar si es cuenta demo y está habilitada la persuasión
+      if ((!this.isDemo && !this.isClientDemo) || this.userSession?.is_root || import.meta.env.VITE_ENABLE_DEMO_PERSUASION === 'false') {
         return
       }
 
