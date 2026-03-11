@@ -718,7 +718,7 @@
     />
 
     <!-- Global Support Chat Bubble -->
-    <SupportChatBubble />
+    <SupportChatBubble ref="supportChat" />
 
     <!-- Register Dialog -->
     <register-dialog
@@ -788,6 +788,10 @@
       </div>
     </transition>
 
+    <!-- Floating Support Card -->
+    <div class="fixed-bottom-right q-ma-md support-card-floating-wrapper" v-if="!$q.screen.xs">
+      <SupportFacebookCard @click="handleSupportClick" />
+    </div>
   </q-layout>
 </template>
 
@@ -825,6 +829,9 @@ import {
 import { useDemoPersuasion } from 'src/composables/useDemoPersuasion'
 import { useCompanySetup } from 'src/composables/useCompanySetup'
 import ProPlanPromoBanner from 'src/components/ProPlanPromoBanner.vue'
+import SupportFacebookCard from 'src/components/SupportFacebookCard.vue'
+
+import SupportChatBubble from 'src/components/SupportChatBubble.vue'
 
 export default {
   name: 'MainLayout',
@@ -842,7 +849,8 @@ export default {
     IntegrationDynamic,
     BottomNav,
     ProPlanPromoBanner,
-    SupportChatBubble: () => import('src/components/SupportChatBubble.vue')
+    SupportFacebookCard,
+    SupportChatBubble
   },
   data () {
     return {
@@ -2412,6 +2420,15 @@ export default {
     },
 
     /**
+     * Handle support click from the Facebook card in the drawer
+     */
+    handleSupportClick () {
+      console.log('Support card clicked', this.$refs.supportChat)
+      if (this.$refs.supportChat) {
+        this.$refs.supportChat.toggleMiniChat()
+      }
+    },
+    /**
      * Logout map actions
      */
     ...mapActions(authentication, ['logout', 'setCompanySession']),
@@ -3916,4 +3933,20 @@ body.body--dark .renew-subscription-btn {
   }
 }
 
+.support-card-floating-wrapper {
+  z-index: 9998;
+  width: 350px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+  &:hover {
+    transform: translateY(-5px);
+  }
+}
+
+/* Hide the default chat FAB because the card is our new trigger */
+:deep(.support-chat-bubble) {
+  .chat-fab {
+    display: none !important;
+  }
+}
 </style>

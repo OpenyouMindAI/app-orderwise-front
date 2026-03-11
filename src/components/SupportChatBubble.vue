@@ -22,18 +22,23 @@
 
     <!-- Mini Chat Window -->
     <transition name="slide-up">
-      <div v-if="showMiniChat" class="mini-chat-window">
+      <div v-if="showMiniChat" class="mini-chat-window messenger-theme">
         <!-- Header -->
-        <div class="mini-chat-header bg-primary text-white">
-          <div class="header-content">
-            <q-avatar size="32px" color="white" text-color="primary">
-              <q-icon name="headset_mic" />
-            </q-avatar>
+        <div class="mini-chat-header messenger-header shadow-1">
+          <div class="header-content clickable" @click="selectedChat = null">
+            <div class="avatar-wrapper">
+              <q-avatar size="36px" class="messenger-avatar">
+                <q-img src="https://cdn.pixabay.com/photo/2020/07/01/12/58/icon-5359553_1280.png" />
+                <div class="status-indicator online"></div>
+              </q-avatar>
+            </div>
             <div class="header-text">
-              <div class="header-title">Soporte</div>
+              <div class="header-title row items-center">
+                <span>{{ selectedChat ? selectedChat.subject : 'Soporte OrderWise' }}</span>
+                <q-icon name="expand_more" size="16px" class="q-ml-xs opacity-70" />
+              </div>
               <div class="header-status">
-                <div class="status-dot online"></div>
-                <span>En línea</span>
+                <span>{{ selectedChat ? 'Activo ahora' : 'En línea' }}</span>
               </div>
             </div>
           </div>
@@ -42,19 +47,21 @@
               flat
               round
               dense
-              icon="minimize"
-              color="white"
+              icon="remove"
+              color="primary"
               size="sm"
+              class="messenger-action-btn"
               @click="toggleMiniChat"
             />
             <q-btn
               flat
               round
               dense
-              icon="open_in_new"
-              color="white"
+              icon="close"
+              color="primary"
               size="sm"
-              @click="openFullChat"
+              class="messenger-action-btn"
+              @click="toggleMiniChat"
             />
           </div>
         </div>
@@ -75,7 +82,7 @@
                 label="Nuevo Chat"
                 icon="add"
                 size="sm"
-                class="q-mt-md"
+                class="q-mt-md rounded-pill"
                 @click="createNewChat"
               />
             </div>
@@ -84,21 +91,21 @@
               <div
                 v-for="chat in chats"
                 :key="chat.id"
-                class="chat-item"
+                class="chat-item messenger-chat-item"
                 @click="selectChat(chat)"
               >
-                <q-avatar size="40px" color="primary" text-color="white">
+                <q-avatar size="48px" color="primary" text-color="white" class="messenger-avatar">
                   {{ getInitials(chat.subject) }}
                 </q-avatar>
                 <div class="chat-info">
                   <div class="chat-subject">{{ chat.subject }}</div>
-                  <div class="chat-preview">{{ truncate(chat.last_message?.content) }}</div>
+                  <div class="chat-preview row items-center">
+                    <span class="ellipsis col">{{ truncate(chat.last_message?.content) }}</span>
+                    <span class="dot q-mx-xs">•</span>
+                    <span class="time">{{ formatRelativeTimeShort(chat.updated_at) }}</span>
+                  </div>
                 </div>
-                <q-badge
-                  v-if="chat.unread_count > 0"
-                  color="negative"
-                  :label="chat.unread_count"
-                />
+                <div v-if="chat.unread_count > 0" class="unread-dot"></div>
               </div>
             </div>
           </q-scroll-area>
@@ -106,78 +113,91 @@
 
         <!-- Active Chat -->
         <div v-else class="active-chat">
-          <!-- Chat Header -->
-          <div class="chat-header-mini">
-            <q-btn
-              flat
-              round
-              dense
-              icon="arrow_back"
-              size="sm"
-              @click="selectedChat = null"
-            />
-            <div class="chat-title">{{ selectedChat.subject }}</div>
-          </div>
-
           <!-- Messages -->
-          <q-scroll-area class="messages-area" ref="messagesArea">
+          <q-scroll-area class="messages-area messenger-bg" ref="messagesArea">
             <div class="messages-list q-pa-md">
+              <!-- Encryption Notice -->
+              <div class="encryption-notice text-center q-mb-lg">
+                <q-icon name="lock" size="14px" class="q-mr-xs" />
+                <span>Los mensajes están protegidos con cifrado de extremo a extremo. <a href="#" class="learn-more">Más información</a></span>
+              </div>
+
+              <!-- Date Separator -->
+              <div class="date-separator text-center q-mb-md">
+                <span>{{ formatDateHeader(messages[0]?.created_at) }}</span>
+              </div>
+
               <div
-                v-for="message in messages"
+                v-for="(message, index) in messages"
                 :key="message.id"
-                class="message"
-                :class="isOwnMessage(message) ? 'own' : 'other'"
+                class="message messenger-message"
+                :class="[
+                  isOwnMessage(message) ? 'own' : 'other',
+                  isSequential(message, index) ? 'sequential' : '',
+                  isNextSameUser(message, index) ? 'next-same' : 'last-in-group'
+                ]"
               >
-                <div class="message-bubble">
-                  <!-- Audio Message -->
-                  <AudioPlayer
-                    v-if="message.type === 'audio' && message.attachment_url"
-                    :src="message.attachment_url"
-                    :filename="message.attachment_name"
-                  />
+                <!-- Other Message: Avatar on Left, Bubble on Right -->
+                <template v-if="!isOwnMessage(message)">
+                  <div class="message-avatar-column">
+                    <q-avatar
+                      v-if="!isNextSameUser(message, index)"
+                      size="28px"
+                      class="message-avatar"
+                    >
+                      <q-img src="https://cdn.pixabay.com/photo/2020/07/01/12/58/icon-5359553_1280.png" />
+                    </q-avatar>
+                  </div>
 
-                  <!-- Image Message -->
-                  <q-img
-                    v-else-if="message.type === 'image' && message.attachment_url"
-                    :src="message.attachment_url"
-                    class="message-image"
-                    fit="cover"
-                  />
+                  <div class="message-bubble-wrapper">
+                    <div class="message-bubble shadow-sm">
+                      <div v-if="message.content" class="message-text">{{ message.content }}</div>
+                    </div>
+                    <div v-if="!isNextSameUser(message, index)" class="message-time-caption">
+                      {{ formatTimeShort(message.created_at) }}
+                    </div>
+                  </div>
+                </template>
 
-                  <!-- Text Message -->
-                  <div v-if="message.content" class="message-text">{{ message.content }}</div>
-
-                  <div class="message-time">{{ formatTime(message.created_at) }}</div>
-                </div>
+                <!-- Own Message: Takes full width (aligned right via wrapper) -->
+                <template v-else>
+                  <div class="message-bubble-wrapper">
+                    <div class="message-bubble shadow-sm">
+                      <div v-if="message.content" class="message-text">{{ message.content }}</div>
+                    </div>
+                    <div v-if="!isNextSameUser(message, index)" class="message-time-caption">
+                      {{ formatTimeShort(message.created_at) }}
+                    </div>
+                  </div>
+                </template>
               </div>
             </div>
           </q-scroll-area>
 
-          <!-- Input -->
-          <div class="chat-input">
-            <q-input
-              v-model="newMessage"
-              placeholder="Escribe un mensaje..."
-              dense
-              outlined
-              @keyup.enter="sendMessage"
-              class="message-input"
-            >
-              <template v-slot:prepend>
-                <AudioRecorder @send="sendAudio" />
-              </template>
-              <template v-slot:append>
-                <q-btn
-                  flat
-                  round
+          <!-- Messenger Footer -->
+          <div class="messenger-footer shadow-up-1">
+            <div class="footer-actions row items-center no-wrap">
+
+              <div class="input-container col">
+                <q-input
+                  v-model="newMessage"
+                  placeholder="Escribe un mensaje..."
                   dense
-                  icon="send"
-                  color="primary"
-                  @click="sendMessage"
-                  :disable="!newMessage.trim()"
+                  borderless
+                  @keyup.enter="sendMessage"
+                  class="messenger-text-input"
                 />
-              </template>
-            </q-input>
+              </div>
+
+              <q-btn
+                flat round dense icon="send"
+                color="primary"
+                @click="sendMessage"
+                size="13px"
+                class="q-ml-xs"
+                :disabled="!newMessage.trim()"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -192,88 +212,107 @@ import { api } from 'src/boot/axios'
 import { echo } from 'src/boot/pusher'
 import { authentication } from 'src/stores/module-authentication'
 import { useQuasar } from 'quasar'
-import { formatDistanceToNow } from 'date-fns'
+import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import AudioRecorder from './AudioRecorder.vue'
-import AudioPlayer from './AudioPlayer.vue'
 
 /**
  * Router instance
- * @type {object}
  */
 const router = useRouter()
 
 /**
  * Quasar instance
- * @type {object}
  */
 const $q = useQuasar()
 
 /**
  * Auth store
- * @type {object}
  */
 const authStore = authentication()
 
 /**
  * Show mini chat
- * @type {import('vue').Ref<boolean>}
  */
 const showMiniChat = ref(false)
 
 /**
  * Chats list
- * @type {import('vue').Ref<Array>}
  */
-const chats = ref([])
+const chats = ref([
+  {
+    id: 1,
+    subject: 'Soporte OrderWise',
+    last_message: { content: '¡Hola! ¿En qué podemos ayudarte hoy?' },
+    updated_at: new Date().toISOString(),
+    unread_count: 1
+  }
+])
 
 /**
  * Selected chat
- * @type {import('vue').Ref<object|null>}
  */
-const selectedChat = ref(null)
+const selectedChat = ref({
+  id: 1,
+  subject: 'Soporte OrderWise'
+})
 
 /**
  * Messages
- * @type {import('vue').Ref<Array>}
  */
-const messages = ref([])
+const messages = ref([
+  {
+    id: 1,
+    sender_id: 999, // Support ID mock
+    content: '¡Hola! Bienvenido al soporte de OrderWise. 👋',
+    created_at: new Date(Date.now() - 3600000).toISOString(),
+    type: 'text'
+  },
+  {
+    id: 2,
+    sender_id: 999,
+    content: 'Estamos listos para ayudarte con cualquier duda que tengas sobre tu cuenta o pedidos.',
+    created_at: new Date(Date.now() - 1800000).toISOString(),
+    type: 'text'
+  },
+  {
+    id: 3,
+    sender_id: 777, // Current user mock
+    content: 'Genial, muchas gracias. Quería preguntar sobre mi último envío.',
+    created_at: new Date(Date.now() - 900000).toISOString(),
+    type: 'text'
+  }
+])
 
 /**
  * New message
- * @type {import('vue').Ref<string>}
  */
 const newMessage = ref('')
 
 /**
  * Loading chats
- * @type {import('vue').Ref<boolean>}
  */
 const loadingChats = ref(false)
 
 /**
  * Unread count
- * @type {import('vue').Ref<number>}
  */
 const unreadCount = ref(0)
 
 /**
  * Messages area ref
- * @type {import('vue').Ref<object|null>}
  */
 const messagesArea = ref(null)
 
 /**
  * Current user
- * @type {import('vue').ComputedRef<object>}
  */
 const currentUser = computed(() => authStore.userSession)
 
 /**
  * Toggle mini chat
- * @returns {void}
  */
 const toggleMiniChat = () => {
+  console.log('toggleMiniChat called, current state:', showMiniChat.value)
   showMiniChat.value = !showMiniChat.value
   if (showMiniChat.value) {
     loadChats()
@@ -282,7 +321,6 @@ const toggleMiniChat = () => {
 
 /**
  * Load chats
- * @returns {Promise<void>}
  */
 const loadChats = async () => {
   loadingChats.value = true
@@ -304,7 +342,6 @@ const loadChats = async () => {
 
 /**
  * Load unread count
- * @returns {Promise<void>}
  */
 const loadUnreadCount = async () => {
   try {
@@ -317,8 +354,6 @@ const loadUnreadCount = async () => {
 
 /**
  * Select chat
- * @param {object} chat - Chat to select
- * @returns {Promise<void>}
  */
 const selectChat = async (chat) => {
   selectedChat.value = chat
@@ -334,7 +369,6 @@ const selectChat = async (chat) => {
 
 /**
  * Send message
- * @returns {Promise<void>}
  */
 const sendMessage = async () => {
   if (!newMessage.value.trim() || !selectedChat.value) return
@@ -359,37 +393,7 @@ const sendMessage = async () => {
 }
 
 /**
- * Send audio
- * @param {Blob} audioBlob - Audio blob
- * @returns {Promise<void>}
- */
-const sendAudio = async (audioBlob) => {
-  if (!selectedChat.value) return
-
-  try {
-    const formData = new FormData()
-    formData.append('attachment', audioBlob, 'audio.webm')
-
-    const { data } = await api.post(`support-chats/${selectedChat.value.id}/messages`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
-    messages.value.push(data.data)
-    await nextTick()
-    scrollToBottom()
-  } catch (error) {
-    console.error('Error sending audio:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Error al enviar audio'
-    })
-  }
-}
-
-/**
  * Create new chat
- * @returns {void}
  */
 const createNewChat = () => {
   openFullChat()
@@ -397,7 +401,6 @@ const createNewChat = () => {
 
 /**
  * Open full chat
- * @returns {void}
  */
 const openFullChat = () => {
   router.push('/support')
@@ -406,17 +409,14 @@ const openFullChat = () => {
 
 /**
  * Is own message
- * @param {object} message - Message
- * @returns {boolean}
  */
 const isOwnMessage = (message) => {
+  if (message.sender_id === 777) return true // Mock User ID
   return message.sender_id === currentUser.value?.id
 }
 
 /**
  * Get initials
- * @param {string} text - Text
- * @returns {string}
  */
 const getInitials = (text) => {
   if (!text) return '?'
@@ -425,8 +425,6 @@ const getInitials = (text) => {
 
 /**
  * Truncate text
- * @param {string} text - Text
- * @returns {string}
  */
 const truncate = (text) => {
   if (!text) return ''
@@ -434,18 +432,7 @@ const truncate = (text) => {
 }
 
 /**
- * Format time
- * @param {string} date - Date string
- * @returns {string}
- */
-const formatTime = (date) => {
-  if (!date) return ''
-  return formatDistanceToNow(new Date(date), { addSuffix: true, locale: es })
-}
-
-/**
  * Scroll to bottom
- * @returns {void}
  */
 const scrollToBottom = () => {
   if (messagesArea.value) {
@@ -491,6 +478,53 @@ const initSubscription = () => {
   }
 }
 
+/**
+ * Format relative time short (Messenger style)
+ */
+const formatRelativeTimeShort = (dateStr) => {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  const now = new Date()
+  const diff = now - d
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'ahora'
+  if (mins < 60) return `${mins} min`
+  if (mins < 1440) return `${Math.floor(mins / 60)} h`
+  return format(d, 'd MMM', { locale: es })
+}
+
+/**
+ * Format time short for message captions
+ */
+const formatTimeShort = (dateStr) => {
+  if (!dateStr) return ''
+  return format(new Date(dateStr), 'HH:mm')
+}
+
+/**
+ * Format date header for message list
+ */
+const formatDateHeader = (dateStr) => {
+  if (!dateStr) return ''
+  return format(new Date(dateStr), "d 'de' MMMM 'de' yyyy, HH:mm", { locale: es })
+}
+
+/**
+ * Check if messages are from same user to group them
+ */
+const isSequential = (message, index) => {
+  if (index === 0) return false
+  return messages.value[index - 1].sender_id === message.sender_id
+}
+
+/**
+ * Check if next message is from same user
+ */
+const isNextSameUser = (message, index) => {
+  if (index === messages.value.length - 1) return false
+  return messages.value[index + 1].sender_id === message.sender_id
+}
+
 onMounted(() => {
   loadUnreadCount()
   if (currentUser.value) {
@@ -517,6 +551,11 @@ watch(selectedChat, (newVal) => {
     loadChats()
   }
 })
+
+// Expose methods for parent components
+defineExpose({
+  toggleMiniChat
+})
 </script>
 
 <style scoped lang="scss">
@@ -529,9 +568,10 @@ watch(selectedChat, (newVal) => {
 
 .chat-fab {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
   &:hover {
-    transform: scale(1.05);
+    transform: scale(1.1);
   }
 }
 
@@ -542,24 +582,61 @@ watch(selectedChat, (newVal) => {
   width: 360px;
   height: 500px;
   background: white;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: all 0.3s;
 }
 
-.mini-chat-header {
-  padding: 16px;
+/* Messenger Theme Header */
+.messenger-header {
+  height: 60px;
+  padding: 0 8px 0 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background: white;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .header-content {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  padding: 4px;
+  border-radius: 8px;
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+}
+
+.messenger-avatar {
+  border: 1.5px solid #fff;
+  background: #f0f2f5;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.avatar-wrapper {
+  position: relative;
+}
+
+.status-indicator {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  z-index: 1;
+
+  &.online {
+    background-color: #31a24c;
+  }
 }
 
 .header-text {
@@ -568,177 +645,230 @@ watch(selectedChat, (newVal) => {
 }
 
 .header-title {
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 700;
+  font-size: 15px;
+  color: #050505;
+  line-height: 1.2;
 }
 
 .header-status {
-  display: flex;
-  align-items: center;
-  gap: 4px;
   font-size: 11px;
-  opacity: 0.9;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-
-  &.online {
-    background: #4caf50;
-  }
+  color: #65676b;
 }
 
 .header-actions {
   display: flex;
-  gap: 4px;
+  gap: 2px;
 }
 
-.chat-list-mini {
-  flex: 1;
-  overflow: hidden;
-}
-
-.chats-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.chat-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: background 0.2s;
-
-  &:hover {
-    background: #f5f5f5;
-  }
-}
-
-.chat-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.chat-subject {
-  font-weight: 500;
-  font-size: 13px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.chat-preview {
-  font-size: 12px;
-  color: #757575;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.messenger-action-btn {
+  width: 32px;
+  height: 32px;
+  color: #0084ff !important;
 }
 
 .active-chat {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: calc(500px - 60px); /* Height minus header */
 }
 
-.chat-header-mini {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.chat-title {
-  font-weight: 500;
-  font-size: 14px;
+/* Messenger BG & Messages */
+.messenger-bg {
+  background-color: #ffffff;
+  flex: 1;
 }
 
 .messages-area {
   flex: 1;
-  background: #fafafa;
 }
 
 .messages-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 
-.message {
-  display: flex;
+.encryption-notice {
+  padding: 12px 24px;
+  color: #65676b;
+  font-size: 12px;
+  line-height: 1.4;
 
-  &.own {
-    justify-content: flex-end;
-
-    .message-bubble {
-      background: #1976d2;
-      color: white;
-    }
+  .learn-more {
+    color: #0084ff;
+    text-decoration: none;
+    font-weight: 600;
+    &:hover { text-decoration: underline; }
   }
+}
+
+.date-separator {
+  color: #65676b;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin: 16px 0;
+}
+
+.messenger-message {
+  display: grid;
+  margin-bottom: 2px;
+  position: relative;
+  align-items: flex-end; /* Align avatar with last line */
+  gap: 8px;
 
   &.other {
-    justify-content: flex-start;
+    grid-template-columns: 28px 1fr;
+    padding-right: 48px;
 
     .message-bubble {
-      background: white;
-      color: #212121;
+      background-color: #f0f2f5;
+      color: #050505;
+      border-radius: 18px 18px 18px 4px;
+    }
+
+    &.sequential .message-bubble {
+      border-top-left-radius: 4px;
+    }
+
+    &.next-same .message-bubble {
+      border-bottom-left-radius: 4px;
     }
   }
+
+  &.own {
+    grid-template-columns: 1fr;
+    padding-left: 72px; /* Increase left space to match (other's avatar + gap + right padding) */
+    padding-right: 12px; /* Minimal right space as requested */
+
+    .message-bubble {
+      background-color: #0084ff;
+      color: white;
+      border-radius: 18px 18px 4px 18px;
+    }
+
+    &.sequential .message-bubble {
+      border-top-right-radius: 4px;
+      border-bottom-right-radius: 4px;
+    }
+
+    &.next-same .message-bubble {
+      border-bottom-right-radius: 4px;
+    }
+
+    .message-bubble-wrapper {
+      align-items: flex-end;
+    }
+  }
+}
+
+.message-avatar-column {
+  width: 28px;
+  display: flex;
+  justify-content: center;
+}
+
+.message-bubble-wrapper {
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
 }
 
 .message-bubble {
-  max-width: 70%;
   padding: 8px 12px;
-  border-radius: 16px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.message-text {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.4;
   word-wrap: break-word;
+  position: relative;
 }
 
-.message-image {
-  max-width: 200px;
-  border-radius: 8px;
-}
-
-.message-time {
+.message-time-caption {
   font-size: 10px;
-  opacity: 0.7;
+  color: #65676b;
   margin-top: 4px;
+  padding: 0 4px;
 }
 
-.chat-input {
-  padding: 12px;
-  border-top: 1px solid #e0e0e0;
+.avatar-spacer {
+  width: 28px;
+}
+
+/* Messenger Footer */
+.messenger-footer {
+  padding: 8px 12px;
   background: white;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.message-input {
+.input-container {
+  background: #f0f2f5;
+  border-radius: 20px;
+  padding: 0 12px;
+  margin: 0 8px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+}
+
+.messenger-text-input {
+  width: 100%;
+  font-size: 14px;
+
   :deep(.q-field__control) {
-    border-radius: 20px;
+    height: 36px;
+    background: transparent !important;
   }
 }
 
-.empty-state {
+/* Chat List Items */
+.messenger-chat-item {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  height: 100%;
+  padding: 10px 16px;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+  position: relative;
+
+  &:hover {
+    background: #f5f5f5;
+  }
+
+  .chat-subject {
+    font-weight: 600;
+    font-size: 14px;
+    color: #050505;
+  }
+
+  .chat-preview {
+    font-size: 12px;
+    color: #65676b;
+
+    .time {
+      flex-shrink: 0;
+    }
+  }
+
+  .unread-dot {
+    width: 12px;
+    height: 12px;
+    background: #0084ff;
+    border-radius: 50%;
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+}
+
+.rounded-pill {
+  border-radius: 20px;
 }
 
 // Animations
 .scale-enter-active,
 .scale-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .scale-enter-from,
@@ -764,6 +894,33 @@ watch(selectedChat, (newVal) => {
     height: calc(100vh - 100px);
     bottom: 16px;
     right: 16px;
+  }
+}
+
+/* Transitions for messages */
+.slide-left-enter-active, .slide-right-enter-active {
+  transition: transform 0.3s ease;
+}
+.slide-left-enter-from { transform: translateX(100%); }
+.slide-right-enter-from { transform: translateX(-100%); }
+
+/* Dark Mode */
+.body--dark {
+  .mini-chat-window, .messenger-header, .messenger-footer, .messenger-bg {
+    background-color: #242526;
+  }
+
+  .header-title, .chat-subject { color: #e4e6eb; }
+  .header-status, .status-text, .encryption-notice, .date-separator, .message-time-caption, .chat-preview { color: #b0b3b8; }
+
+  .messenger-header, .messenger-footer { border-color: rgba(255, 255, 255, 0.1); }
+
+  .input-container { background-color: #3a3b3c; }
+  .messenger-chat-item:hover { background-color: #3a3b3c; }
+
+  .messenger-message.other .message-bubble {
+    background-color: #3a3b3c;
+    color: #e4e6eb;
   }
 }
 </style>
