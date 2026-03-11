@@ -89,6 +89,7 @@
     "eslint-plugin-promise": "^6.0.0",
     "eslint-plugin-vue": "^9.0.0",
     "ftp-deploy": "^2.4.7",
+    "msw": "^2.12.10",
     "vite": "^6.3.5",
     "workbox-build": "^6.5.4",
     "workbox-cacheable-response": "^6.5.4",
@@ -102,5 +103,10 @@
     "node": "^18 || ^16 || ^14.19 || ^22.15",
     "npm": ">= 6.13.4",
     "yarn": ">= 1.21.1"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
   }
 }

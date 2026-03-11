@@ -27,6 +27,7 @@ export default configure(function (/* ctx */) {
     // preFetch: true,
 
     boot: [
+      'msw',
       'i18n',
       'axios',
       'authorization',
@@ -49,7 +50,7 @@ export default configure(function (/* ctx */) {
 
     build: {
       target: {
-        browser: ['es2019', 'edge88', 'firefox78', 'chrome87', 'safari13.1'],
+        browser: ['es2022', 'edge89', 'firefox89', 'chrome89', 'safari15'],
         node: 'node16'
       },
 

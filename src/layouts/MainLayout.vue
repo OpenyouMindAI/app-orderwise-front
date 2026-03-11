@@ -788,10 +788,6 @@
       </div>
     </transition>
 
-    <!-- Floating Support Card -->
-    <div class="fixed-bottom-right q-ma-md support-card-floating-wrapper" v-if="!$q.screen.xs">
-      <SupportFacebookCard @click="handleSupportClick" />
-    </div>
   </q-layout>
 </template>
 
@@ -829,7 +825,6 @@ import {
 import { useDemoPersuasion } from 'src/composables/useDemoPersuasion'
 import { useCompanySetup } from 'src/composables/useCompanySetup'
 import ProPlanPromoBanner from 'src/components/ProPlanPromoBanner.vue'
-import SupportFacebookCard from 'src/components/SupportFacebookCard.vue'
 
 import SupportChatBubble from 'src/components/SupportChatBubble.vue'
 
@@ -849,7 +844,6 @@ export default {
     IntegrationDynamic,
     BottomNav,
     ProPlanPromoBanner,
-    SupportFacebookCard,
     SupportChatBubble
   },
   data () {
@@ -3943,10 +3937,4 @@ body.body--dark .renew-subscription-btn {
   }
 }
 
-/* Hide the default chat FAB because the card is our new trigger */
-:deep(.support-chat-bubble) {
-  .chat-fab {
-    display: none !important;
-  }
-}
 </style>

@@ -10,215 +10,185 @@
         class="chat-fab"
         @click="toggleMiniChat"
       >
-        <q-badge
-          v-if="unreadCount > 0"
-          color="negative"
-          floating
-          :label="unreadCount > 99 ? '99+' : unreadCount"
-        />
         <q-tooltip>Chat de Soporte</q-tooltip>
       </q-btn>
     </transition>
 
-    <!-- Mini Chat Window -->
+    <!-- Support Components (Card or Chat) -->
     <transition name="slide-up">
-      <div v-if="showMiniChat" class="mini-chat-window messenger-theme">
-        <!-- Header -->
-        <div class="mini-chat-header messenger-header shadow-1">
-          <div class="header-content clickable" @click="selectedChat = null">
-            <div class="avatar-wrapper">
-              <q-avatar size="36px" class="messenger-avatar">
-                <q-img src="https://cdn.pixabay.com/photo/2020/07/01/12/58/icon-5359553_1280.png" />
-                <div class="status-indicator online"></div>
-              </q-avatar>
-            </div>
-            <div class="header-text">
-              <div class="header-title row items-center">
-                <span>{{ selectedChat ? selectedChat.subject : 'Soporte OrderWise' }}</span>
-                <q-icon name="expand_more" size="16px" class="q-ml-xs opacity-70" />
-              </div>
-              <div class="header-status">
-                <span>{{ selectedChat ? 'Activo ahora' : 'En línea' }}</span>
-              </div>
-            </div>
-          </div>
-          <div class="header-actions">
-            <q-btn
-              flat
-              round
-              dense
-              icon="remove"
-              color="primary"
-              size="sm"
-              class="messenger-action-btn"
-              @click="toggleMiniChat"
-            />
-            <q-btn
-              flat
-              round
-              dense
-              icon="close"
-              color="primary"
-              size="sm"
-              class="messenger-action-btn"
-              @click="toggleMiniChat"
-            />
-          </div>
-        </div>
+      <div v-if="showMiniChat" class="mini-chat-container">
+        <!-- List View (Facebook Card) -->
+        <transition name="fade-scale" mode="out-in">
+          <SupportFacebookCard
+            v-if="!selectedChat"
+            class="full-height-component"
+            @chat-click="selectChat"
+            @new-chat="startNewChat"
+            @close="toggleMiniChat"
+          />
 
-        <!-- Chat List (if no active chat) -->
-        <div v-if="!selectedChat" class="chat-list-mini">
-          <q-scroll-area class="fit">
-            <div v-if="loadingChats" class="text-center q-pa-md">
-              <q-spinner color="primary" size="32px" />
-            </div>
-
-            <div v-else-if="chats.length === 0" class="empty-state q-pa-md text-center">
-              <q-icon name="chat_bubble_outline" size="48px" color="grey-5" />
-              <div class="text-grey-7 q-mt-sm">No hay conversaciones</div>
-              <q-btn
-                unelevated
-                color="primary"
-                label="Nuevo Chat"
-                icon="add"
-                size="sm"
-                class="q-mt-md rounded-pill"
-                @click="createNewChat"
-              />
-            </div>
-
-            <div v-else class="chats-list">
-              <div
-                v-for="chat in chats"
-                :key="chat.id"
-                class="chat-item messenger-chat-item"
-                @click="selectChat(chat)"
-              >
-                <q-avatar size="48px" color="primary" text-color="white" class="messenger-avatar">
-                  {{ getInitials(chat.subject) }}
-                </q-avatar>
-                <div class="chat-info">
-                  <div class="chat-subject">{{ chat.subject }}</div>
-                  <div class="chat-preview row items-center">
-                    <span class="ellipsis col">{{ truncate(chat.last_message?.content) }}</span>
-                    <span class="dot q-mx-xs">•</span>
-                    <span class="time">{{ formatRelativeTimeShort(chat.updated_at) }}</span>
+          <!-- Active Chat View (Messenger style) -->
+          <q-card v-else class="support-facebook-card shadow-2">
+            <!-- Header -->
+            <q-card-section class="card-header q-pa-md">
+              <div class="row items-center no-wrap">
+                <div class="avatar-container q-mr-sm">
+                  <q-avatar size="44px" class="palma-avatar">
+                    <q-icon name="auto_awesome" size="22px" color="white" />
+                    <div class="status-indicator online"></div>
+                  </q-avatar>
+                </div>
+                <div class="col">
+                  <div class="support-name">
+                    <span class="ellipsis">{{ selectedChat ? (selectedChat.title || selectedChat.subject) : 'Soporte OrderWise' }}</span>
+                  </div>
+                  <div class="support-status">
+                    <q-icon name="circle" size="8px" color="green-5" class="q-ml-none q-mr-xs" />
+                    <span class="status-text">Activo ahora</span>
                   </div>
                 </div>
-                <div v-if="chat.unread_count > 0" class="unread-dot"></div>
+                <div class="row no-wrap items-center">
+                  <q-btn
+                    flat round dense
+                    icon="arrow_back"
+                    color="grey-7"
+                    size="sm"
+                    class="close-btn q-mr-xs"
+                    @click="selectedChat = null"
+                  >
+                    <q-tooltip>Volver</q-tooltip>
+                  </q-btn>
+                  <q-btn
+                    flat round dense
+                    icon="close"
+                    color="grey-7"
+                    size="sm"
+                    class="close-btn"
+                    @click="toggleMiniChat"
+                  />
+                </div>
               </div>
-            </div>
-          </q-scroll-area>
-        </div>
+            </q-card-section>
 
-        <!-- Active Chat -->
-        <div v-else class="active-chat">
-          <!-- Messages -->
-          <q-scroll-area class="messages-area messenger-bg" ref="messagesArea">
-            <div class="messages-list q-pa-md">
-              <!-- Encryption Notice -->
-              <div class="encryption-notice text-center q-mb-lg">
-                <q-icon name="lock" size="14px" class="q-mr-xs" />
-                <span>Los mensajes están protegidos con cifrado de extremo a extremo. <a href="#" class="learn-more">Más información</a></span>
-              </div>
+            <q-separator />
 
-              <!-- Date Separator -->
-              <div class="date-separator text-center q-mb-md">
-                <span>{{ formatDateHeader(messages[0]?.created_at) }}</span>
-              </div>
+            <!-- Content -->
+            <div class="mini-chat-content">
+              <div class="active-chat">
+                <!-- Messages -->
+                <q-scroll-area class="messages-area" ref="messagesArea">
+                  <div class="messages-list q-pa-md">
+                    <!-- Encryption Notice -->
+                    <div class="encryption-notice text-center q-mb-lg">
+                      <q-icon name="lock" size="14px" class="q-mr-xs" />
+                      <span>Los mensajes están protegidos con cifrado.</span>
+                    </div>
 
-              <div
-                v-for="(message, index) in messages"
-                :key="message.id"
-                class="message messenger-message"
-                :class="[
-                  isOwnMessage(message) ? 'own' : 'other',
-                  isSequential(message, index) ? 'sequential' : '',
-                  isNextSameUser(message, index) ? 'next-same' : 'last-in-group'
-                ]"
-              >
-                <!-- Other Message: Avatar on Left, Bubble on Right -->
-                <template v-if="!isOwnMessage(message)">
-                  <div class="message-avatar-column">
-                    <q-avatar
-                      v-if="!isNextSameUser(message, index)"
-                      size="28px"
-                      class="message-avatar"
+                    <!-- Date Separator -->
+                    <div v-if="messages.length > 0" class="date-separator text-center q-mb-md">
+                      <span>{{ formatDateHeader(messages[0]?.created_at) }}</span>
+                    </div>
+
+                    <!-- Messages Looping -->
+                    <div
+                      v-for="(message, index) in messages"
+                      :key="message.id"
+                      class="message messenger-message"
+                      :class="[
+                        isOwnMessage(message) ? 'own' : 'other',
+                        isSequential(message, index) ? 'sequential' : '',
+                        isNextSameUser(message, index) ? 'next-same' : 'last-in-group'
+                      ]"
                     >
-                      <q-img src="https://cdn.pixabay.com/photo/2020/07/01/12/58/icon-5359553_1280.png" />
-                    </q-avatar>
-                  </div>
+                      <!-- Other Message: Avatar on Left -->
+                      <template v-if="!isOwnMessage(message)">
+                        <div class="message-avatar-column">
+                          <q-avatar v-if="!isNextSameUser(message, index)" size="28px" class="message-avatar">
+                            <div class="ai-avatar-bg"><q-icon name="auto_awesome" size="14px" color="white" /></div>
+                          </q-avatar>
+                        </div>
 
-                  <div class="message-bubble-wrapper">
-                    <div class="message-bubble shadow-sm">
-                      <div v-if="message.content" class="message-text">{{ message.content }}</div>
-                    </div>
-                    <div v-if="!isNextSameUser(message, index)" class="message-time-caption">
-                      {{ formatTimeShort(message.created_at) }}
-                    </div>
-                  </div>
-                </template>
+                        <div class="message-bubble-wrapper">
+                          <div class="message-bubble shadow-sm">
+                            <div v-if="message.content" class="message-text" v-html="formatMessageContent(message.content)"></div>
+                          </div>
+                          <div v-if="!isNextSameUser(message, index)" class="message-time-caption">
+                            {{ formatTimeShort(message.created_at) }}
+                          </div>
+                        </div>
+                      </template>
 
-                <!-- Own Message: Takes full width (aligned right via wrapper) -->
-                <template v-else>
-                  <div class="message-bubble-wrapper">
-                    <div class="message-bubble shadow-sm">
-                      <div v-if="message.content" class="message-text">{{ message.content }}</div>
+                      <!-- Own Message: Content Aligned Right -->
+                      <template v-else>
+                        <div class="message-bubble-wrapper">
+                          <div class="message-bubble shadow-sm">
+                            <div v-if="message.content" class="message-text">{{ message.content }}</div>
+                          </div>
+                          <div v-if="!isNextSameUser(message, index)" class="message-time-caption">
+                            {{ formatTimeShort(message.created_at) }}
+                          </div>
+                        </div>
+                      </template>
                     </div>
-                    <div v-if="!isNextSameUser(message, index)" class="message-time-caption">
-                      {{ formatTimeShort(message.created_at) }}
+
+                    <!-- Typing Indicator -->
+                    <div v-if="isTyping" class="message messenger-message other sequential">
+                      <div class="message-avatar-column"></div>
+                      <div class="message-bubble-wrapper">
+                        <div class="message-bubble shadow-sm typing-bubble">
+                          <div class="typing-animation"><span></span><span></span><span></span></div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </template>
+                </q-scroll-area>
+
+                <!-- Footer -->
+                <q-separator />
+                <q-card-section class="q-pa-md messenger-footer">
+                  <q-input
+                    ref="chatInput"
+                    v-model="newMessage"
+                    placeholder="Envía un mensaje..."
+                    dense
+                    rounded
+                    outlined
+                    bg-color="white"
+                    autogrow
+                    :max-rows="4"
+                    @keydown.enter.prevent="sendMessage"
+                    class="messenger-text-input"
+                  >
+                    <template v-slot:append>
+                      <q-btn
+                        flat
+                        round
+                        icon="send"
+                        :color="newMessage.trim() && !isTyping ? 'primary' : 'grey-5'"
+                        size="sm"
+                        @click="sendMessage"
+                        class="send-btn"
+                      />
+                    </template>
+                  </q-input>
+                </q-card-section>
               </div>
             </div>
-          </q-scroll-area>
-
-          <!-- Messenger Footer -->
-          <div class="messenger-footer shadow-up-1">
-            <div class="footer-actions row items-center no-wrap">
-
-              <div class="input-container col">
-                <q-input
-                  v-model="newMessage"
-                  placeholder="Escribe un mensaje..."
-                  dense
-                  borderless
-                  @keyup.enter="sendMessage"
-                  class="messenger-text-input"
-                />
-              </div>
-
-              <q-btn
-                flat round dense icon="send"
-                color="primary"
-                @click="sendMessage"
-                size="13px"
-                class="q-ml-xs"
-                :disabled="!newMessage.trim()"
-              />
-            </div>
-          </div>
-        </div>
+          </q-card>
+        </transition>
       </div>
     </transition>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, nextTick, watch } from 'vue'
 import { api } from 'src/boot/axios'
-import { echo } from 'src/boot/pusher'
 import { authentication } from 'src/stores/module-authentication'
+import SupportFacebookCard from './SupportFacebookCard.vue'
 import { useQuasar } from 'quasar'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-
-/**
- * Router instance
- */
-const router = useRouter()
 
 /**
  * Quasar instance
@@ -230,58 +200,27 @@ const $q = useQuasar()
  */
 const authStore = authentication()
 
-/**
- * Show mini chat
- */
 const showMiniChat = ref(false)
+
+/**
+ * Typing indicator
+ */
+const isTyping = ref(false)
 
 /**
  * Chats list
  */
-const chats = ref([
-  {
-    id: 1,
-    subject: 'Soporte OrderWise',
-    last_message: { content: '¡Hola! ¿En qué podemos ayudarte hoy?' },
-    updated_at: new Date().toISOString(),
-    unread_count: 1
-  }
-])
+const chats = ref([])
 
 /**
  * Selected chat
  */
-const selectedChat = ref({
-  id: 1,
-  subject: 'Soporte OrderWise'
-})
+const selectedChat = ref(null)
 
 /**
  * Messages
  */
-const messages = ref([
-  {
-    id: 1,
-    sender_id: 999, // Support ID mock
-    content: '¡Hola! Bienvenido al soporte de OrderWise. 👋',
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-    type: 'text'
-  },
-  {
-    id: 2,
-    sender_id: 999,
-    content: 'Estamos listos para ayudarte con cualquier duda que tengas sobre tu cuenta o pedidos.',
-    created_at: new Date(Date.now() - 1800000).toISOString(),
-    type: 'text'
-  },
-  {
-    id: 3,
-    sender_id: 777, // Current user mock
-    content: 'Genial, muchas gracias. Quería preguntar sobre mi último envío.',
-    created_at: new Date(Date.now() - 900000).toISOString(),
-    type: 'text'
-  }
-])
+const messages = ref([])
 
 /**
  * New message
@@ -289,19 +228,14 @@ const messages = ref([
 const newMessage = ref('')
 
 /**
- * Loading chats
- */
-const loadingChats = ref(false)
-
-/**
- * Unread count
- */
-const unreadCount = ref(0)
-
-/**
  * Messages area ref
  */
 const messagesArea = ref(null)
+
+/**
+ * Chat input ref
+ */
+const chatInput = ref(null)
 
 /**
  * Current user
@@ -312,43 +246,20 @@ const currentUser = computed(() => authStore.userSession)
  * Toggle mini chat
  */
 const toggleMiniChat = () => {
-  console.log('toggleMiniChat called, current state:', showMiniChat.value)
   showMiniChat.value = !showMiniChat.value
-  if (showMiniChat.value) {
-    loadChats()
-  }
 }
 
 /**
- * Load chats
+ * Load chats (kept for manual refresh if needed)
  */
 const loadChats = async () => {
-  loadingChats.value = true
   try {
-    const { data } = await api.get('support-chats', {
-      params: {
-        per_page: 10,
-        only_open: true
-      }
+    const { data } = await api.get('ai-chats', {
+      params: { company_id: authStore.userSession?.company_session?.id }
     })
-    chats.value = data.data || []
-    loadUnreadCount()
+    chats.value = data.data || data || []
   } catch (error) {
-    console.error('Error loading chats:', error)
-  } finally {
-    loadingChats.value = false
-  }
-}
-
-/**
- * Load unread count
- */
-const loadUnreadCount = async () => {
-  try {
-    const { data } = await api.get('support-chats/unread-count')
-    unreadCount.value = data.unread_count || 0
-  } catch (error) {
-    console.error('Error loading unread count:', error)
+    console.error('Error loading AI chats:', error)
   }
 }
 
@@ -357,13 +268,14 @@ const loadUnreadCount = async () => {
  */
 const selectChat = async (chat) => {
   selectedChat.value = chat
+  messages.value = [] // Clear immediately so UI updates
   try {
-    const { data } = await api.get(`support-chats/${chat.id}`)
+    const { data } = await api.get(`ai-chats/${chat.id}`)
     messages.value = data.messages || []
     await nextTick()
     scrollToBottom()
   } catch (error) {
-    console.error('Error loading chat:', error)
+    console.error('Error loading AI chat:', error)
   }
 }
 
@@ -376,59 +288,83 @@ const sendMessage = async () => {
   const messageText = newMessage.value
   newMessage.value = ''
 
+  // Add user message locally for immediate feedback
+  const userMessage = {
+    id: Date.now(),
+    role: 'user',
+    sender_id: authStore.userSession?.id,
+    content: messageText,
+    created_at: new Date().toISOString()
+  }
+  messages.value.push(userMessage)
+
+  isTyping.value = true
+  await nextTick()
+  scrollToBottom()
+
   try {
-    const { data } = await api.post(`support-chats/${selectedChat.value.id}/messages`, {
-      message: messageText
-    })
-    messages.value.push(data.data)
+    // If it's a new chat, create it on first message
+    if (selectedChat.value.id === 'new') {
+      const { data } = await api.post('ai-chats', {
+        company_id: authStore.userSession?.company_session?.id,
+        message: messageText,
+        branch_office_id: authStore.branchOffice?.id
+      })
+
+      // Update selected chat and message list (data is the new chat)
+      const newChat = data.chat || data
+      selectedChat.value = newChat
+      chats.value.unshift(newChat)
+      messages.value = newChat.messages || []
+    } else {
+      const { data } = await api.post(`ai-chats/${selectedChat.value.id}/messages`, {
+        message: messageText,
+        branch_office_id: authStore.branchOffice?.id
+      })
+
+      // Replace the local mock user message with the real one from server
+      const userIdx = messages.value.findIndex(m => m.id === userMessage.id)
+      if (userIdx !== -1 && data.user_message) messages.value[userIdx] = data.user_message
+
+      messages.value.push(data.assistant_message)
+
+      // Update last message in chat list
+      const chatIndex = chats.value.findIndex(c => c.id === selectedChat.value.id)
+      if (chatIndex !== -1) {
+        chats.value[chatIndex].last_message = data.assistant_message
+        chats.value[chatIndex].updated_at = new Date().toISOString()
+      }
+    }
+
     await nextTick()
     scrollToBottom()
   } catch (error) {
-    console.error('Error sending message:', error)
+    console.error('Error sending AI message:', error)
     $q.notify({
       type: 'negative',
-      message: 'Error al enviar mensaje'
+      message: 'Error al enviar mensaje a la IA'
     })
+    // Rollback local message if it failed
+    messages.value = messages.value.filter(m => m.id !== userMessage.id)
+  } finally {
+    isTyping.value = false
   }
 }
 
 /**
  * Create new chat
  */
-const createNewChat = () => {
-  openFullChat()
-}
-
-/**
- * Open full chat
- */
-const openFullChat = () => {
-  router.push('/support')
-  showMiniChat.value = false
+const startNewChat = async () => {
+  // Option 1: Stay in bubble and show empty chat state with input
+  selectedChat.value = { id: 'new', subject: 'Nueva conversación', title: 'Nueva conversación' }
+  messages.value = []
 }
 
 /**
  * Is own message
  */
 const isOwnMessage = (message) => {
-  if (message.sender_id === 777) return true // Mock User ID
-  return message.sender_id === currentUser.value?.id
-}
-
-/**
- * Get initials
- */
-const getInitials = (text) => {
-  if (!text) return '?'
-  return text.split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 2)
-}
-
-/**
- * Truncate text
- */
-const truncate = (text) => {
-  if (!text) return ''
-  return text.length > 40 ? text.substring(0, 40) + '...' : text
+  return message.role === 'user' || message.sender_id === currentUser.value?.id
 }
 
 /**
@@ -440,57 +376,11 @@ const scrollToBottom = () => {
   }
 }
 
-// Listen for new messages
-let supportChannel = null
-
-/**
- * Initialize Pusher subscription
- */
-const initSubscription = () => {
-  if (supportChannel) {
-    echo?.leave(`support.user.${currentUser.value.id}`)
-  }
-
-  if (echo && currentUser.value) {
-    supportChannel = echo.private(`support.user.${currentUser.value.id}`)
-      .listen('.message.sent', (data) => {
-        // Auto-open on new message
-        if (!showMiniChat.value) {
-          showMiniChat.value = true
-          loadChats().then(() => {
-            const incomingChat = chats.value.find(c => c.id === data.message.support_chat_id)
-            if (incomingChat) selectChat(incomingChat)
-          })
-        }
-
-        // Add message if it belongs to selected chat
-        if (selectedChat.value && parseInt(data.message.support_chat_id) === parseInt(selectedChat.value.id)) {
-          // Avoid duplicates
-          const exists = messages.value.some(m => parseInt(m.id) === parseInt(data.message.id))
-          if (!exists) {
-            messages.value.push(data.message)
-            nextTick(() => scrollToBottom())
-          }
-        }
-        loadUnreadCount()
-        loadChats()
-      })
-  }
-}
-
-/**
- * Format relative time short (Messenger style)
- */
-const formatRelativeTimeShort = (dateStr) => {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  const now = new Date()
-  const diff = now - d
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'ahora'
-  if (mins < 60) return `${mins} min`
-  if (mins < 1440) return `${Math.floor(mins / 60)} h`
-  return format(d, 'd MMM', { locale: es })
+const formatMessageContent = (content) => {
+  if (!content) return ''
+  return content
+    .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="chat-link" style="color: #0084ff; text-decoration: none; font-weight: 500;">$1</a>')
+    .replace(/\n/g, '<br>')
 }
 
 /**
@@ -514,7 +404,14 @@ const formatDateHeader = (dateStr) => {
  */
 const isSequential = (message, index) => {
   if (index === 0) return false
-  return messages.value[index - 1].sender_id === message.sender_id
+  const prevMessage = messages.value[index - 1]
+  if (message.role && prevMessage.role) {
+    return message.role === prevMessage.role
+  }
+  if (message.sender_id && prevMessage.sender_id) {
+    return message.sender_id === prevMessage.sender_id
+  }
+  return false
 }
 
 /**
@@ -522,32 +419,22 @@ const isSequential = (message, index) => {
  */
 const isNextSameUser = (message, index) => {
   if (index === messages.value.length - 1) return false
-  return messages.value[index + 1].sender_id === message.sender_id
+  const nextMessage = messages.value[index + 1]
+  if (message.role && nextMessage.role) {
+    return message.role === nextMessage.role
+  }
+  if (message.sender_id && nextMessage.sender_id) {
+    return message.sender_id === nextMessage.sender_id
+  }
+  return false
 }
-
-onMounted(() => {
-  loadUnreadCount()
-  if (currentUser.value) {
-    initSubscription()
-  }
-})
-
-// Watch for user session to initialize subscription
-watch(currentUser, (newVal) => {
-  if (newVal) {
-    initSubscription()
-  }
-}, { immediate: true })
-
-onUnmounted(() => {
-  if (supportChannel && currentUser.value) {
-    echo?.leave(`support.user.${currentUser.value.id}`)
-  }
-})
 
 // Watch for chat selection
 watch(selectedChat, (newVal) => {
-  if (newVal) {
+  // If we select a chat from the list or any other way,
+  // we don't need to load THE LIST again.
+  // Only load chats if we've specifically gone BACK to the list.
+  if (newVal === null) {
     loadChats()
   }
 })
@@ -575,30 +462,39 @@ defineExpose({
   }
 }
 
-.mini-chat-window {
+.mini-chat-container {
   position: fixed;
   bottom: 24px;
   right: 24px;
   width: 360px;
   height: 500px;
+  z-index: 9999;
+}
+
+.full-height-component {
+  height: 100%;
+}
+
+.support-facebook-card {
+  width: 100%;
+  height: 100%;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   transition: all 0.3s;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* active chat specific styles */
+.active-chat-window {
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 /* Messenger Theme Header */
-.messenger-header {
-  height: 60px;
-  padding: 0 8px 0 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.card-header {
   background: white;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .header-content {
@@ -620,16 +516,26 @@ defineExpose({
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
+.ai-avatar-bg {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #0084ff, #00c6ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
 .avatar-wrapper {
   position: relative;
 }
 
 .status-indicator {
   position: absolute;
-  bottom: 2px;
-  right: 2px;
-  width: 10px;
-  height: 10px;
+  bottom: 1px;
+  right: 1px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   border: 2px solid #fff;
   z-index: 1;
@@ -637,6 +543,11 @@ defineExpose({
   &.online {
     background-color: #31a24c;
   }
+}
+
+.palma-avatar {
+  background: linear-gradient(135deg, #0084ff, #00c6ff);
+  box-shadow: 0 2px 8px rgba(0, 132, 255, 0.3);
 }
 
 .header-text {
@@ -647,12 +558,18 @@ defineExpose({
 .header-title {
   font-weight: 700;
   font-size: 15px;
-  color: #050505;
+  color: #18181b;
   line-height: 1.2;
+  letter-spacing: -0.2px;
 }
 
 .header-status {
-  font-size: 11px;
+  display: flex;
+  align-items: center;
+}
+
+.status-text {
+  font-size: 12px;
   color: #65676b;
 }
 
@@ -667,20 +584,36 @@ defineExpose({
   color: #0084ff !important;
 }
 
-.active-chat {
+.mini-chat-content {
+  flex: 1;
+  min-height: 0; /* Critical: allows flex children to shrink properly */
   display: flex;
   flex-direction: column;
-  height: calc(500px - 60px); /* Height minus header */
+  overflow: hidden;
 }
 
-/* Messenger BG & Messages */
-.messenger-bg {
-  background-color: #ffffff;
+.chat-list-mini {
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
+.active-chat {
+  flex: 1;
+  min-height: 0; /* Critical: allows flex children to shrink properly */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: white;
+}
+
+/* Messages scroll area */
 .messages-area {
   flex: 1;
+  min-height: 0; /* Critical: prevents messages from overflowing */
+  background-color: #ffffff;
+  position: relative;
+  z-index: 1;
 }
 
 .messages-list {
@@ -712,10 +645,14 @@ defineExpose({
 
 .messenger-message {
   display: grid;
-  margin-bottom: 2px;
+  margin-bottom: 8px;
   position: relative;
   align-items: flex-end; /* Align avatar with last line */
   gap: 8px;
+
+  &.next-same {
+    margin-bottom: 2px;
+  }
 
   &.other {
     grid-template-columns: 28px 1fr;
@@ -724,15 +661,23 @@ defineExpose({
     .message-bubble {
       background-color: #f0f2f5;
       color: #050505;
+      /* Send by itself -> Tail at bottom-left */
+      border-radius: 18px 18px 18px 0;
+    }
+
+    /* Top message of a group (no prev, has next) -> no tail, flat bottom-left to connect */
+    &.next-same:not(.sequential) .message-bubble {
       border-radius: 18px 18px 18px 4px;
     }
 
-    &.sequential .message-bubble {
-      border-top-left-radius: 4px;
+    /* Middle message of a group (has prev, has next) -> flat top-left, flat bottom-left */
+    &.sequential.next-same .message-bubble {
+      border-radius: 4px 18px 18px 4px;
     }
 
-    &.next-same .message-bubble {
-      border-bottom-left-radius: 4px;
+    /* Bottom message of a group (has prev, no next) -> flat top-left, tail at bottom-left */
+    &.sequential:not(.next-same) .message-bubble {
+      border-radius: 4px 18px 18px 0;
     }
   }
 
@@ -744,16 +689,23 @@ defineExpose({
     .message-bubble {
       background-color: #0084ff;
       color: white;
+      /* Send by itself -> Tail at bottom-right */
+      border-radius: 18px 18px 0 18px;
+    }
+
+    /* Top message of a group (no prev, has next) -> no tail, flat bottom-right to connect */
+    &.next-same:not(.sequential) .message-bubble {
       border-radius: 18px 18px 4px 18px;
     }
 
-    &.sequential .message-bubble {
-      border-top-right-radius: 4px;
-      border-bottom-right-radius: 4px;
+    /* Middle message of a group (has prev, has next) -> flat top-right, flat bottom-right */
+    &.sequential.next-same .message-bubble {
+      border-radius: 18px 4px 4px 18px;
     }
 
-    &.next-same .message-bubble {
-      border-bottom-right-radius: 4px;
+    /* Bottom message of a group (has prev, no next) -> flat top-right, tail at bottom-right */
+    &.sequential:not(.next-same) .message-bubble {
+      border-radius: 18px 4px 0 18px;
     }
 
     .message-bubble-wrapper {
@@ -780,6 +732,12 @@ defineExpose({
   line-height: 1.4;
   word-wrap: break-word;
   position: relative;
+
+  &.typing-bubble {
+    background-color: #f0f2f5;
+    padding: 12px 16px;
+    width: fit-content;
+  }
 }
 
 .message-time-caption {
@@ -795,74 +753,44 @@ defineExpose({
 
 /* Messenger Footer */
 .messenger-footer {
-  padding: 8px 12px;
-  background: white;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.input-container {
-  background: #f0f2f5;
-  border-radius: 20px;
-  padding: 0 12px;
-  margin: 0 8px;
-  min-height: 36px;
-  display: flex;
-  align-items: center;
+  background: #f8f9fa;
+  position: relative;
+  z-index: 100;
 }
 
 .messenger-text-input {
   width: 100%;
   font-size: 14px;
-
-  :deep(.q-field__control) {
-    height: 36px;
-    background: transparent !important;
-  }
 }
 
-/* Chat List Items */
-.messenger-chat-item {
-  display: flex;
-  align-items: center;
-  padding: 10px 16px;
-  gap: 12px;
-  cursor: pointer;
-  transition: background 0.2s;
-  position: relative;
-
-  &:hover {
-    background: #f5f5f5;
-  }
-
-  .chat-subject {
-    font-weight: 600;
-    font-size: 14px;
-    color: #050505;
-  }
-
-  .chat-preview {
-    font-size: 12px;
-    color: #65676b;
-
-    .time {
-      flex-shrink: 0;
-    }
-  }
-
-  .unread-dot {
-    width: 12px;
-    height: 12px;
-    background: #0084ff;
-    border-radius: 50%;
-    position: absolute;
-    right: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-  }
+.send-btn {
+  margin-left: 4px;
 }
 
 .rounded-pill {
   border-radius: 20px;
+}
+
+.typing-animation {
+  display: flex;
+  gap: 4px;
+  padding: 4px 0;
+
+  span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #9ca3af;
+    animation: typing-bounce 1.4s infinite ease-in-out;
+
+    &:nth-child(2) { animation-delay: 0.2s; }
+    &:nth-child(3) { animation-delay: 0.4s; }
+  }
+}
+
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-4px); }
 }
 
 // Animations
@@ -879,17 +807,18 @@ defineExpose({
 
 .slide-up-enter-active,
 .slide-up-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.15);
+  transform-origin: bottom right;
 }
 
 .slide-up-enter-from,
 .slide-up-leave-to {
   opacity: 0;
-  transform: translateY(20px);
+  transform: translateY(40px) scale(0.3);
 }
 
 @media (max-width: 600px) {
-  .mini-chat-window {
+  .mini-chat-container {
     width: calc(100vw - 32px);
     height: calc(100vh - 100px);
     bottom: 16px;
@@ -897,26 +826,35 @@ defineExpose({
   }
 }
 
-/* Transitions for messages */
-.slide-left-enter-active, .slide-right-enter-active {
-  transition: transform 0.3s ease;
+// Transitions for view switching
+.fade-scale-enter-active,
+.fade-scale-leave-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.slide-left-enter-from { transform: translateX(100%); }
-.slide-right-enter-from { transform: translateX(-100%); }
+
+.fade-scale-enter-from,
+.fade-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
 
 /* Dark Mode */
 .body--dark {
-  .mini-chat-window, .messenger-header, .messenger-footer, .messenger-bg {
+  .support-facebook-card {
     background-color: #242526;
+    border-color: rgba(255, 255, 255, 0.1);
   }
 
-  .header-title, .chat-subject { color: #e4e6eb; }
+  .card-header, .messenger-footer, .messenger-bg, .messages-area, .active-chat {
+    background-color: #242526 !important;
+  }
+
+  .support-name, .header-title, .chat-subject { color: #e4e6eb; }
   .header-status, .status-text, .encryption-notice, .date-separator, .message-time-caption, .chat-preview { color: #b0b3b8; }
 
-  .messenger-header, .messenger-footer { border-color: rgba(255, 255, 255, 0.1); }
+  .card-header, .messenger-footer { border-color: rgba(255, 255, 255, 0.1); }
 
   .input-container { background-color: #3a3b3c; }
-  .messenger-chat-item:hover { background-color: #3a3b3c; }
 
   .messenger-message.other .message-bubble {
     background-color: #3a3b3c;
