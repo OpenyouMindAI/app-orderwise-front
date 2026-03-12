@@ -108,7 +108,26 @@
 
                       <div class="message-bubble-wrapper">
                         <div class="message-bubble shadow-sm">
-                          <div v-if="message.content" class="message-text" v-html="formatMessageContent(message.content)"></div>
+                          <div v-if="getVideoData(message.content)" class="video-messages-container">
+                            <div
+                              v-for="(video, vIdx) in getVideoData(message.content)"
+                              :key="vIdx"
+                              class="video-card cursor-pointer"
+                              @click="playVideo(video.url)"
+                            >
+                              <div class="video-thumbnail-container">
+                                <q-img :src="getFileUrl(video.picture)" class="video-thumbnail" />
+                                <div class="play-overlay">
+                                  <q-icon name="play_arrow" size="42px" color="white" />
+                                </div>
+                              </div>
+                              <div class="video-info q-pa-sm">
+                                <div class="video-title text-weight-bold">{{ video.title }}</div>
+                                <div class="video-description">{{ video.description }}</div>
+                              </div>
+                            </div>
+                          </div>
+                          <div v-else-if="message.content" class="message-text" v-html="formatMessageContent(message.content)"></div>
                         </div>
                         <div v-if="!isNextSameUser(message, messages.length - 1 - index)" class="message-time-caption">
                           {{ formatTimeShort(message.created_at) }}
@@ -120,7 +139,26 @@
                     <template v-else>
                       <div class="message-bubble-wrapper">
                         <div class="message-bubble shadow-sm">
-                          <div v-if="message.content" class="message-text">{{ message.content }}</div>
+                          <div v-if="getVideoData(message.content)" class="video-messages-container">
+                            <div
+                              v-for="(video, vIdx) in getVideoData(message.content)"
+                              :key="vIdx"
+                              class="video-card cursor-pointer"
+                              @click="playVideo(video.url)"
+                            >
+                              <div class="video-thumbnail-container">
+                                <q-img :src="getFileUrl(video.picture)" class="video-thumbnail" />
+                                <div class="play-overlay">
+                                  <q-icon name="play_arrow" size="42px" color="white" />
+                                </div>
+                              </div>
+                              <div class="video-info q-pa-sm">
+                                <div class="video-title text-weight-bold">{{ video.title }}</div>
+                                <div class="video-description">{{ video.description }}</div>
+                              </div>
+                            </div>
+                          </div>
+                          <div v-else-if="message.content" class="message-text">{{ message.content }}</div>
                         </div>
                         <div v-if="!isNextSameUser(message, messages.length - 1 - index)" class="message-time-caption">
                           {{ formatTimeShort(message.created_at) }}
@@ -171,6 +209,30 @@
         </transition>
       </div>
     </transition>
+
+    <!-- Video Tutorial Modal -->
+    <q-dialog v-model="showVideoModal" full-width full-height class="video-modal" transition-show="fade" transition-hide="fade">
+      <q-card class="bg-black text-white full-width full-height relative-position overflow-hidden">
+        <q-btn
+          flat round dense
+          icon="close"
+          color="white"
+          class="absolute-top-right q-ma-md z-max"
+          size="lg"
+          v-close-popup
+        />
+
+        <div class="flex flex-center full-width full-height">
+          <video
+            v-if="showVideoModal"
+            :src="currentVideoUrl"
+            controls
+            autoplay
+            class="video-player"
+          ></video>
+        </div>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -222,6 +284,12 @@ const newMessage = ref('')
  * Messages area ref
  */
 const messagesArea = ref(null)
+
+/**
+ * Video Modal State
+ */
+const showVideoModal = ref(false)
+const currentVideoUrl = ref('')
 
 /**
  * Chat input ref
@@ -300,27 +368,56 @@ const sendMessage = async () => {
         branch_office_id: authStore.branchOffice?.id
       })
 
-      // Update selected chat and message list (data is the new chat)
-      const newChat = data.chat || data
-      selectedChat.value = newChat
-      chats.value.unshift(newChat)
-      messages.value = newChat.messages || []
+      // Update selected chat and message list
+      // Handle both full chat object or just response message
+      const newChat = data.chat || (data.id ? data : null)
+
+      if (newChat) {
+        selectedChat.value = newChat
+        chats.value.unshift(newChat)
+        messages.value = newChat.messages || messages.value
+      }
+
+      // If there's an assistant message in the response but not in the chat object
+      const assistantMessage = data.assistant_message ||
+                               (typeof data.message === 'string' && !data.id ? {
+                                 id: Date.now() + 1,
+                                 role: 'assistant',
+                                 content: data.message,
+                                 created_at: new Date().toISOString()
+                               } : null)
+
+      if (assistantMessage && !messages.value.some(m => m.role === 'assistant')) {
+        messages.value.push(assistantMessage)
+      }
     } else {
       const { data } = await api.post(`ai-chats/${selectedChat.value.id}/messages`, {
         message: messageText,
         branch_office_id: authStore.branchOffice?.id
       })
 
-      // Replace the local mock user message with the real one from server
+      console.log('API Response (Message):', data)
+
+      // Replace the local mock user message with the real one from server if available
       const userIdx = messages.value.findIndex(m => m.id === userMessage.id)
       if (userIdx !== -1 && data.user_message) messages.value[userIdx] = data.user_message
 
-      messages.value.push(data.assistant_message)
+      // Handle assistant message from various possible locations in response
+      const assistantMessage = data.assistant_message || {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: data.output || data.message || (typeof data === 'string' ? data : ''),
+        created_at: new Date().toISOString()
+      }
+
+      if (assistantMessage.content) {
+        messages.value.push(assistantMessage)
+      }
 
       // Update last message in chat list
       const chatIndex = chats.value.findIndex(c => c.id === selectedChat.value.id)
       if (chatIndex !== -1) {
-        chats.value[chatIndex].last_message = data.assistant_message
+        chats.value[chatIndex].last_message = assistantMessage
         chats.value[chatIndex].updated_at = new Date().toISOString()
       }
     }
@@ -353,6 +450,7 @@ const startNewChat = async () => {
  * Is own message
  */
 const isOwnMessage = (message) => {
+  if (!message) return false
   return message.role === 'user' || message.sender_id === currentUser.value?.id
 }
 
@@ -372,9 +470,46 @@ const scrollToBottom = () => {
 
 const formatMessageContent = (content) => {
   if (!content) return ''
+  // If it's a JSON string that looks like our video data, Don't format it as text
+  if (typeof content === 'string' && content.startsWith('[') && content.includes('"url"')) {
+    return ''
+  }
   return content
     .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="chat-link" style="color: #0084ff; text-decoration: none; font-weight: 500;">$1</a>')
-    .replace(/\n/g, '<br>')
+}
+
+/**
+ * Detect and parse video tutorial data from n8n
+ */
+const getVideoData = (content) => {
+  if (!content) return null
+  try {
+    const parsed = typeof content === 'string' ? JSON.parse(content) : content
+    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].url && parsed[0].title) {
+      return parsed
+    }
+    return null
+  } catch (e) {
+    return null
+  }
+}
+
+/**
+ * Get absolute URL for files (video/images)
+ */
+const getFileUrl = (path) => {
+  if (!path) return ''
+  if (path.startsWith('http')) return path
+  const r2Domain = 'https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev'
+  return `${r2Domain}/${path}`
+}
+
+/**
+ * Open video in modal
+ */
+const playVideo = (url) => {
+  currentVideoUrl.value = getFileUrl(url)
+  showVideoModal.value = true
 }
 
 /**
@@ -389,8 +524,10 @@ const formatTimeShort = (dateStr) => {
  * Check if messages are from same user to group them
  */
 const isSequential = (message, index) => {
-  if (index === 0) return false
+  if (index === 0 || !message) return false
   const prevMessage = messages.value[index - 1]
+  if (!prevMessage) return false
+
   if (message.role && prevMessage.role) {
     return message.role === prevMessage.role
   }
@@ -404,8 +541,10 @@ const isSequential = (message, index) => {
  * Check if next message is from same user
  */
 const isNextSameUser = (message, index) => {
-  if (index === messages.value.length - 1) return false
+  if (index === messages.value.length - 1 || !message) return false
   const nextMessage = messages.value[index + 1]
+  if (!nextMessage) return false
+
   if (message.role && nextMessage.role) {
     return message.role === nextMessage.role
   }
@@ -718,13 +857,15 @@ defineExpose({
   display: flex;
   flex-direction: column;
   max-width: 100%;
+  min-width: 0;
 }
 
 .message-bubble {
   padding: 8px 12px;
   font-size: 14px;
   line-height: 1.4;
-  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
   position: relative;
 
   &.typing-bubble {
@@ -732,6 +873,106 @@ defineExpose({
     padding: 12px 16px;
     width: fit-content;
   }
+}
+
+.message-text {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: pre-wrap;
+
+  :deep(a) {
+    word-break: break-all;
+  }
+}
+
+.video-messages-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.video-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+  width: 240px;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+
+    .video-thumbnail {
+      transform: scale(1.05);
+    }
+
+    .play-overlay {
+      background: rgba(0,0,0,0.4);
+      opacity: 1;
+    }
+  }
+}
+
+.video-thumbnail-container {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16/9;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-thumbnail {
+  width: 100%;
+  height: 100%;
+  transition: transform 0.3s ease;
+}
+
+.play-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.2);
+  opacity: 0.9;
+  transition: all 0.3s ease;
+  z-index: 2;
+}
+
+.video-info {
+  background: #f8f9fa;
+}
+
+.video-title {
+  font-size: 13px;
+  line-height: 1.3;
+  color: #1a1a1b;
+  margin-bottom: 4px;
+}
+
+.video-description {
+  font-size: 11px;
+  line-height: 1.2;
+  color: #5f6368;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.video-player {
+  max-width: 90%;
+  max-height: 80%;
+  border-radius: 8px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
 }
 
 .message-time-caption {

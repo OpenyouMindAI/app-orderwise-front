@@ -13,9 +13,22 @@ import path from 'path'
 import dotenv from 'dotenv'
 
 export default configure(function (/* ctx */) {
-  // Cargar variables de entorno según entorno actual
-  const envFile = `.env.${process.env.NODE_ENV}`
-  const env = dotenv.config({ path: envFile }).parsed
+  // Cargar variables de entorno siguiendo el estándar de Vite (.env, .env.local, .env.[mode], .env.[mode].local)
+  const nodeEnv = process.env.NODE_ENV || 'development'
+  const envFiles = [
+    '.env',
+    '.env.local',
+    `.env.${nodeEnv}`,
+    `.env.${nodeEnv}.local`
+  ]
+
+  let env = {}
+  for (const file of envFiles) {
+    const result = dotenv.config({ path: path.resolve(__dirname, file) })
+    if (!result.error) {
+      env = { ...env, ...result.parsed }
+    }
+  }
 
   return {
     eslint: {
@@ -27,7 +40,6 @@ export default configure(function (/* ctx */) {
     // preFetch: true,
 
     boot: [
-      'msw',
       'i18n',
       'axios',
       'authorization',
