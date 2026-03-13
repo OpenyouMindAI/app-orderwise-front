@@ -81,7 +81,7 @@
                 {{ chat.title || chat.subject || 'Conversación' }}
               </div>
               <div class="chat-row-subtitle text-grey-7 text-caption text-no-wrap ellipsis">
-                {{ chat.last_message?.content || 'Ver conversación' }}
+                {{ formatLastMessage(chat.last_message?.content) }}
               </div>
             </div>
             <div class="column items-end">
@@ -160,6 +160,29 @@ const formatDate = (dateStr) => {
   if (!dateStr) return ''
   const d = new Date(dateStr)
   return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+}
+
+const formatLastMessage = (content) => {
+  if (!content) return 'Ver conversación'
+  try {
+    let raw = content
+    // Handle nested message property from n8n/other sources
+    if (typeof raw === 'object' && raw !== null && raw.message) {
+      raw = raw.message
+    }
+
+    if (typeof raw === 'string' && (raw.trim().startsWith('[') || raw.trim().startsWith('{'))) {
+      const parsed = JSON.parse(raw)
+      const data = Array.isArray(parsed) ? parsed[0] : (parsed.message ? JSON.parse(parsed.message)[0] : parsed)
+      
+      if (data && (data.message || data.title)) {
+        return data.message || data.title
+      }
+    }
+    return typeof raw === 'string' ? raw : 'Ver conversación'
+  } catch (e) {
+    return content
+  }
 }
 
 onMounted(() => {

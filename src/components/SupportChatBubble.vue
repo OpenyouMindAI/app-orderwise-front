@@ -106,15 +106,16 @@
                         </q-avatar>
                       </div>
 
-                      <div class="message-bubble-wrapper">
-                        <div class="message-bubble shadow-sm">
-                          <div v-if="getVideoData(message.content)" class="video-messages-container">
-                            <div
-                              v-for="(video, vIdx) in getVideoData(message.content)"
-                              :key="vIdx"
-                              class="video-card cursor-pointer"
-                              @click="playVideo(video.url)"
-                            >
+                      <!-- Video: thumbnail bubble + message bubble -->
+                      <template v-if="getVideoData(message.content)">
+                        <div
+                          v-for="(video, vIdx) in getVideoData(message.content)"
+                          :key="vIdx"
+                          class="video-group"
+                        >
+                          <!-- Bubble 1: thumbnail clicable -->
+                          <div class="message-bubble-wrapper">
+                            <div class="message-bubble shadow-sm video-bubble" @click="openVideoModal(video)">
                               <div class="video-thumbnail-container">
                                 <q-img :src="getFileUrl(video.picture)" class="video-thumbnail" />
                                 <div class="play-overlay">
@@ -123,11 +124,22 @@
                               </div>
                               <div class="video-info q-pa-sm">
                                 <div class="video-title text-weight-bold">{{ video.title }}</div>
-                                <div class="video-description">{{ video.description }}</div>
                               </div>
                             </div>
                           </div>
-                          <div v-else-if="message.content" class="message-text" v-html="formatMessageContent(message.content)"></div>
+                          <!-- Bubble 2: video.message como mensaje separado -->
+                          <div v-if="video.message" class="message-bubble-wrapper q-mt-xs">
+                            <div class="message-bubble shadow-sm">
+                              <div class="message-text">{{ video.message }}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </template>
+
+                      <!-- Mensaje normal -->
+                      <div v-else class="message-bubble-wrapper">
+                        <div class="message-bubble shadow-sm">
+                          <div v-if="message.content" class="message-text" v-html="formatMessageContent(message.content)"></div>
                         </div>
                         <div v-if="!isNextSameUser(message, messages.length - 1 - index)" class="message-time-caption">
                           {{ formatTimeShort(message.created_at) }}
@@ -137,15 +149,16 @@
 
                     <!-- Own Message: Content Aligned Right -->
                     <template v-else>
-                      <div class="message-bubble-wrapper">
-                        <div class="message-bubble shadow-sm">
-                          <div v-if="getVideoData(message.content)" class="video-messages-container">
-                            <div
-                              v-for="(video, vIdx) in getVideoData(message.content)"
-                              :key="vIdx"
-                              class="video-card cursor-pointer"
-                              @click="playVideo(video.url)"
-                            >
+                      <!-- Video: thumbnail bubble + message bubble -->
+                      <template v-if="getVideoData(message.content)">
+                        <div
+                          v-for="(video, vIdx) in getVideoData(message.content)"
+                          :key="vIdx"
+                          class="video-group"
+                        >
+                          <!-- Bubble 1: thumbnail clicable -->
+                          <div class="message-bubble-wrapper">
+                            <div class="message-bubble shadow-sm video-bubble" @click="openVideoModal(video)">
                               <div class="video-thumbnail-container">
                                 <q-img :src="getFileUrl(video.picture)" class="video-thumbnail" />
                                 <div class="play-overlay">
@@ -154,11 +167,22 @@
                               </div>
                               <div class="video-info q-pa-sm">
                                 <div class="video-title text-weight-bold">{{ video.title }}</div>
-                                <div class="video-description">{{ video.description }}</div>
                               </div>
                             </div>
                           </div>
-                          <div v-else-if="message.content" class="message-text">{{ message.content }}</div>
+                          <!-- Bubble 2: video.message como mensaje separado -->
+                          <div v-if="video.message" class="message-bubble-wrapper q-mt-xs">
+                            <div class="message-bubble shadow-sm">
+                              <div class="message-text">{{ video.message }}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </template>
+
+                      <!-- Mensaje normal (propio) -->
+                      <div v-else class="message-bubble-wrapper">
+                        <div class="message-bubble shadow-sm">
+                          <div v-if="message.content" class="message-text">{{ message.content }}</div>
                         </div>
                         <div v-if="!isNextSameUser(message, messages.length - 1 - index)" class="message-time-caption">
                           {{ formatTimeShort(message.created_at) }}
@@ -211,8 +235,8 @@
     </transition>
 
     <!-- Video Tutorial Modal -->
-    <q-dialog v-model="showVideoModal" full-width full-height class="video-modal" transition-show="fade" transition-hide="fade">
-      <q-card class="bg-black text-white full-width full-height relative-position overflow-hidden">
+    <q-dialog v-model="showVideoModal" maximized persistent class="video-modal" transition-show="fade" transition-hide="fade">
+      <div class="video-modal-container no-scroll">
         <q-btn
           flat round dense
           icon="close"
@@ -222,16 +246,14 @@
           v-close-popup
         />
 
-        <div class="flex flex-center full-width full-height">
-          <video
-            v-if="showVideoModal"
-            :src="currentVideoUrl"
-            controls
-            autoplay
-            class="video-player"
-          ></video>
-        </div>
-      </q-card>
+        <video
+          v-if="showVideoModal"
+          :src="currentVideoUrl"
+          controls
+          autoplay
+          class="video-player"
+        ></video>
+      </div>
     </q-dialog>
   </div>
 </template>
@@ -479,13 +501,21 @@ const formatMessageContent = (content) => {
 }
 
 /**
- * Detect and parse video tutorial data from n8n
+ * Detect and parse video tutorial data.
+ * Handles two shapes:
+ *  1. Full response object:   { message: "[{...}]" }  (n8n webhook response)
+ *  2. Plain JSON array string: "[{url, title, ...}]"
  */
 const getVideoData = (content) => {
   if (!content) return null
   try {
-    const parsed = typeof content === 'string' ? JSON.parse(content) : content
-    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].url && parsed[0].title) {
+    let raw = content
+    // Shape 1: the response itself is an object with a `message` string
+    if (typeof raw === 'object' && raw !== null && typeof raw.message === 'string') {
+      raw = raw.message
+    }
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].url) {
       return parsed
     }
     return null
@@ -505,11 +535,12 @@ const getFileUrl = (path) => {
 }
 
 /**
- * Open video in modal
+ * Open video in fullscreen modal
  */
-const playVideo = (url) => {
-  currentVideoUrl.value = getFileUrl(url)
+const openVideoModal = (video) => {
+  currentVideoUrl.value = getFileUrl(video.url)
   showVideoModal.value = true
+  showMiniChat.value = false // Close chat when video opens
 }
 
 /**
@@ -898,33 +929,23 @@ defineExpose({
   }
 }
 
-.video-messages-container {
+.video-group {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 4px;
   width: 100%;
 }
 
-.video-card {
-  background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  transition: all 0.2s ease;
-  width: 240px;
+.video-bubble {
+  padding: 4px !important;
+  cursor: pointer;
 
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  &:hover .play-overlay {
+    background: rgba(0, 0, 0, 0.45);
+  }
 
-    .video-thumbnail {
-      transform: scale(1.05);
-    }
-
-    .play-overlay {
-      background: rgba(0,0,0,0.4);
-      opacity: 1;
-    }
+  &:hover .video-thumbnail {
+    transform: scale(1.03);
   }
 }
 
@@ -932,10 +953,7 @@ defineExpose({
   position: relative;
   overflow: hidden;
   aspect-ratio: 16/9;
-  background: #000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 10px;
 }
 
 .video-thumbnail {
@@ -946,21 +964,18 @@ defineExpose({
 
 .play-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0,0,0,0.2);
-  opacity: 0.9;
-  transition: all 0.3s ease;
+  background: rgba(0, 0, 0, 0.25);
+  transition: background 0.2s ease;
   z-index: 2;
 }
 
 .video-info {
   background: #f8f9fa;
+  border-radius: 0 0 10px 10px;
 }
 
 .video-title {
@@ -981,11 +996,41 @@ defineExpose({
   overflow: hidden;
 }
 
+.video-inner-message {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #444;
+  white-space: pre-wrap;
+}
+
+.video-modal :deep(.q-dialog__inner) {
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  background: rgba(0, 0, 0, 0.8) !important; /* Semi-transparent backdrop look */
+}
+
+.video-modal-container {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
 .video-player {
+  width: auto;
+  height: auto;
   max-width: 90%;
-  max-height: 80%;
-  border-radius: 8px;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  max-height: 85%;
+  display: block;
+  outline: none;
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .message-time-caption {

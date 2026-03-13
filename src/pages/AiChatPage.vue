@@ -41,7 +41,7 @@
                 </div>
                 <div class="conv-content">
                   <div class="conv-title">{{ chat.title || 'Nueva conversación' }}</div>
-                  <div class="conv-preview">{{ truncateMessage(chat.last_message?.content) || 'Iniciar chat...' }}</div>
+                  <div class="conv-preview">{{ formatLastMessage(chat.last_message?.content) || 'Iniciar chat...' }}</div>
                 </div>
                 <q-btn
                   flat
@@ -143,32 +143,31 @@
               >
                 <div
                   v-for="message in messages"
-                  :key="message.id"
+                  :key="message?.id"
                   class="message-block"
-                  :class="message.role"
+                  :class="message?.role"
                 >
                   <div class="message-avatar">
-                    <q-avatar size="32px" :color="message.role === 'user' ? 'primary' : 'grey-3'">
-                      <q-icon :name="message.role === 'user' ? 'person' : 'smart_toy'" :color="message.role === 'user' ? 'white' : 'grey-7'" />
+                    <q-avatar size="32px" :color="message?.role === 'user' ? 'primary' : 'grey-3'">
+                      <q-icon :name="message?.role === 'user' ? 'person' : 'smart_toy'" :color="message?.role === 'user' ? 'white' : 'grey-7'" />
                     </q-avatar>
                   </div>
                   <div class="message-body">
-                    <div class="message-author">{{ message.role === 'user' ? 'Tú' : 'Asistente IA' }}</div>
-                    <div class="message-text" v-html="formatMessage(message.content)"></div>
+                    <div class="message-author">{{ message?.role === 'user' ? 'Tú' : 'Asistente IA' }}</div>
+                    <div v-if="!getVideoData(message.content)" class="message-text" v-html="formatMessage(message.content)"></div>
 
-                    <!-- Tutoriales -->
-                    <div v-if="message.metadata?.tutorials?.length > 0" class="tutorials-container">
+                    <!-- Unified Tutorials Section -->
+                    <div v-if="hasTutorials(message)" class="tutorials-container q-mt-md">
                       <div class="tutorials-header">
                         <q-icon name="school" size="18px" />
                         <span>Recursos relacionados</span>
                       </div>
                       <div class="tutorials-grid">
                         <div
-                          v-for="tutorial in message.metadata.tutorials"
-                          :key="tutorial.id"
+                          v-for="(tutorial, tIdx) in getNormalizedTutorials(message)"
+                          :key="tIdx"
                           class="tutorial-card-modern"
                         >
-                          <!-- Video Player Embebido -->
                           <div class="tutorial-video-wrapper" v-if="tutorial.video_url">
                             <video
                               :src="tutorial.video_url"
@@ -178,23 +177,22 @@
                             ></video>
                           </div>
 
-                          <!-- Info del Tutorial -->
                           <div class="tutorial-info">
                             <div class="tutorial-title">{{ tutorial.title }}</div>
                             <div class="tutorial-description" v-if="tutorial.description">
                               {{ tutorial.description }}
                             </div>
-                            <div class="tutorial-stats">
-                              <span v-if="tutorial.views_count">
-                                <q-icon name="visibility" size="14px" /> {{ tutorial.views_count }}
+
+                            <div class="tutorial-stats" v-if="tutorial.views || tutorial.likes">
+                              <span v-if="tutorial.views">
+                                <q-icon name="visibility" size="14px" /> {{ tutorial.views }}
                               </span>
-                              <span v-if="tutorial.likes_count">
-                                <q-icon name="favorite" size="14px" /> {{ tutorial.likes_count }}
+                              <span v-if="tutorial.likes">
+                                <q-icon name="favorite" size="14px" /> {{ tutorial.likes }}
                               </span>
                             </div>
 
-                            <!-- Botón para ir a la aplicación -->
-                            <div class="q-mt-md">
+                            <div class="q-mt-md" v-if="tutorial.id">
                               <q-btn
                                 flat
                                 color="primary"
@@ -208,72 +206,78 @@
                           </div>
                         </div>
                       </div>
+
+                      <template v-for="(tutorial, tIdx) in getNormalizedTutorials(message)" :key="'m-'+tIdx">
+                        <div v-if="tutorial.extra_message" class="message-text q-mt-md">
+                          {{ tutorial.extra_message }}
+                        </div>
+                      </template>
                     </div>
 
                     <div class="message-timestamp">{{ formatTime(message.created_at) }}</div>
                   </div>
                 </div>
 
-                <!-- Typing Indicator -->
-                <div v-if="isTyping" class="message-block assistant">
-                  <div class="message-avatar">
-                    <q-avatar size="32px" color="grey-3">
-                      <q-icon name="smart_toy" color="grey-7" />
-                    </q-avatar>
-                  </div>
-                  <div class="message-body">
-                    <div class="message-author">Asistente IA</div>
-                    <div class="typing-animation">
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                    </div>
+              <!-- Typing Indicator -->
+              <div v-if="isTyping" class="message-block assistant">
+                <div class="message-avatar">
+                  <q-avatar size="32px" color="grey-3">
+                    <q-icon name="smart_toy" color="grey-7" />
+                  </q-avatar>
+                </div>
+                <div class="message-body">
+                  <div class="message-author">Asistente IA</div>
+                  <div class="typing-animation">
+                    <span></span>
+                    <span></span>
+                    <span></span>
                   </div>
                 </div>
               </div>
-            </q-scroll-area>
-          </div>
+            </div>
+          </q-scroll-area>
+        </div>
 
-          <!-- Input Moderno -->
-          <div class="input-container-modern">
-            <div class="input-box">
-              <q-input
-                v-model="newMessage"
-                placeholder="Envía un mensaje al asistente..."
-                borderless
-                autogrow
-                dense
-                class="modern-input"
-                @keyup.enter.exact="sendMessage"
-              >
-                <template v-slot:prepend>
-                  <q-btn flat round dense icon="attach_file" size="sm" color="grey-6" />
-                </template>
-                <template v-slot:append>
-                  <q-btn
-                    v-if="newMessage.trim()"
-                    unelevated
-                    round
-                    icon="send"
-                    color="primary"
-                    size="sm"
-                    @click="sendMessage"
-                    :disable="isTyping"
-                    class="send-btn-modern"
-                  />
-                  <q-btn v-else flat round dense icon="mic" size="sm" color="grey-6" />
-                </template>
-              </q-input>
-            </div>
-            <div class="input-footer">
-              <span class="text-caption text-grey-6">El asistente puede cometer errores. Verifica la información importante.</span>
-            </div>
+        <!-- Input Moderno -->
+        <div class="input-container-modern">
+          <div class="input-box">
+            <q-input
+              v-model="newMessage"
+              placeholder="Envía un mensaje al asistente..."
+              borderless
+              autogrow
+              dense
+              class="modern-input"
+              @keyup.enter.exact="sendMessage"
+            >
+              <template v-slot:prepend>
+                <q-btn flat round dense icon="attach_file" size="sm" color="grey-6" />
+              </template>
+              <template v-slot:append>
+                <q-btn
+                  v-if="newMessage.trim()"
+                  unelevated
+                  round
+                  icon="send"
+                  color="primary"
+                  size="sm"
+                  @click="sendMessage"
+                  :disable="isTyping"
+                  class="send-btn-modern"
+                />
+                <q-btn v-else flat round dense icon="mic" size="sm" color="grey-6" />
+              </template>
+            </q-input>
+          </div>
+          <div class="input-footer">
+            <span class="text-caption text-grey-6">El asistente puede cometer errores. Verifica la información importante.</span>
           </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Dialog Tutorial -->
+    <!-- Dialog Tutorial (Legacy) -->
     <q-dialog v-model="showTutorialDialog" maximized>
       <q-card class="tutorial-dialog">
         <q-card-section class="row items-center q-pb-none">
@@ -446,20 +450,39 @@ export default {
           message: messageText,
           branch_office_id: this.currentBranchOffice?.id
         })
-        const userIndex = this.messages.findIndex(m => m.id === userMessage.id)
-        if (userIndex !== -1) this.messages[userIndex] = data.user_message
-        this.messages.push(data.assistant_message)
+
+        // Replace local mock with server one
+        const userIndex = this.messages.findIndex(m => m && m.id === userMessage.id)
+        if (userIndex !== -1 && data.user_message) {
+          this.messages[userIndex] = data.user_message
+        }
+
+        // Handle assistant message (various response shapes)
+        const assistantMessage = data.assistant_message || {
+          id: Date.now() + 1,
+          role: 'assistant',
+          content: data.output || data.message || (typeof data === 'string' ? data : ''),
+          created_at: new Date().toISOString()
+        }
+
+        if (assistantMessage.content) {
+          this.messages.push(assistantMessage)
+        }
+
+        // Update the chat preview in sidebar
         const chatIndex = this.chats.findIndex(c => c.id === this.selectedChat.id)
         if (chatIndex !== -1) {
-          this.chats[chatIndex].last_message = data.assistant_message
-          this.chats[chatIndex].last_message_at = data.assistant_message.created_at
+          this.chats[chatIndex].last_message = assistantMessage
+          this.chats[chatIndex].last_message_at = assistantMessage.created_at || new Date().toISOString()
         }
+
         await this.$nextTick()
         this.scrollToBottom()
       } catch (error) {
         console.error('Error sending message:', error)
         this.$q.notify({ type: 'negative', message: 'Error al enviar el mensaje' })
-        this.messages = this.messages.filter(m => m.id !== userMessage.id)
+        // Guard against undefined messages during filter
+        this.messages = this.messages.filter(m => m && m.id !== userMessage.id)
       } finally {
         this.isTyping = false
       }
@@ -530,8 +553,73 @@ export default {
     truncateMessage (message) {
       if (!message) return ''
       const maxLength = 40
-      if (message.length <= maxLength) return message
-      return message.substring(0, maxLength) + '...'
+      return message.length <= maxLength ? message : message.substring(0, maxLength) + '...'
+    },
+
+    getVideoData (content) {
+      if (!content) return null
+      try {
+        let raw = content
+        if (typeof raw === 'object' && raw !== null && typeof raw.message === 'string') raw = raw.message
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+        return (Array.isArray(parsed) && parsed.length > 0 && parsed[0].url) ? parsed : null
+      } catch (e) { return null }
+    },
+
+    getFileUrl (path) {
+      if (!path) return ''
+      if (path.startsWith('http')) return path
+      return `https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev/${path}`
+    },
+
+    hasTutorials (message) {
+      return !!this.getVideoData(message.content) || (message.metadata?.tutorials?.length > 0)
+    },
+
+    getNormalizedTutorials (message) {
+      const tutorials = []
+      const videoData = this.getVideoData(message.content)
+
+      if (videoData) {
+        videoData.forEach(v => {
+          tutorials.push({
+            title: v.title,
+            description: v.description,
+            video_url: this.getFileUrl(v.url),
+            miniature_url: this.getFileUrl(v.picture),
+            extra_message: v.message
+          })
+        })
+      }
+
+      if (message.metadata?.tutorials) {
+        message.metadata.tutorials.forEach(t => {
+          tutorials.push({
+            id: t.id,
+            title: t.title,
+            description: t.description,
+            video_url: t.video_url,
+            miniature_url: t.miniature_url,
+            views: t.views_count,
+            likes: t.likes_count
+          })
+        })
+      }
+      return tutorials
+    },
+
+    formatLastMessage (content) {
+      if (!content) return 'Iniciar chat...'
+      try {
+        let raw = content
+        if (typeof raw === 'object' && raw !== null && raw.message) raw = raw.message
+        if (typeof raw === 'string' && (raw.trim().startsWith('[') || raw.trim().startsWith('{'))) {
+          const parsed = JSON.parse(raw)
+          const data = Array.isArray(parsed) ? parsed[0] : (parsed.message ? JSON.parse(parsed.message)[0] : parsed)
+          if (data && (data.message || data.title)) return data.message || data.title
+        }
+        return this.truncateMessage(typeof raw === 'string' ? raw : '')
+      } catch (e) { return this.truncateMessage(content) }
     }
   }
 }
