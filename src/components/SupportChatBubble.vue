@@ -748,10 +748,23 @@ defineExpose({
   /* Smooth scrolling for new messages */
   scroll-behavior: smooth;
 
-  /* Thin scrollbar */
-  &::-webkit-scrollbar { width: 4px; }
-  &::-webkit-scrollbar-track { background: transparent; }
-  &::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  &:hover::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.3);
+    background-clip: content-box;
+  }
 }
 
 .encryption-notice {

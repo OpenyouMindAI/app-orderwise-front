@@ -41,60 +41,62 @@
 
     <q-separator />
 
-    <!-- Chat List -->
-    <q-scroll-area class="chats-wrapper">
-      <!-- Loading -->
-      <div v-if="loading" class="text-center q-pa-lg">
-        <q-spinner color="primary" size="32px" />
-      </div>
+    <!-- Chat List Container -->
+    <div class="chats-main-container">
+      <div class="chats-wrapper custom-scrollbar">
+        <!-- Loading -->
+        <div v-if="loading" class="text-center q-pa-lg">
+          <q-spinner color="primary" size="32px" />
+        </div>
 
-      <!-- Empty state -->
-      <div v-else-if="chats.length === 0" class="empty-state q-pa-xl text-center" @click="onNewChat">
-        <q-icon name="chat_bubble_outline" size="48px" color="grey-3" />
-        <div class="text-h6 text-grey-9 q-mt-md">¡Hola!</div>
-        <div class="text-body2 text-grey-6 q-mt-xs">Habla con Palma para resolver tus dudas.</div>
-        <q-btn
-          unelevated
-          color="primary"
-          label="Empezar a chatear"
-          icon="send"
-          class="q-mt-lg rounded-pill"
-          @click.stop="onNewChat"
-        />
-      </div>
+        <!-- Empty state -->
+        <div v-else-if="chats.length === 0" class="empty-state q-pa-xl text-center" @click="onNewChat">
+          <q-icon name="chat_bubble_outline" size="48px" color="grey-3" />
+          <div class="text-h6 text-grey-9 q-mt-md">¡Hola!</div>
+          <div class="text-body2 text-grey-6 q-mt-xs">Habla con Palma para resolver tus dudas.</div>
+          <q-btn
+            unelevated
+            color="primary"
+            label="Empezar a chatear"
+            icon="send"
+            class="q-mt-lg rounded-pill"
+            @click.stop="onNewChat"
+          />
+        </div>
 
-      <!-- Chat items -->
-      <div v-else class="chat-items-list q-py-sm">
-        <div
-          v-for="(chat, index) in chats"
-          :key="chat.id"
-          class="chat-row"
-          :class="{ 'is-last': index === chats.length - 1 }"
-          @click="onChatClick(chat)"
-        >
-          <q-avatar size="42px" class="chat-row-avatar">
-            <q-icon name="auto_awesome" size="20px" color="primary" />
-          </q-avatar>
-          <div class="col overflow-hidden" style="min-width: 0;">
-            <div class="chat-row-title text-weight-bold text-no-wrap ellipsis">
-              {{ chat.title || chat.subject || 'Conversación' }}
+        <!-- Chat items -->
+        <div v-else class="chat-items-list q-py-sm">
+          <div
+            v-for="(chat, index) in chats"
+            :key="chat.id"
+            class="chat-row"
+            :class="{ 'is-last': index === chats.length - 1 }"
+            @click="onChatClick(chat)"
+          >
+            <q-avatar size="42px" class="chat-row-avatar">
+              <q-icon name="auto_awesome" size="20px" color="primary" />
+            </q-avatar>
+            <div class="col overflow-hidden" style="min-width: 0;">
+              <div class="chat-row-title text-weight-bold text-no-wrap ellipsis">
+                {{ chat.title || chat.subject || 'Conversación' }}
+              </div>
+              <div class="chat-row-subtitle text-grey-7 text-caption text-no-wrap ellipsis">
+                {{ chat.last_message?.content || 'Ver conversación' }}
+              </div>
             </div>
-            <div class="chat-row-subtitle text-grey-7 text-caption text-no-wrap ellipsis">
-              {{ chat.last_message?.content || 'Ver conversación' }}
+            <div class="column items-end">
+              <q-badge
+                v-if="chat.unread_count > 0"
+                color="primary"
+                :label="chat.unread_count"
+                class="q-mb-xs"
+              />
+              <div class="text-caption text-grey-5">{{ formatDate(chat.last_message_at || chat.updated_at) }}</div>
             </div>
-          </div>
-          <div class="column items-end">
-            <q-badge
-              v-if="chat.unread_count > 0"
-              color="primary"
-              :label="chat.unread_count"
-              class="q-mb-xs"
-            />
-            <div class="text-caption text-grey-5">{{ formatDate(chat.updated_at) }}</div>
           </div>
         </div>
       </div>
-    </q-scroll-area>
+    </div>
 
     <!-- Footer CTA -->
     <q-separator />
@@ -134,7 +136,7 @@ const loadChats = async () => {
     const { data } = await api.get('ai-chats', {
       params: { company_id: authStore.userSession?.company_session?.id }
     })
-    chats.value = (data.data || data || []).slice(0, 5) // Show max 5 recent chats
+    chats.value = data.data || data || []
   } catch (e) {
     console.error('Error loading chats for card:', e)
   } finally {
@@ -228,9 +230,37 @@ onMounted(() => {
 }
 
 /* Chat list */
-.chats-wrapper {
-  background: white;
+.chats-main-container {
   flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: white;
+}
+
+.chats-wrapper {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  &:hover::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.3);
+    background-clip: content-box;
+  }
 }
 
 .chats-wrapper :deep(.q-scrollarea__content) {
