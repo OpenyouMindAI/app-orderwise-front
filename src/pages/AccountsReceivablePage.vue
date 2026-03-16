@@ -191,6 +191,7 @@
                             <q-tooltip>Ver estado</q-tooltip>
                           </q-btn>
                           <q-btn
+                            v-if="Number(props.row.balance) > 0"
                             round
                             unelevated
                             color="positive"
@@ -245,6 +246,7 @@
                     <q-tooltip>Ver estado de cuenta</q-tooltip>
                   </q-btn>
                   <q-btn
+                    v-if="Number(props.row.balance) > 0"
                     icon="payment"
                     size="sm"
                     round
@@ -292,6 +294,7 @@
           </div>
           <div class="client-actions">
             <q-btn
+              v-if="Number(statement?.summary?.current_balance) > 0"
               icon="payment"
               label="Registrar Pago"
               unelevated
@@ -540,7 +543,7 @@
                             @click="viewInvoiceDetail(props.row.invoice)"
                           />
                           <q-btn
-                            v-if="props.row.type === 'invoice' && props.row.balance > 0"
+                            v-if="props.row.type === 'invoice' && Number(props.row.balance) > 0"
                             icon="payment"
                             size="sm"
                             round
@@ -707,7 +710,7 @@
                         <q-tooltip>Ver detalle</q-tooltip>
                       </q-btn>
                       <q-btn
-                        v-if="props.row.type === 'invoice' && props.row.balance > 0.000000000000"
+                        v-if="props.row.type === 'invoice' && Number(props.row.balance) > 0"
                         icon="payment"
                         size="xs"
                         round
