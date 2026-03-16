@@ -24,7 +24,7 @@
           </q-btn>
         </div>
 
-        <div class="sidebar-tabs" v-if="isRootOrSuperAdmin">
+        <div class="sidebar-tabs" v-if="isRoot">
           <div
             class="tab-item"
             :class="{ active: sidebarView === 'chats' }"
@@ -43,7 +43,7 @@
         </div>
 
         <!-- Admin Search Bar -->
-        <div class="sidebar-search" v-if="isRootOrSuperAdmin">
+        <div class="sidebar-search" v-if="isRoot">
           <q-input
             v-if="sidebarView === 'chats'"
             v-model="filters.search"
@@ -74,7 +74,7 @@
           <transition name="fade" mode="out-in">
             <!-- ===== LISTA DE CHATS ===== -->
             <q-scroll-area v-if="sidebarView === 'chats'" key="chats-view" class="fit">
-              <div v-if="isRootOrSuperAdmin" class="status-filters">
+              <div v-if="isRoot" class="status-filters">
                 <q-chip
                   v-for="status in statusOptions"
                   :key="status.value"
@@ -165,7 +165,7 @@
                 </div>
 
                 <!-- Pagination for Admin -->
-                <div v-if="isRootOrSuperAdmin && pagination.lastPage > 1" class="text-center q-pa-sm">
+                <div v-if="isRoot && pagination.lastPage > 1" class="text-center q-pa-sm">
                   <q-pagination
                     v-model="pagination.page"
                     :max="pagination.lastPage"
@@ -827,6 +827,7 @@ const pagination = ref({
   lastPage: 1
 })
 
+const isRoot = computed(() => !!authStore.userSession?.is_root)
 const isRootOrSuperAdmin = computed(() => {
   return authStore.userSession?.is_root || authStore.userSession?.is_super_admin
 })
@@ -1971,20 +1972,36 @@ onUnmounted(() => {
 }
 
 .chat-item-wrapper {
-  padding: 12px 16px;
+  padding: 16px;
   cursor: pointer;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
   background: white;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  margin: 4px 12px;
+  border-radius: 12px;
 
   &:hover {
-    background: #f0f4f8;
+    background: #f8fbff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
   }
 
   &.active {
     background: #e3f2fd;
-    border-left: 4px solid #1976d2;
-    padding-left: 12px;
+    transform: translateX(4px);
+    box-shadow: 0 4px 15px rgba(25, 118, 210, 0.1);
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 12px;
+      bottom: 12px;
+      width: 4px;
+      background: #1976d2;
+      border-radius: 0 4px 4px 0;
+    }
   }
 }
 
@@ -1993,12 +2010,24 @@ onUnmounted(() => {
   border-bottom-color: rgba(255, 255, 255, 0.05);
 
   &:hover {
-    background: #2d2d2d;
+    background: #252525;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
 
   &.active {
-    background: #1a237e;
-    border-left-color: #3f51b5;
+    background: rgba(25, 118, 210, 0.15);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 12px;
+      bottom: 12px;
+      width: 4px;
+      background: #90caf9;
+      border-radius: 0 4px 4px 0;
+    }
   }
 }
 
@@ -2059,25 +2088,37 @@ onUnmounted(() => {
 // Sidebar Admin Styles
 .sidebar-tabs {
   display: flex;
-  background: white;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  margin-top: -16px; // Ajuste para que pegue al header
+  background: #f8f9fa;
+  padding: 8px;
+  margin: 0 16px 12px 16px;
+  border-radius: 12px;
+  gap: 4px;
 
   .tab-item {
     flex: 1;
-    padding: 12px;
+    padding: 8px 12px;
     text-align: center;
     cursor: pointer;
     font-weight: 600;
+    font-size: 13px;
     color: #607d8b;
-    border-bottom: 3px solid transparent;
-    transition: all 0.3s ease;
+    border-radius: 8px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 
-    &:hover { background: #f5f7f9; }
+    &:hover {
+      background: rgba(0, 0, 0, 0.03);
+      color: #1976d2;
+    }
 
     &.active {
+      background: white;
       color: #1976d2;
-      border-bottom-color: #1976d2;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      transform: scale(1.02);
     }
 
     span { position: relative; }
@@ -2085,30 +2126,46 @@ onUnmounted(() => {
 }
 
 .body--dark .sidebar-tabs {
-  background: #1e1e1e;
-  border-bottom-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
   .tab-item {
-    color: #b0bec5;
-    &.active { color: #90caf9; border-bottom-color: #90caf9; }
+    color: #90a4ae;
+    &:hover { background: rgba(255, 255, 255, 0.03); }
+    &.active {
+      background: #2c2c2c;
+      color: #90caf9;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
   }
 }
 
 .sidebar-search {
-  padding: 12px 16px;
-  background: #f8f9fa;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 0 16px 16px 16px;
+  background: transparent;
 
   .search-input {
     :deep(.q-field__control) {
       background: white;
-      border-radius: 12px;
+      border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
+
+      &:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      }
+      &.q-field__control--focused {
+        border-color: #1976d2;
+        box-shadow: 0 4px 15px rgba(25, 118, 210, 0.1);
+      }
     }
   }
 }
 
 .body--dark .sidebar-search {
-  background: #252525;
-  .search-input :deep(.q-field__control) { background: #2c2c2c; }
+  .search-input :deep(.q-field__control) {
+    background: #252525;
+    border-color: rgba(255, 255, 255, 0.05);
+  }
 }
 
 .status-filters {
@@ -2116,20 +2173,38 @@ onUnmounted(() => {
   gap: 8px;
   padding: 12px 16px;
   overflow-x: auto;
-  background: white;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  background: transparent;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
 
   .status-chip {
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 500;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    background: white;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    }
+
     &.active {
-      background: #1976d2;
+      background: linear-gradient(135deg, #1976d2, #1565c0);
       color: white;
+      border: none;
+      box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
     }
   }
 }
 
 .body--dark .status-filters {
-  background: #1e1e1e;
+  .status-chip {
+    background: #252525;
+    border-color: rgba(255, 255, 255, 0.1);
+    &.active {
+      background: linear-gradient(135deg, #1976d2, #1565c0);
+    }
+  }
 }
 
 .section-label {
@@ -2152,6 +2227,34 @@ onUnmounted(() => {
   border: 2px solid white;
   &.active { background: #4caf50; }
   &.inactive { background: #bdbdbd; }
+}
+
+// Pagination Admin
+.text-center.q-pa-sm {
+  background: white;
+  border-top: 1px solid rgba(0, 0, 0, 0.03);
+  padding: 12px !important;
+
+  :deep(.q-pagination) {
+    .q-btn {
+      border-radius: 8px;
+      margin: 0 2px;
+      &:hover { background: #f0f4f8; }
+    }
+    .q-btn--active {
+      background: #1976d2 !important;
+      color: white !important;
+      box-shadow: 0 4px 10px rgba(25, 118, 210, 0.2);
+    }
+  }
+}
+
+.body--dark .text-center.q-pa-sm {
+  background: #1e1e1e;
+  border-top-color: rgba(255, 255, 255, 0.05);
+  :deep(.q-pagination) {
+    .q-btn:hover { background: #2d2d2d; }
+  }
 }
 
 // Main chat area
@@ -2667,9 +2770,11 @@ onUnmounted(() => {
 }
 
 .audio-bubble {
-  min-width: 200px;
+  min-width: 260px;
   background: white;
-  padding: 8px 12px 12px 12px !important;
+  padding: 12px !important;
+  border-radius: 18px !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
 }
 
 .body--dark .audio-bubble {
@@ -2677,8 +2782,9 @@ onUnmounted(() => {
 }
 
 .user-message .audio-bubble {
-  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%) !important;
   color: white;
+  box-shadow: 0 4px 15px rgba(25, 118, 210, 0.3) !important;
 }
 
 // Animations
