@@ -1592,8 +1592,7 @@ export default {
         // Recargar los módulos y estados para que el menú se vea correctamente sin refrescar
         this.loadingPage()
 
-        console.log('🏁 handleCompanySetupSuccess (MainLayout) - Evitando redirección para inspección')
-        // this.$router.push('/')
+        this.$router.push('/')
       } catch (error) {
         console.error('Error al procesar configuración de empresa:', error)
         notify('Error al procesar la configuración', 'negative', 'warning')

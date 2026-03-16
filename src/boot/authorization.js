@@ -107,7 +107,6 @@ const validateModuleAccess = (store, to) => {
 
   // 1. Validar rutas exclusivas de Root
   if (CONFIG.ROOT_ONLY_ROUTES.includes(to.name) && !user?.is_root) {
-    console.warn(`[Auth] ACCESO DENEGADO (Root Only): ${to.name} es exclusivo para usuarios Root.`)
     return '/'
   }
 
@@ -116,7 +115,6 @@ const validateModuleAccess = (store, to) => {
   const isFree = store.currentPlan?.slug === 'free' || store.subscriptionPlan === 'Free'
 
   if ((isDemo || isFree) && CONFIG.PREMIUM_MODULES.includes(to.name)) {
-    console.warn(`[Auth] ACCESO DENEGADO (Plan): ${to.name} requiere plan Premium.`)
     return '/'
   }
 
@@ -131,12 +129,10 @@ const validateModuleAccess = (store, to) => {
                         ['Product', 'Category', 'User', 'Role', 'Invoice', 'Cashbox', 'BranchOffice'].includes(to.name)
 
     if (isMainModule && !hasModuleAccess) {
-      console.warn(`[Auth] ACCESO DENEGADO (Módulo): No tienes el módulo ${to.name} asignado.`)
       return '/'
     }
   }
 
-  console.log(`[Auth] ACCESO PERMITIDO a: ${to.name}`)
   return null
 }
 
