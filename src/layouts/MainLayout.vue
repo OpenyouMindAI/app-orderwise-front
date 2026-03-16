@@ -483,9 +483,9 @@
                       </q-item-section>
                     </q-item>
 
-                    <!-- Panel Admin (Solo para root o super_admin) -->
+                    <!-- Panel Admin (Solo para root) -->
                     <q-item
-                      v-if="isRootOrSuperAdmin()"
+                      v-if="userSession?.is_root"
                       v-ripple
                       clickable
                       dense
@@ -2187,12 +2187,13 @@ export default {
      * @returns {Object}
      */
     validateRole (roles = []) {
-      const rol = this.userSession?.roles[0]
       if (this.userSession?.is_root) return true
-      if (roles && roles.length > 0 && rol) {
-        return roles.some((element) => element.id === rol.id)
-      }
-      return false
+      if (!roles || roles.length === 0) return true
+
+      const userRoles = this.userSession?.roles || []
+      return userRoles.some(userRole =>
+        roles.some(allowedRole => allowedRole.id === userRole.id)
+      )
     },
     /**
      * Check if user is root or super admin
