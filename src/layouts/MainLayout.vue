@@ -68,9 +68,8 @@
         </div>
         <q-space />
 
-        <!-- Branch Office Indicator -->
-        <!-- Support Button (Replaces Branch Office Indicator) -->
-        <div class="support-indicator">
+        <!-- Support Button (Only for Admins) -->
+        <div class="support-indicator" v-if="isRootOrSuperAdmin()">
           <q-btn
             v-if="userSession?.is_root"
             flat
@@ -180,19 +179,7 @@
           >
             <q-tooltip>Escanear QR</q-tooltip>
           </q-btn>
-          <!-- Chat IA (Visible en Desktop y Tablet) -->
-          <q-btn
-            flat
-            dense
-            icon="smart_toy"
-            round
-            color="primary"
-            @click="changeRoute('AiChat', 'Chat con IA')"
-            v-if="userSession?.is_root && !$q.screen.xs"
-            class="ai-chat-btn"
-          >
-            <q-tooltip>Chat con IA - Asistente Virtual</q-tooltip>
-          </q-btn>
+
           <!-- Herramientas -->
           <q-btn flat dense icon="apps" round @click="loadIntegrations">
             <q-tooltip class="text-body2">
@@ -216,17 +203,6 @@
                   >
                     <q-icon name="sync_alt" size="24px" />
                     <span class="tool-label">Empresa</span>
-                  </div>
-
-                  <!-- Chat IA (Solo Mobile XS) -->
-                  <div
-                    v-if="userSession?.is_root && $q.screen.xs"
-                    class="tool-item"
-                    :class="{ 'tool-active': $route.name === 'AiChat' }"
-                    @click="changeRoute('AiChat', 'Chat con IA')"
-                  >
-                    <q-icon name="smart_toy" size="24px" color="primary" />
-                    <span class="tool-label">Chat IA</span>
                   </div>
 
                   <!-- Tour de Página (Solo Mobile XS) -->
@@ -717,9 +693,6 @@
       @open-subscription="showSubscriptionDialog = true"
     />
 
-    <!-- Global Support Chat Bubble -->
-    <SupportChatBubble ref="supportChat" />
-
     <!-- Register Dialog -->
     <register-dialog
       v-model="showCreateCompanyDialog"
@@ -753,6 +726,9 @@
       @verified="handleOtpVerified"
       @back="showOtpVerification = false; showCreateCompanyDialog = true"
     />
+
+    <!-- Global Support Chat Bubble (Only for Admins) -->
+    <SupportChatBubble v-if="isRootOrSuperAdmin()" ref="supportChat" />
 
     <bottom-nav v-if="!$route.meta.hideBottomNav" :data-menu="dataMenu" />
 
@@ -825,7 +801,6 @@ import {
 import { useDemoPersuasion } from 'src/composables/useDemoPersuasion'
 import { useCompanySetup } from 'src/composables/useCompanySetup'
 import ProPlanPromoBanner from 'src/components/ProPlanPromoBanner.vue'
-
 import SupportChatBubble from 'src/components/SupportChatBubble.vue'
 
 export default {
@@ -1212,10 +1187,12 @@ export default {
         this.setNotification(notification)
       })
 
-    this.$echo.private(`support.user.${this.userSession.id}`)
-      .listen('.message.sent', (data) => {
-        this.handleGlobalSupportMessage(data)
-      })
+    if (this.isRootOrSuperAdmin()) {
+      this.$echo.private(`support.user.${this.userSession.id}`)
+        .listen('.message.sent', (data) => {
+          this.handleGlobalSupportMessage(data)
+        })
+    }
 
     // Listen for subscription updates
     window.addEventListener('subscription-updated', () => {
@@ -1958,6 +1935,7 @@ export default {
         }
       })
     },
+
     /**
      * Maneja un mensaje de soporte entrante globalmente
      * @param {Object} data data del evento
@@ -1978,6 +1956,7 @@ export default {
         id: data.chat_id
       })
     },
+
     async getDataNotification () {
       try {
         const { data } = await api.get('notifications', {

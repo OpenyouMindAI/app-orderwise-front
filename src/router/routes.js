@@ -447,7 +447,7 @@ const routes = [
         path: 'admin/support',
         name: 'AdminSupport',
         meta: { requiresAuth: true, hideBottomNav: true },
-        component: () => import('pages/AdminSupportPage.vue')
+        component: () => import('pages/SupportChatPage.vue')
       }
     ]
   },

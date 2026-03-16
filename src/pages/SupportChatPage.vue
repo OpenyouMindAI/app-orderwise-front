@@ -24,73 +24,206 @@
           </q-btn>
         </div>
 
+        <div class="sidebar-tabs" v-if="isRootOrSuperAdmin">
+          <div
+            class="tab-item"
+            :class="{ active: sidebarView === 'chats' }"
+            @click="sidebarView = 'chats'; loadChats()"
+          >
+            <span>Chats</span>
+            <q-badge v-if="unreadCount > 0" color="negative" floating>{{ unreadCount }}</q-badge>
+          </div>
+          <div
+            class="tab-item"
+            :class="{ active: sidebarView === 'users' }"
+            @click="sidebarView = 'users'; fetchUsers()"
+          >
+            <span>Personas</span>
+          </div>
+        </div>
+
+        <!-- Admin Search Bar -->
+        <div class="sidebar-search" v-if="isRootOrSuperAdmin">
+          <q-input
+            v-if="sidebarView === 'chats'"
+            v-model="filters.search"
+            dense
+            rounded
+            outlined
+            placeholder="Buscar chats..."
+            class="search-input"
+            @keyup.enter="loadChats()"
+          >
+            <template v-slot:prepend><q-icon name="search" size="20px" /></template>
+          </q-input>
+          <q-input
+            v-else
+            v-model="userSearch"
+            dense
+            rounded
+            outlined
+            placeholder="Buscar personas..."
+            class="search-input"
+            @keyup.enter="fetchUsers()"
+          >
+            <template v-slot:prepend><q-icon name="search" size="20px" /></template>
+          </q-input>
+        </div>
+
         <div class="chat-list">
-          <q-scroll-area class="fit">
-            <div v-if="loading && chats.length === 0" class="text-center q-pa-md">
-              <q-spinner color="primary" size="40px" />
-            </div>
+          <transition name="fade" mode="out-in">
+            <!-- ===== LISTA DE CHATS ===== -->
+            <q-scroll-area v-if="sidebarView === 'chats'" key="chats-view" class="fit">
+              <div v-if="isRootOrSuperAdmin" class="status-filters">
+                <q-chip
+                  v-for="status in statusOptions"
+                  :key="status.value"
+                  clickable
+                  @click="filters.status = status.value; loadChats()"
+                  :class="['status-chip', { active: filters.status === status.value }]"
+                  size="sm"
+                >
+                  {{ status.label }}
+                </q-chip>
+              </div>
 
-            <div v-else-if="chats.length === 0" class="empty-state">
-              <q-icon name="chat_bubble_outline" size="64px" color="grey-5" />
-              <div class="empty-text">No tienes tickets de soporte</div>
-              <q-btn
-                flat
-                color="primary"
-                label="Crear ticket"
-                icon="add"
-                @click="openNewTicketDialog"
-              />
-            </div>
+              <div v-if="loading && chats.length === 0" class="text-center q-pa-md">
+                <q-spinner color="primary" size="40px" />
+              </div>
 
-            <div v-else class="chats-list-wrapper">
-              <div
-                v-for="chat in chats"
-                :key="chat.id"
-                class="chat-item-wrapper"
-                :class="{ 'active': selectedChat?.id === chat.id }"
-                @click="selectChat(chat)"
-              >
-                <div class="chat-item-content">
-                  <div class="chat-avatar">
-                    <q-avatar size="49px" :color="chat.type === 'info' ? 'secondary' : (chat.type === 'sales' ? 'orange' : getStatusColor(chat.status))" text-color="white">
-                      <q-icon :name="chat.type === 'info' ? 'info' : (chat.type === 'sales' ? 'point_of_sale' : getStatusIcon(chat.status))" size="24px" />
-                    </q-avatar>
-                  </div>
-                  <div class="chat-info">
-                    <div class="chat-header-row">
-                      <div class="chat-title">{{ chat.subject || 'Sin asunto' }}</div>
-                      <q-badge
-                        :color="chat.type === 'info' ? 'secondary' : (chat.type === 'sales' ? 'orange' : 'primary')"
-                        :label="chat.type === 'info' ? 'Información' : (chat.type === 'sales' ? 'Ventas' : 'Soporte')"
-                        class="q-ml-sm"
-                        outline
-                      />
-                      <q-badge
-                        v-if="chat.unread_count > 0"
-                        color="negative"
-                        :label="chat.unread_count"
-                        class="q-ml-sm"
-                      />
+              <div v-else-if="chats.length === 0" class="empty-state">
+                <q-icon name="chat_bubble_outline" size="64px" color="grey-5" />
+                <div class="empty-text">{{ isRootOrSuperAdmin ? 'No hay chats para estos filtros' : 'No tienes tickets de soporte' }}</div>
+                <q-btn
+                  v-if="!isRootOrSuperAdmin"
+                  flat
+                  color="primary"
+                  label="Crear ticket"
+                  icon="add"
+                  @click="openNewTicketDialog"
+                />
+              </div>
+
+              <div v-else class="chats-list-wrapper">
+                <div
+                  v-for="chat in chats"
+                  :key="chat.id"
+                  class="chat-item-wrapper"
+                  :class="{ 'active': selectedChat?.id === chat.id }"
+                  @click="selectChat(chat)"
+                >
+                  <div class="chat-item-content">
+                    <div class="chat-avatar">
+                      <template v-if="isRootOrSuperAdmin">
+                        <q-avatar size="49px" class="shadow-1">
+                          <img v-if="getChatPartner(chat)?.avatar" :src="getChatPartner(chat).avatar" />
+                          <div v-else class="avatar-fallback bg-teal-7 text-white">
+                            {{ getInitials(getChatPartner(chat)?.name) }}
+                          </div>
+                        </q-avatar>
+                      </template>
+                      <template v-else>
+                        <q-avatar size="49px" :color="chat.type === 'info' ? 'secondary' : (chat.type === 'sales' ? 'orange' : getStatusColor(chat.status))" text-color="white">
+                          <q-icon :name="chat.type === 'info' ? 'info' : (chat.type === 'sales' ? 'point_of_sale' : getStatusIcon(chat.status))" size="24px" />
+                        </q-avatar>
+                      </template>
                     </div>
-                    <div class="chat-preview">
-                      {{ truncateMessage(chat.last_message?.content) || 'Sin mensajes' }}
+                    <div class="chat-info">
+                      <div class="chat-header-row">
+                        <div class="chat-title">{{ isRootOrSuperAdmin ? (getChatPartner(chat)?.name || 'Usuario') : (chat.subject || 'Sin asunto') }}</div>
+                        <q-badge
+                          v-if="!isRootOrSuperAdmin"
+                          :color="chat.type === 'info' ? 'secondary' : (chat.type === 'sales' ? 'orange' : 'primary')"
+                          :label="chat.type === 'info' ? 'Información' : (chat.type === 'sales' ? 'Ventas' : 'Soporte')"
+                          class="q-ml-sm"
+                          outline
+                        />
+                        <q-badge
+                          v-if="chat.unread_count > 0"
+                          color="negative"
+                          :label="chat.unread_count"
+                          class="q-ml-sm"
+                        />
+                      </div>
+                      <div class="chat-preview">
+                        {{ truncateMessage(chat.last_message?.content) || (isRootOrSuperAdmin ? chat.subject : 'Sin mensajes') }}
+                      </div>
                     </div>
-                  </div>
-                  <div class="chat-meta">
-                    <div class="chat-time">{{ formatDate(chat.last_message_at) }}</div>
-                    <q-chip
-                      :color="getStatusColor(chat.status)"
-                      text-color="white"
-                      size="sm"
-                      dense
-                    >
-                      {{ getStatusLabel(chat.status) }}
-                    </q-chip>
+                    <div class="chat-meta">
+                      <div class="chat-time">{{ formatDate(chat.last_message_at) }}</div>
+                      <q-chip
+                        v-if="!isRootOrSuperAdmin"
+                        :color="getStatusColor(chat.status)"
+                        text-color="white"
+                        size="sm"
+                        dense
+                      >
+                        {{ getStatusLabel(chat.status) }}
+                      </q-chip>
+                    </div>
                   </div>
                 </div>
+
+                <!-- Pagination for Admin -->
+                <div v-if="isRootOrSuperAdmin && pagination.lastPage > 1" class="text-center q-pa-sm">
+                  <q-pagination
+                    v-model="pagination.page"
+                    :max="pagination.lastPage"
+                    :max-pages="3"
+                    direction-links
+                    flat
+                    dense
+                    size="sm"
+                    @update:model-value="loadChats"
+                  />
+                </div>
               </div>
-            </div>
-          </q-scroll-area>
+            </q-scroll-area>
+
+            <!-- ===== VISTA DE PERSONAS (ADMIN) ===== -->
+            <q-scroll-area v-else key="users-view" class="fit">
+              <div class="users-section q-pa-md">
+                <div v-if="onlineUsersFiltered.length > 0">
+                  <div class="section-label">En línea — {{ onlineUsersFiltered.length }}</div>
+                  <div v-for="user in onlineUsersFiltered" :key="'on-' + user.id" class="chat-item-wrapper" @click="openChatWithUser(user)">
+                    <div class="chat-item-content">
+                       <q-avatar size="48px">
+                        <img v-if="user.avatar" :src="user.avatar" />
+                        <div v-else class="avatar-fallback bg-primary text-white">{{ getInitials(user.name) }}</div>
+                        <div class="chat-status-dot active"></div>
+                      </q-avatar>
+                      <div class="chat-info">
+                        <div class="chat-title">{{ user.name }}</div>
+                        <div class="chat-preview text-positive">Activo ahora</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-if="offlineUsersFiltered.length > 0" class="q-mt-md">
+                  <div class="section-label">Otros usuarios — {{ offlineUsersFiltered.length }}</div>
+                  <div v-for="user in offlineUsersFiltered" :key="'off-' + user.id" class="chat-item-wrapper" @click="openChatWithUser(user)">
+                    <div class="chat-item-content">
+                       <q-avatar size="48px">
+                        <img v-if="user.avatar" :src="user.avatar" />
+                        <div v-else class="avatar-fallback bg-grey-5 text-white">{{ getInitials(user.name) }}</div>
+                        <div class="chat-status-dot inactive"></div>
+                      </q-avatar>
+                      <div class="chat-info">
+                        <div class="chat-title">{{ user.name }}</div>
+                        <div class="chat-preview">{{ user.company || 'Sin empresa' }}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-if="uniqueUsers.length === 0 && !loading" class="empty-state">
+                  <q-icon name="person_search" size="56px" color="grey-4" />
+                  <div class="empty-text">No se encontraron usuarios</div>
+                </div>
+              </div>
+            </q-scroll-area>
+          </transition>
         </div>
       </div>
 
@@ -131,11 +264,17 @@
               @click="selectedChat = null"
               class="q-mr-sm"
             />
-            <q-avatar :color="selectedChat.type === 'info' ? 'secondary' : (selectedChat.type === 'sales' ? 'orange' : getStatusColor(selectedChat.status))" text-color="white" size="40px">
+            <q-avatar v-if="isRootOrSuperAdmin" size="40px" class="shadow-1">
+              <img v-if="selectedChat.client?.avatar" :src="selectedChat.client.avatar" />
+              <div v-else class="avatar-fallback bg-primary text-white">
+                {{ getInitials(selectedChat.client?.name) }}
+              </div>
+            </q-avatar>
+            <q-avatar v-else :color="selectedChat.type === 'info' ? 'secondary' : (selectedChat.type === 'sales' ? 'orange' : getStatusColor(selectedChat.status))" text-color="white" size="40px">
               <q-icon :name="selectedChat.type === 'info' ? 'info' : (selectedChat.type === 'sales' ? 'point_of_sale' : 'support_agent')" />
             </q-avatar>
             <div class="header-info">
-              <div class="chat-name">{{ selectedChat.subject }}</div>
+              <div class="chat-name">{{ isRootOrSuperAdmin ? selectedChat.client?.name : selectedChat.subject }}</div>
               <div class="chat-status">
                 <q-chip
                   :color="getStatusColor(selectedChat.status)"
@@ -145,13 +284,17 @@
                 >
                   {{ getStatusLabel(selectedChat.status) }}
                 </q-chip>
-                <span v-if="selectedChat.admin" class="q-ml-sm text-caption">
+                <span v-if="selectedChat.admin && !isRootOrSuperAdmin" class="q-ml-sm text-caption">
                   Atendido por: {{ selectedChat.admin.name }}
+                </span>
+                <span v-if="isRootOrSuperAdmin" class="q-ml-sm text-caption text-grey-7">
+                  {{ selectedChat.subject }}
                 </span>
               </div>
             </div>
             <q-space />
             <q-chip
+              v-if="selectedChat.type === 'support' || isRootOrSuperAdmin"
               :color="getPriorityColor(selectedChat.priority)"
               text-color="white"
               size="sm"
@@ -159,6 +302,18 @@
             >
               {{ getPriorityLabel(selectedChat.priority) }}
             </q-chip>
+            <q-btn v-if="isRootOrSuperAdmin" flat round dense icon="more_vert" color="grey-7" class="q-ml-sm">
+              <q-menu>
+                <q-list style="min-width: 150px">
+                  <q-item v-if="selectedChat.status !== 'closed'" clickable v-close-popup @click="closeChat">
+                    <q-item-section class="text-negative">Cerrar Ticket</q-item-section>
+                  </q-item>
+                  <q-item v-else clickable v-close-popup @click="reopenChat">
+                    <q-item-section>Reabrir Ticket</q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </q-btn>
           </div>
 
           <!-- Mensajes -->
@@ -168,18 +323,26 @@
                 <div
                   v-for="message in messages"
                   :key="message.id"
-                  :class="['message-wrapper', isOwnMessage(message) ? 'user-message' : 'assistant-message']"
+                  :class="['message-wrapper', isOwnMessage(message) ? 'user-message' : 'assistant-message', { 'is-audio': message.type === 'audio' }]"
                 >
-                  <div class="message-bubble">
+                  <div class="message-bubble" :class="{ 'audio-bubble': message.type === 'audio' }">
                     <div class="message-sender" v-if="!isOwnMessage(message)">
-                      {{ message.sender?.name || 'Soporte' }}
+                      {{ message.sender?.name || (isRootOrSuperAdmin ? selectedChat.client?.name : 'Soporte') }}
+                    </div>
+
+                    <!-- Attachment: Audio -->
+                    <div v-if="message.type === 'audio' && message.attachment_url" class="message-attachment audio-attachment">
+                      <AudioPlayer
+                        :src="getFullUrl(message.attachment_url)"
+                        :filename="message.attachment_name || 'voice-message.webm'"
+                      />
                     </div>
 
                     <!-- Attachment: Image -->
                     <div v-if="message.type === 'image' && message.attachment_url" class="message-attachment image-attachment">
                       <div class="image-container" @click="openImagePreview(message, getMessageImages(message))">
                         <q-img
-                          :src="message.attachment_url"
+                          :src="getFullUrl(message.attachment_url)"
                           :alt="message.attachment_name"
                           class="attachment-image"
                           fit="cover"
@@ -200,7 +363,7 @@
                     <!-- Attachment: Video -->
                     <div v-if="message.type === 'video' && message.attachment_url" class="message-attachment video-attachment">
                       <video
-                        :src="message.attachment_url"
+                        :src="getFullUrl(message.attachment_url)"
                         controls
                         class="attachment-video"
                         preload="metadata"
@@ -210,7 +373,7 @@
 
                     <!-- Attachment: File -->
                     <div v-if="message.type === 'file' && message.attachment_url" class="message-attachment file-attachment">
-                      <a :href="message.attachment_url" target="_blank" class="file-link">
+                      <a :href="getFullUrl(message.attachment_url)" target="_blank" class="file-link">
                         <div class="file-icon-wrapper">
                           <q-icon :name="getFileTypeIcon(message.attachment_mime)" size="28px" />
                         </div>
@@ -228,7 +391,7 @@
                       <q-icon
                         v-if="isOwnMessage(message)"
                         :name="message.is_read ? 'done_all' : 'done'"
-                        :color="message.is_read ? 'primary' : 'grey'"
+                        :color="message.is_read ? (message.type === 'audio' ? 'blue-2' : 'white') : 'grey-3'"
                         size="16px"
                         class="q-ml-xs"
                       />
@@ -324,15 +487,17 @@
                 </template>
                 <template v-slot:append>
                   <q-btn
+                    v-if="newMessage.trim() || selectedFile"
                     round
                     icon="send"
                     size="md"
                     style="border-radius: 100px;"
                     color="primary"
                     @click="sendMessage"
-                    :disable="(!newMessage.trim() && !selectedFile) || sending"
+                    :disable="sending"
                     :loading="sending"
                   />
+                  <AudioRecorder v-else @send="sendAudioMessage" />
                 </template>
               </q-input>
             </div>
@@ -416,7 +581,6 @@
               readonly
               hint="El título se asigna automáticamente según el asunto"
             />
-
 
             <q-input
               v-model="newTicket.message"
@@ -528,6 +692,9 @@ import { authentication } from 'src/stores/module-authentication'
 import { useQuasar } from 'quasar'
 import { format, formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
+
+import AudioRecorder from 'src/components/AudioRecorder.vue'
+import AudioPlayer from 'src/components/AudioPlayer.vue'
 
 /**
  * Quasar instance
@@ -645,6 +812,123 @@ const showScrollButton = ref(false)
 const unreadMessagesBelow = ref(0)
 
 /**
+ * Admin Features State
+ */
+const sidebarView = ref('chats')
+const unreadCount = ref(0) // Total global unread for admin
+const userSearch = ref('')
+const sessionUsers = ref([])
+const filters = ref({
+  status: 'open',
+  search: ''
+})
+const pagination = ref({
+  page: 1,
+  lastPage: 1
+})
+
+const isRootOrSuperAdmin = computed(() => {
+  return authStore.userSession?.is_root || authStore.userSession?.is_super_admin
+})
+
+const statusOptions = [
+  { label: 'Abiertos', value: 'open' },
+  { label: 'En Progreso', value: 'in_progress' },
+  { label: 'Cerrados', value: 'closed' }
+]
+
+const uniqueUsers = computed(() => {
+  const map = new Map()
+  sessionUsers.value.forEach(session => {
+    const userId = session.user_id || session.user?.id
+    if (!userId) return
+    const existing = map.get(userId)
+    if (!existing || session.status === 'online') {
+      map.set(userId, {
+        id: userId,
+        name: session.user?.name || 'Usuario',
+        email: session.user?.email || '',
+        avatar: session.user?.avatar || null,
+        company: session.company?.name || '',
+        status: session.status,
+        lastActivity: session.last_activity_at
+      })
+    }
+  })
+  return Array.from(map.values())
+})
+
+const filteredUsers = computed(() => {
+  if (!userSearch.value) return uniqueUsers.value
+  const s = userSearch.value.toLowerCase()
+  return uniqueUsers.value.filter(u =>
+    u.name?.toLowerCase().includes(s) ||
+    u.email?.toLowerCase().includes(s) ||
+    u.company?.toLowerCase().includes(s)
+  )
+})
+
+const onlineUsersFiltered = computed(() => {
+  return filteredUsers.value.filter(u => u.status === 'online')
+})
+
+const offlineUsersFiltered = computed(() => {
+  return filteredUsers.value.filter(u => u.status !== 'online')
+})
+
+const getFullUrl = (url) => {
+  if (!url) return ''
+  if (url.startsWith('http') || url.startsWith('data:')) return url
+  const baseUrl = import.meta.env.VITE_APP_API_URL?.replace(/\/api\/?$/, '') || ''
+  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
+}
+
+/**
+ * Envía un mensaje de audio
+ */
+const sendAudioMessage = async (audioBlob) => {
+  if (sending.value || !selectedChat.value) return
+  sending.value = true
+
+  // Mensaje temporal
+  const tempId = Date.now()
+  const tempMessage = {
+    id: tempId,
+    content: '',
+    type: 'audio',
+    sender_id: currentUser.value?.id,
+    sender: { name: currentUser.value?.name },
+    attachment_url: URL.createObjectURL(audioBlob),
+    attachment_name: 'voice-message.webm',
+    is_read: false,
+    created_at: new Date().toISOString()
+  }
+  messages.value.push(tempMessage)
+  await nextTick()
+  scrollToBottom()
+
+  try {
+    const formData = new FormData()
+    formData.append('attachment', audioBlob, 'voice-message.webm')
+    formData.append('type', 'audio')
+
+    const { data } = await api.post(`support-chats/${selectedChat.value.id}/messages`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+
+    // Reemplazar mensaje temporal
+    const index = messages.value.findIndex(m => m.id === tempId)
+    if (index !== -1) messages.value[index] = data.data
+  } catch (error) {
+    console.error('Error sending audio:', error)
+    messages.value = messages.value.filter(m => m.id !== tempId)
+    $q.notify({ type: 'negative', message: 'Error al enviar audio' })
+  } finally {
+    sending.value = false
+  }
+}
+
+/**
  * Indica si el usuario ha scrolleado hacia arriba
  * @type {import('vue').Ref<boolean>}
  */
@@ -727,8 +1011,22 @@ const currentUser = computed(() => authStore.userSession)
 const loadChats = async () => {
   loading.value = true
   try {
-    const { data } = await api.get('support-chats')
-    chats.value = data.data || data
+    let params = {}
+    if (isRootOrSuperAdmin.value) {
+      params = {
+        status: filters.value.status,
+        search: filters.value.search,
+        page: pagination.value.page
+      }
+    }
+    const { data } = await api.get('support-chats', { params })
+    if (isRootOrSuperAdmin.value) {
+      chats.value = data.data
+      pagination.value.lastPage = data.last_page
+      unreadCount.value = data.total_unread || 0
+    } else {
+      chats.value = data.data || data
+    }
   } catch (error) {
     console.error('Error loading chats:', error)
     $q.notify({
@@ -738,6 +1036,90 @@ const loadChats = async () => {
   } finally {
     loading.value = false
   }
+}
+
+/**
+ * Carga usuarios para el monitor de soporte
+ */
+const fetchUsers = async () => {
+  if (!isRootOrSuperAdmin.value) return
+  loading.value = true
+  try {
+    const { data } = await api.get('user-sessions', {
+      params: {
+        status: 'all',
+        search: userSearch.value,
+        per_page: 100
+      }
+    })
+    sessionUsers.value = data.data || []
+  } catch (error) {
+    console.error('Error fetching users:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+/**
+ * Abre un chat con un usuario específico
+ */
+const openChatWithUser = async (user) => {
+  loading.value = true
+  try {
+    const { data } = await api.post('support-chats/open-direct', { user_id: user.id })
+    await loadChats()
+    selectChat(data.chat)
+  } catch (error) {
+    console.error('Error opening chat:', error)
+    $q.notify({ type: 'negative', message: 'No se pudo abrir la conversación' })
+  } finally {
+    loading.value = false
+  }
+}
+
+/**
+ * Cierra el chat seleccionado (Admin)
+ */
+const closeChat = async () => {
+  if (!selectedChat.value || !isRootOrSuperAdmin.value) return
+  try {
+    const { data } = await api.post(`support-chats/${selectedChat.value.id}/close`)
+    selectedChat.value = data.chat
+    loadChats()
+    $q.notify({ type: 'positive', message: 'Ticket cerrado' })
+  } catch (error) {
+    $q.notify({ type: 'negative', message: 'Error al cerrar' })
+  }
+}
+
+/**
+ * Reabre el chat seleccionado (Admin)
+ */
+const reopenChat = async () => {
+  if (!selectedChat.value || !isRootOrSuperAdmin.value) return
+  try {
+    const { data } = await api.post(`support-chats/${selectedChat.value.id}/reopen`)
+    selectedChat.value = data.chat
+    loadChats()
+    $q.notify({ type: 'positive', message: 'Ticket reabierto' })
+  } catch (error) {
+    $q.notify({ type: 'negative', message: 'Error al reabrir' })
+  }
+}
+
+/**
+ * Obtiene el compañero de chat (para admin)
+ */
+const getChatPartner = (chat) => {
+  return chat.client || chat.users?.find(u => u.id !== currentUser.value?.id)
+}
+
+/**
+ * Obtiene iniciales
+ */
+const getInitials = (name) => {
+  if (!name) return '?'
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
 }
 
 /**
@@ -1323,6 +1705,22 @@ let currentChatChannel = null
 const subscribeToEvents = () => {
   if (!echo || !currentUser.value) return
 
+  if (isRootOrSuperAdmin.value) {
+    // Canal global de admins
+    echo.private('support.admins')
+      .listen('.message.sent', (data) => {
+        handleGlobalMessage(data)
+      })
+      .listen('.chat.created', (data) => {
+        loadChats()
+        $q.notify({
+          message: `Nuevo ticket: ${data.chat.subject}`,
+          color: 'primary',
+          icon: 'support_agent'
+        })
+      })
+  }
+
   echo.private(`support.user.${currentUser.value.id}`)
     .listen('.message.sent', (data) => {
       handleGlobalMessage(data)
@@ -1415,6 +1813,9 @@ const handleGlobalMessage = (data) => {
  */
 const unsubscribeFromEvents = () => {
   if (echo) {
+    if (isRootOrSuperAdmin.value) {
+      echo.leave('support.admins')
+    }
     if (currentUser.value) {
       echo.leave(`support.user.${currentUser.value.id}`)
     }
@@ -1653,6 +2054,104 @@ onUnmounted(() => {
 .chat-time {
   font-size: 11px;
   color: #90a4ae;
+}
+
+// Sidebar Admin Styles
+.sidebar-tabs {
+  display: flex;
+  background: white;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  margin-top: -16px; // Ajuste para que pegue al header
+
+  .tab-item {
+    flex: 1;
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    font-weight: 600;
+    color: #607d8b;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+
+    &:hover { background: #f5f7f9; }
+
+    &.active {
+      color: #1976d2;
+      border-bottom-color: #1976d2;
+    }
+
+    span { position: relative; }
+  }
+}
+
+.body--dark .sidebar-tabs {
+  background: #1e1e1e;
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+  .tab-item {
+    color: #b0bec5;
+    &.active { color: #90caf9; border-bottom-color: #90caf9; }
+  }
+}
+
+.sidebar-search {
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+  .search-input {
+    :deep(.q-field__control) {
+      background: white;
+      border-radius: 12px;
+    }
+  }
+}
+
+.body--dark .sidebar-search {
+  background: #252525;
+  .search-input :deep(.q-field__control) { background: #2c2c2c; }
+}
+
+.status-filters {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  background: white;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+
+  .status-chip {
+    transition: all 0.3s ease;
+    &.active {
+      background: #1976d2;
+      color: white;
+    }
+  }
+}
+
+.body--dark .status-filters {
+  background: #1e1e1e;
+}
+
+.section-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #90a4ae;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+.chat-status-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid white;
+  &.active { background: #4caf50; }
+  &.inactive { background: #bdbdbd; }
 }
 
 // Main chat area
@@ -2165,6 +2664,21 @@ onUnmounted(() => {
     border-color: white;
     transform: scale(1.1);
   }
+}
+
+.audio-bubble {
+  min-width: 200px;
+  background: white;
+  padding: 8px 12px 12px 12px !important;
+}
+
+.body--dark .audio-bubble {
+  background: #2c2c2c !important;
+}
+
+.user-message .audio-bubble {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  color: white;
 }
 
 // Animations
