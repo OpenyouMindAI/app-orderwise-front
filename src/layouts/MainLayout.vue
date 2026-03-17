@@ -608,11 +608,11 @@
 
         <q-scroll-area class="col">
           <q-expansion-item
-            v-for="(category_module, index) in filteredDataMenu"
+            v-for="category_module in filteredDataMenu"
             expand-separator
             :key="category_module.id"
             :icon="category_module.icon"
-            :default-opened="index === 0"
+            v-model="expansionStates[category_module.id]"
             :label="category_module.name"
           >
             <div v-for="list in category_module.modules" :key="list.id">
@@ -993,7 +993,17 @@ export default {
        * Subscription renewal button state
        * @type {Boolean}
        */
-      showRenewButton: false
+      showRenewButton: false,
+      /**
+       * Menu expansion states
+       * @type {Object}
+       */
+      expansionStates: {},
+      /**
+       * Previous menu expansion states (before search)
+       * @type {Object}
+       */
+      previousExpansionStates: {}
     }
   },
   computed: {
@@ -1148,6 +1158,29 @@ export default {
             }).length > 0
           )
         })
+
+        // Initialize expansion states
+        this.dataMenu.forEach((item, index) => {
+          if (this.expansionStates[item.id] === undefined) {
+            this.expansionStates[item.id] = index === 0
+          }
+        })
+      }
+    },
+    menuSearch (newVal, oldVal) {
+      if (newVal && !oldVal) {
+        // Search started: save current states
+        this.previousExpansionStates = JSON.parse(JSON.stringify(this.expansionStates))
+        // Expand all
+        Object.keys(this.expansionStates).forEach(key => {
+          this.expansionStates[key] = true
+        })
+      } else if (!newVal && oldVal) {
+        // Search cleared or closed: restore states
+        Object.keys(this.previousExpansionStates).forEach(key => {
+          this.expansionStates[key] = this.previousExpansionStates[key]
+        })
+        this.previousExpansionStates = {}
       }
     },
     $route (to, from) {
