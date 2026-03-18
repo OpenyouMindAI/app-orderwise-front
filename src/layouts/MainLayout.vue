@@ -728,7 +728,10 @@
     />
 
     <!-- Global Support Chat Bubble (Only for Admins) -->
-    <SupportChatBubble v-if="isRootOrSuperAdmin()" ref="supportChat" />
+    <SupportChatBubble
+      v-if="isRootOrSuperAdmin() && $route.name !== 'Support' && $route.name !== 'AdminSupport'"
+      ref="supportChat"
+    />
 
     <bottom-nav v-if="!$route.meta.hideBottomNav" :data-menu="dataMenu" />
 

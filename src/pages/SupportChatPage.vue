@@ -3,7 +3,7 @@
     <div class="chat-container">
       <!-- Sidebar con lista de tickets -->
       <div class="chat-sidebar" :class="{ 'mobile-hidden': selectedChat && $q.screen.lt.md }">
-        <div class="sidebar-header">
+        <div v-if="!isRoot" class="sidebar-header">
           <div class="header-content">
             <q-icon name="forum" size="32px" color="white" />
             <div class="header-text">
@@ -24,206 +24,211 @@
           </q-btn>
         </div>
 
-        <div class="sidebar-tabs" v-if="isRoot">
-          <div
-            class="tab-item"
-            :class="{ active: sidebarView === 'chats' }"
-            @click="sidebarView = 'chats'; loadChats()"
-          >
-            <span>Chats</span>
-            <q-badge v-if="unreadCount > 0" color="negative" floating>{{ unreadCount }}</q-badge>
+        <div class="chat-list column no-wrap">
+          <!-- Admin tools (Persistent Header) -->
+          <div v-if="isRoot" class="admin-sidebar-header q-pt-md">
+            <div class="sidebar-tabs" :class="{ 'users-active': sidebarView === 'users' }">
+              <div class="tab-indicator"></div>
+              <div
+                class="tab-item"
+                :class="{ active: sidebarView === 'chats' }"
+                @click="sidebarView = 'chats'; loadChats()"
+              >
+                <span>Chats</span>
+                <q-badge v-if="unreadCount > 0" color="negative" floating>{{ unreadCount }}</q-badge>
+              </div>
+              <div
+                class="tab-item"
+                :class="{ active: sidebarView === 'users' }"
+                @click="sidebarView = 'users'; fetchUsers()"
+              >
+                <span>Personas</span>
+              </div>
+            </div>
+
+            <div class="sidebar-search q-pb-sm">
+              <q-input
+                v-model="activeSearchValue"
+                dense
+                rounded
+                outlined
+                :placeholder="sidebarView === 'chats' ? 'Buscar chats...' : 'Buscar personas...'"
+                class="search-input"
+                @keyup.enter="handleSearch"
+              >
+                <template v-slot:prepend><q-icon name="search" size="20px" /></template>
+                <template v-slot:append v-if="activeSearchValue">
+                  <q-icon name="close" size="16px" class="cursor-pointer" @click="activeSearchValue = ''" />
+                </template>
+              </q-input>
+            </div>
+
+            <!-- Filtros de estado unificados -->
+            <div v-if="isRoot && sidebarView === 'chats'" class="status-filters q-pb-md">
+              <q-chip
+                v-for="status in statusOptions"
+                :key="status.value || 'all'"
+                clickable
+                @click="filters.status = status.value; loadChats()"
+                :class="['status-chip', { active: filters.status === status.value }]"
+                size="sm"
+              >
+                {{ status.label }}
+              </q-chip>
+            </div>
           </div>
-          <div
-            class="tab-item"
-            :class="{ active: sidebarView === 'users' }"
-            @click="sidebarView = 'users'; fetchUsers()"
-          >
-            <span>Personas</span>
-          </div>
-        </div>
 
-        <!-- Admin Search Bar -->
-        <div class="sidebar-search" v-if="isRoot">
-          <q-input
-            v-if="sidebarView === 'chats'"
-            v-model="filters.search"
-            dense
-            rounded
-            outlined
-            placeholder="Buscar chats..."
-            class="search-input"
-            @keyup.enter="loadChats()"
-          >
-            <template v-slot:prepend><q-icon name="search" size="20px" /></template>
-          </q-input>
-          <q-input
-            v-else
-            v-model="userSearch"
-            dense
-            rounded
-            outlined
-            placeholder="Buscar personas..."
-            class="search-input"
-            @keyup.enter="fetchUsers()"
-          >
-            <template v-slot:prepend><q-icon name="search" size="20px" /></template>
-          </q-input>
-        </div>
+          <!-- Animated Content -->
+          <div class="col relative-position overflow-hidden">
+            <transition name="slide-fade-content" mode="out-in">
+              <!-- ===== VISTA DE CHATS ===== -->
+              <div v-if="sidebarView === 'chats'" key="chats-view" class="fit column no-wrap">
+                <q-scroll-area class="col">
+                  <div v-if="loading && chats.length === 0" class="text-center q-pa-md">
+                    <q-spinner color="primary" size="40px" />
+                  </div>
 
-        <div class="chat-list">
-          <transition name="fade" mode="out-in">
-            <!-- ===== LISTA DE CHATS ===== -->
-            <q-scroll-area v-if="sidebarView === 'chats'" key="chats-view" class="fit">
-              <div v-if="isRoot" class="status-filters">
-                <q-chip
-                  v-for="status in statusOptions"
-                  :key="status.value"
-                  clickable
-                  @click="filters.status = status.value; loadChats()"
-                  :class="['status-chip', { active: filters.status === status.value }]"
-                  size="sm"
-                >
-                  {{ status.label }}
-                </q-chip>
-              </div>
+                  <div v-else-if="chats.length === 0" class="empty-state">
+                    <q-icon name="chat_bubble_outline" size="64px" color="grey-5" />
+                    <div class="empty-text">{{ isRoot ? 'No hay chats para estos filtros' : 'No tienes tickets de soporte' }}</div>
+                    <q-btn
+                      v-if="!isRoot"
+                      flat
+                      color="primary"
+                      label="Crear ticket"
+                      icon="add"
+                      @click="openNewTicketDialog"
+                    />
+                  </div>
 
-              <div v-if="loading && chats.length === 0" class="text-center q-pa-md">
-                <q-spinner color="primary" size="40px" />
-              </div>
-
-              <div v-else-if="chats.length === 0" class="empty-state">
-                <q-icon name="chat_bubble_outline" size="64px" color="grey-5" />
-                <div class="empty-text">{{ isRootOrSuperAdmin ? 'No hay chats para estos filtros' : 'No tienes tickets de soporte' }}</div>
-                <q-btn
-                  v-if="!isRootOrSuperAdmin"
-                  flat
-                  color="primary"
-                  label="Crear ticket"
-                  icon="add"
-                  @click="openNewTicketDialog"
-                />
-              </div>
-
-              <div v-else class="chats-list-wrapper">
-                <div
-                  v-for="chat in chats"
-                  :key="chat.id"
-                  class="chat-item-wrapper"
-                  :class="{ 'active': selectedChat?.id === chat.id }"
-                  @click="selectChat(chat)"
-                >
-                  <div class="chat-item-content">
-                    <div class="chat-avatar">
-                      <template v-if="isRootOrSuperAdmin">
-                        <q-avatar size="49px" class="shadow-1">
-                          <img v-if="getChatPartner(chat)?.avatar" :src="getChatPartner(chat).avatar" />
-                          <div v-else class="avatar-fallback bg-teal-7 text-white">
-                            {{ getInitials(getChatPartner(chat)?.name) }}
+                  <div v-else class="chats-list-wrapper">
+                    <div
+                      v-for="chat in chats"
+                      :key="chat.id"
+                      class="chat-item-wrapper"
+                      :class="{ 'active': selectedChat?.id === chat.id }"
+                      @click="selectChat(chat)"
+                    >
+                      <div class="chat-item-content">
+                        <div class="chat-avatar">
+                          <template v-if="isRoot">
+                            <q-avatar size="49px" class="shadow-1">
+                              <img
+                                v-if="getChatPartner(chat)?.avatar"
+                                :src="getChatPartner(chat).avatar"
+                                @error="handleAvatarError(getChatPartner(chat))"
+                              />
+                              <div v-else class="avatar-fallback bg-primary text-white">
+                                {{ getInitials(getChatPartner(chat)?.name) }}
+                              </div>
+                            </q-avatar>
+                          </template>
+                          <template v-else>
+                            <q-avatar size="49px" class="shadow-1 palma-support-avatar">
+                              <q-icon name="auto_awesome" size="24px" color="white" />
+                            </q-avatar>
+                          </template>
+                        </div>
+                        <div class="chat-info">
+                          <div class="chat-header-row">
+                            <div class="chat-title">{{ isRoot ? (getChatPartner(chat)?.name || 'Usuario') : 'Soporte' }}</div>
+                            <q-badge
+                              v-if="!isRoot"
+                              :color="chat.type === 'info' ? 'secondary' : (chat.type === 'sales' ? 'orange' : 'primary')"
+                              :label="chat.type === 'info' ? 'Información' : (chat.type === 'sales' ? 'Ventas' : 'Soporte')"
+                              class="q-ml-sm"
+                              outline
+                            />
+                            <q-badge
+                              v-if="chat.unread_count > 0"
+                              color="negative"
+                              :label="chat.unread_count"
+                              class="q-ml-sm"
+                            />
                           </div>
-                        </q-avatar>
-                      </template>
-                      <template v-else>
-                        <q-avatar size="49px" :color="chat.type === 'info' ? 'secondary' : (chat.type === 'sales' ? 'orange' : getStatusColor(chat.status))" text-color="white">
-                          <q-icon :name="chat.type === 'info' ? 'info' : (chat.type === 'sales' ? 'point_of_sale' : getStatusIcon(chat.status))" size="24px" />
-                        </q-avatar>
-                      </template>
-                    </div>
-                    <div class="chat-info">
-                      <div class="chat-header-row">
-                        <div class="chat-title">{{ isRootOrSuperAdmin ? (getChatPartner(chat)?.name || 'Usuario') : (chat.subject || 'Sin asunto') }}</div>
-                        <q-badge
-                          v-if="!isRootOrSuperAdmin"
-                          :color="chat.type === 'info' ? 'secondary' : (chat.type === 'sales' ? 'orange' : 'primary')"
-                          :label="chat.type === 'info' ? 'Información' : (chat.type === 'sales' ? 'Ventas' : 'Soporte')"
-                          class="q-ml-sm"
-                          outline
-                        />
-                        <q-badge
-                          v-if="chat.unread_count > 0"
-                          color="negative"
-                          :label="chat.unread_count"
-                          class="q-ml-sm"
-                        />
-                      </div>
-                      <div class="chat-preview">
-                        {{ truncateMessage(chat.last_message?.content) || (isRootOrSuperAdmin ? chat.subject : 'Sin mensajes') }}
+                          <div class="chat-preview">
+                            {{ truncateMessage(chat.last_message?.content) || (isRoot ? chat.subject : 'Sin mensajes') }}
+                          </div>
+                        </div>
+                        <div class="chat-meta">
+                          <div class="chat-time">{{ formatDate(chat.last_message_at) }}</div>
+                          <q-chip
+                            v-if="!isRoot"
+                            :color="getStatusColor(chat.status)"
+                            text-color="white"
+                            size="sm"
+                            dense
+                          >
+                            {{ getStatusLabel(chat.status) }}
+                          </q-chip>
+                        </div>
                       </div>
                     </div>
-                    <div class="chat-meta">
-                      <div class="chat-time">{{ formatDate(chat.last_message_at) }}</div>
-                      <q-chip
-                        v-if="!isRootOrSuperAdmin"
-                        :color="getStatusColor(chat.status)"
-                        text-color="white"
-                        size="sm"
+
+                    <!-- Pagination for Admin -->
+                    <div v-if="isRoot && pagination.lastPage > 1" class="text-center q-pa-sm">
+                      <q-pagination
+                        v-model="pagination.page"
+                        :max="pagination.lastPage"
+                        :max-pages="3"
+                        direction-links
+                        flat
                         dense
-                      >
-                        {{ getStatusLabel(chat.status) }}
-                      </q-chip>
+                        size="sm"
+                        @update:model-value="loadChats"
+                      />
                     </div>
                   </div>
-                </div>
-
-                <!-- Pagination for Admin -->
-                <div v-if="isRoot && pagination.lastPage > 1" class="text-center q-pa-sm">
-                  <q-pagination
-                    v-model="pagination.page"
-                    :max="pagination.lastPage"
-                    :max-pages="3"
-                    direction-links
-                    flat
-                    dense
-                    size="sm"
-                    @update:model-value="loadChats"
-                  />
-                </div>
+                </q-scroll-area>
               </div>
-            </q-scroll-area>
 
-            <!-- ===== VISTA DE PERSONAS (ADMIN) ===== -->
-            <q-scroll-area v-else key="users-view" class="fit">
-              <div class="users-section q-pa-md">
-                <div v-if="onlineUsersFiltered.length > 0">
-                  <div class="section-label">En línea — {{ onlineUsersFiltered.length }}</div>
-                  <div v-for="user in onlineUsersFiltered" :key="'on-' + user.id" class="chat-item-wrapper" @click="openChatWithUser(user)">
-                    <div class="chat-item-content">
-                       <q-avatar size="48px">
-                        <img v-if="user.avatar" :src="user.avatar" />
-                        <div v-else class="avatar-fallback bg-primary text-white">{{ getInitials(user.name) }}</div>
-                        <div class="chat-status-dot active"></div>
-                      </q-avatar>
-                      <div class="chat-info">
-                        <div class="chat-title">{{ user.name }}</div>
-                        <div class="chat-preview text-positive">Activo ahora</div>
+              <!-- ===== VISTA DE PERSONAS (ADMIN) ===== -->
+              <div v-else key="users-view" class="fit column no-wrap">
+                <q-scroll-area class="col">
+                  <div class="users-section q-pa-md">
+                    <div v-if="onlineUsersFiltered.length > 0">
+                      <div class="section-label">En línea — {{ onlineUsersFiltered.length }}</div>
+                      <div v-for="user in onlineUsersFiltered" :key="'on-' + user.id" class="chat-item-wrapper" @click="openChatWithUser(user)">
+                        <div class="chat-item-content">
+                           <q-avatar size="48px">
+                            <img v-if="user.avatar" :src="user.avatar" @error="handleAvatarError(user)" />
+                            <div v-else class="avatar-fallback bg-primary text-white">{{ getInitials(user.name) }}</div>
+                            <div class="chat-status-dot active"></div>
+                          </q-avatar>
+                          <div class="chat-info">
+                            <div class="chat-title">{{ user.name }}</div>
+                            <div class="chat-preview text-positive">Activo ahora</div>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                <div v-if="offlineUsersFiltered.length > 0" class="q-mt-md">
-                  <div class="section-label">Otros usuarios — {{ offlineUsersFiltered.length }}</div>
-                  <div v-for="user in offlineUsersFiltered" :key="'off-' + user.id" class="chat-item-wrapper" @click="openChatWithUser(user)">
-                    <div class="chat-item-content">
-                       <q-avatar size="48px">
-                        <img v-if="user.avatar" :src="user.avatar" />
-                        <div v-else class="avatar-fallback bg-grey-5 text-white">{{ getInitials(user.name) }}</div>
-                        <div class="chat-status-dot inactive"></div>
-                      </q-avatar>
-                      <div class="chat-info">
-                        <div class="chat-title">{{ user.name }}</div>
-                        <div class="chat-preview">{{ user.company || 'Sin empresa' }}</div>
+                    <div v-if="offlineUsersFiltered.length > 0" class="q-mt-md">
+                      <div class="section-label">Otros usuarios — {{ offlineUsersFiltered.length }}</div>
+                      <div v-for="user in offlineUsersFiltered" :key="'off-' + user.id" class="chat-item-wrapper" @click="openChatWithUser(user)">
+                        <div class="chat-item-content">
+                           <q-avatar size="48px">
+                            <img v-if="user.avatar" :src="user.avatar" @error="handleAvatarError(user)" />
+                            <div v-else class="avatar-fallback bg-grey-5 text-white">{{ getInitials(user.name) }}</div>
+                            <div class="chat-status-dot inactive"></div>
+                          </q-avatar>
+                          <div class="chat-info">
+                            <div class="chat-title">{{ user.name }}</div>
+                            <div class="chat-preview">{{ user.company || 'Sin empresa' }}</div>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                <div v-if="uniqueUsers.length === 0 && !loading" class="empty-state">
-                  <q-icon name="person_search" size="56px" color="grey-4" />
-                  <div class="empty-text">No se encontraron usuarios</div>
-                </div>
+                    <div v-if="uniqueUsers.length === 0 && !loading" class="empty-state">
+                      <q-icon name="person_search" size="56px" color="grey-4" />
+                      <div class="empty-text">No se encontraron usuarios</div>
+                    </div>
+                  </div>
+                </q-scroll-area>
               </div>
-            </q-scroll-area>
-          </transition>
+            </transition>
+          </div>
         </div>
       </div>
 
@@ -236,11 +241,15 @@
             <q-icon name="point_of_sale" size="80px" color="orange" class="icon-sales" />
             <q-icon name="info" size="80px" color="secondary" class="icon-info" />
           </div>
-          <div class="empty-title">Centro de Clientes</div>
+          <div class="empty-title">{{ isRoot ? 'Monitor de Soporte' : 'Centro de Ayuda' }}</div>
           <div class="empty-subtitle">
-            Estamos aquí para ayudarte. Ya sea soporte técnico, información de planes o asesoría de ventas, inicia una conversación con nuestro equipo.
+            {{ isRoot
+                ? 'Gestiona tus tickets y conversa con tus usuarios en tiempo real. Selecciona una conversación del panel lateral para comenzar.'
+                : 'Nuestro equipo de soporte está listo para ayudarte. Inicia una conversación para asistencia técnica, dudas sobre planes o consultas de ventas.'
+            }}
           </div>
           <q-btn
+            v-if="!isRoot"
             unelevated
             color="primary"
             label="Iniciar conversación"
@@ -264,17 +273,17 @@
               @click="selectedChat = null"
               class="q-mr-sm"
             />
-            <q-avatar v-if="isRootOrSuperAdmin" size="40px" class="shadow-1">
-              <img v-if="selectedChat.client?.avatar" :src="selectedChat.client.avatar" />
+            <q-avatar v-if="isRoot" size="40px" class="shadow-1">
+              <img v-if="selectedChat.client?.avatar" :src="selectedChat.client.avatar" @error="handleAvatarError(selectedChat.client)" />
               <div v-else class="avatar-fallback bg-primary text-white">
                 {{ getInitials(selectedChat.client?.name) }}
               </div>
             </q-avatar>
-            <q-avatar v-else :color="selectedChat.type === 'info' ? 'secondary' : (selectedChat.type === 'sales' ? 'orange' : getStatusColor(selectedChat.status))" text-color="white" size="40px">
-              <q-icon :name="selectedChat.type === 'info' ? 'info' : (selectedChat.type === 'sales' ? 'point_of_sale' : 'support_agent')" />
+            <q-avatar v-else size="40px" class="shadow-1 palma-support-avatar">
+              <q-icon name="auto_awesome" size="20px" color="white" />
             </q-avatar>
             <div class="header-info">
-              <div class="chat-name">{{ isRootOrSuperAdmin ? selectedChat.client?.name : selectedChat.subject }}</div>
+              <div class="chat-name">{{ isRoot ? selectedChat.client?.name : 'Soporte' }}</div>
               <div class="chat-status">
                 <q-chip
                   :color="getStatusColor(selectedChat.status)"
@@ -284,25 +293,32 @@
                 >
                   {{ getStatusLabel(selectedChat.status) }}
                 </q-chip>
-                <span v-if="selectedChat.admin && !isRootOrSuperAdmin" class="q-ml-sm text-caption">
-                  Atendido por: {{ selectedChat.admin.name }}
+                <span v-if="!isRoot" class="q-ml-sm text-caption text-grey-7">
+                  {{ selectedChat.subject }}
                 </span>
-                <span v-if="isRootOrSuperAdmin" class="q-ml-sm text-caption text-grey-7">
+                <span v-if="selectedChat.admin && !isRoot" class="q-ml-sm text-caption">
+                  · Atendido por: {{ selectedChat.admin.name }}
+                </span>
+                <span v-if="isRoot" class="q-ml-sm text-caption text-grey-7">
                   {{ selectedChat.subject }}
                 </span>
               </div>
             </div>
             <q-space />
             <q-chip
-              v-if="selectedChat.type === 'support' || isRootOrSuperAdmin"
+              v-if="selectedChat.type === 'support' || isRoot"
               :color="getPriorityColor(selectedChat.priority)"
               text-color="white"
-              size="sm"
-              icon="priority_high"
+              class="priority-chip"
             >
-              {{ getPriorityLabel(selectedChat.priority) }}
+              <q-icon
+                :name="selectedChat.priority === 'urgent' ? 'bolt' : 'priority_high'"
+                size="14px"
+                class="q-mr-xs"
+              />
+              <span class="text-weight-bold">{{ getPriorityLabel(selectedChat.priority) }}</span>
             </q-chip>
-            <q-btn v-if="isRootOrSuperAdmin" flat round dense icon="more_vert" color="grey-7" class="q-ml-sm">
+            <q-btn v-if="isRoot" flat round dense icon="more_vert" color="grey-7" class="q-ml-sm">
               <q-menu>
                 <q-list style="min-width: 150px">
                   <q-item v-if="selectedChat.status !== 'closed'" clickable v-close-popup @click="closeChat">
@@ -327,7 +343,7 @@
                 >
                   <div class="message-bubble" :class="{ 'audio-bubble': message.type === 'audio' }">
                     <div class="message-sender" v-if="!isOwnMessage(message)">
-                      {{ message.sender?.name || (isRootOrSuperAdmin ? selectedChat.client?.name : 'Soporte') }}
+                      {{ message.sender?.name || (isRoot ? selectedChat.client?.name : 'Soporte') }}
                     </div>
 
                     <!-- Attachment: Audio -->
@@ -819,7 +835,7 @@ const unreadCount = ref(0) // Total global unread for admin
 const userSearch = ref('')
 const sessionUsers = ref([])
 const filters = ref({
-  status: 'open',
+  status: null,
   search: ''
 })
 const pagination = ref({
@@ -828,11 +844,35 @@ const pagination = ref({
 })
 
 const isRoot = computed(() => !!authStore.userSession?.is_root)
+
+/**
+ * Lógica de Buscador Unificado
+ */
+const activeSearchValue = computed({
+  get: () => sidebarView.value === 'chats' ? filters.value.search : userSearch.value,
+  set: (val) => {
+    if (sidebarView.value === 'chats') {
+      filters.value.search = val
+    } else {
+      userSearch.value = val
+    }
+  }
+})
+
+const handleSearch = () => {
+  if (sidebarView.value === 'chats') {
+    loadChats()
+  } else {
+    fetchUsers()
+  }
+}
+
 const isRootOrSuperAdmin = computed(() => {
   return authStore.userSession?.is_root || authStore.userSession?.is_super_admin
 })
 
 const statusOptions = [
+  { label: 'Todos', value: null },
   { label: 'Abiertos', value: 'open' },
   { label: 'En Progreso', value: 'in_progress' },
   { label: 'Cerrados', value: 'closed' }
@@ -1121,6 +1161,13 @@ const getChatPartner = (chat) => {
 const getInitials = (name) => {
   if (!name) return '?'
   return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
+}
+
+/**
+ * Maneja error de carga de avatar
+ */
+const handleAvatarError = (obj) => {
+  if (obj) obj.avatar = null
 }
 
 /**
@@ -1551,21 +1598,6 @@ const getStatusColor = (status) => {
 }
 
 /**
- * Obtiene el icono del estado
- * @param {string} status - Estado del chat
- * @returns {string}
- */
-const getStatusIcon = (status) => {
-  const icons = {
-    open: 'fiber_new',
-    in_progress: 'hourglass_top',
-    closed: 'check_circle',
-    reopened: 'refresh'
-  }
-  return icons[status] || 'help'
-}
-
-/**
  * Obtiene la etiqueta del estado
  * @param {string} status - Estado del chat
  * @returns {string}
@@ -1859,7 +1891,7 @@ onUnmounted(() => {
 
 .chat-container {
   display: flex;
-  height: calc(100vh - 120px);
+  height: 100%;
   padding: 20px;
   gap: 20px;
 
@@ -1874,7 +1906,7 @@ onUnmounted(() => {
   width: 380px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   background: transparent;
 
   @media (max-width: 1023px) {
@@ -2041,6 +2073,30 @@ onUnmounted(() => {
   min-width: 0;
 }
 
+.avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.palma-support-avatar {
+  background: linear-gradient(135deg, #0084ff, #00c6ff) !important;
+  box-shadow: 0 2px 8px rgba(0, 132, 255, 0.3);
+}
+
+.chat-avatar {
+  position: relative;
+  flex-shrink: 0;
+}
+
 .chat-header-row {
   display: flex;
   justify-content: space-between;
@@ -2088,74 +2144,112 @@ onUnmounted(() => {
 // Sidebar Admin Styles
 .sidebar-tabs {
   display: flex;
-  background: #f8f9fa;
-  padding: 8px;
+  background: transparent;
+  padding: 4px;
   margin: 0 16px 12px 16px;
-  border-radius: 12px;
-  gap: 4px;
+  border-radius: 14px;
+  gap: 8px;
+  position: relative;
+  background: rgba(0, 0, 0, 0.03);
+
+  .tab-indicator {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc(50% - 8px);
+    background: white;
+    border-radius: 10px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    z-index: 0;
+  }
+
+  &.users-active .tab-indicator {
+    transform: translateX(calc(100% + 8px));
+  }
 
   .tab-item {
     flex: 1;
-    padding: 8px 12px;
+    padding: 10px 12px;
     text-align: center;
     cursor: pointer;
     font-weight: 600;
-    font-size: 13px;
-    color: #607d8b;
-    border-radius: 8px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 14px;
+    color: #546e7a;
+    border-radius: 10px;
+    transition: all 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
+    position: relative;
+    z-index: 1;
 
-    &:hover {
-      background: rgba(0, 0, 0, 0.03);
+    &:hover:not(.active) {
       color: #1976d2;
     }
 
     &.active {
-      background: white;
       color: #1976d2;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-      transform: scale(1.02);
     }
-
-    span { position: relative; }
   }
 }
 
 .body--dark .sidebar-tabs {
-  background: rgba(255, 255, 255, 0.05);
-  .tab-item {
-    color: #90a4ae;
-    &:hover { background: rgba(255, 255, 255, 0.03); }
-    &.active {
-      background: #2c2c2c;
-      color: #90caf9;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
+  background: rgba(255, 255, 255, 0.04);
+  .tab-indicator {
+    background: #2c2c2c;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+  .tab-item.active {
+    color: #90caf9;
   }
 }
 
+/* Transiciones de contenido */
+.slide-fade-content-enter-active,
+.slide-fade-content-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-fade-content-enter-from {
+  opacity: 0;
+  transform: translateX(15px);
+}
+
+.slide-fade-content-leave-to {
+  opacity: 0;
+  transform: translateX(-15px);
+}
+
+// Fade transition for search
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
 .sidebar-search {
-  padding: 0 16px 16px 16px;
+  padding: 0 16px 8px 16px;
   background: transparent;
 
   .search-input {
     :deep(.q-field__control) {
-      background: white;
+      background: #f8f9fa;
       border-radius: 14px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-      border: 1px solid rgba(0, 0, 0, 0.05);
+      box-shadow: none;
       transition: all 0.3s ease;
 
       &:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        background: #f1f3f5;
+        border-color: rgba(0, 0, 0, 0.08);
       }
       &.q-field__control--focused {
+        background: white;
         border-color: #1976d2;
-        box-shadow: 0 4px 15px rgba(25, 118, 210, 0.1);
+        box-shadow: 0 4px 15px rgba(25, 118, 210, 0.08);
       }
     }
   }
@@ -2168,41 +2262,64 @@ onUnmounted(() => {
   }
 }
 
+.admin-sidebar-header {
+  background: white;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.02);
+  z-index: 10;
+}
+
+.body--dark .admin-sidebar-header {
+  background: #1e1e1e;
+  border-bottom-color: rgba(255, 255, 255, 0.03);
+}
+
 .status-filters {
   display: flex;
-  gap: 8px;
-  padding: 12px 16px;
+  gap: 6px;
+  padding: 0 16px 0 16px;
   overflow-x: auto;
   background: transparent;
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
 
   .status-chip {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    font-weight: 500;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    background: white;
+    margin: 0;
+    transition: all 0.2s ease;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #f8f9fa;
+    color: #78909c;
+    height: 28px;
+    padding: 0 10px;
+    box-sizing: border-box;
 
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    &:hover:not(.active) {
+      background: #f1f3f5;
+      color: #1976d2;
+      border-color: rgba(25, 118, 210, 0.3);
     }
 
     &.active {
-      background: linear-gradient(135deg, #1976d2, #1565c0);
-      color: white;
-      border: none;
-      box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+      background: #1976d2;
+      color: white !important;
+      border-color: transparent;
+      box-shadow: 0 4px 10px rgba(25, 118, 210, 0.2);
     }
   }
 }
 
 .body--dark .status-filters {
   .status-chip {
-    background: #252525;
-    border-color: rgba(255, 255, 255, 0.1);
+    background: #2c2c2c;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #90a4ae;
     &.active {
-      background: linear-gradient(135deg, #1976d2, #1565c0);
+      background: #1976d2;
+      color: white !important;
+      border-color: transparent;
     }
   }
 }
@@ -2379,6 +2496,20 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   margin-top: 4px;
+}
+
+.priority-chip {
+  height: 24px;
+  font-size: 11px;
+  padding: 0 12px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  .q-icon {
+    opacity: 0.9;
+  }
 }
 
 .messages-container {

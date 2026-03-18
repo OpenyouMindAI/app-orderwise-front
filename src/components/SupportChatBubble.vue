@@ -33,18 +33,23 @@
             <q-card-section class="card-header q-pa-md">
               <div class="row items-center no-wrap">
                 <div class="avatar-container q-mr-sm">
-                  <q-avatar size="44px" class="palma-avatar">
-                    <q-icon name="auto_awesome" size="22px" color="white" />
-                    <div class="status-indicator online"></div>
+                  <q-avatar size="44px" :class="{ 'palma-avatar': !isRoot, 'shadow-1 bg-primary text-white': isRoot }">
+                    <template v-if="isRoot && selectedChat">
+                      <img v-if="getAvatarUrl(selectedChat)" :src="getAvatarUrl(selectedChat)" @error="handleAvatarError(selectedChat)" />
+                      <div v-else class="full-width full-height row flex-center text-weight-bold" style="font-size: 18px;">
+                        {{ getInitials(getChatName(selectedChat)) }}
+                      </div>
+                    </template>
+                    <q-icon v-else name="auto_awesome" size="22px" color="white" />
+                    <div class="status-indicator" :class="isPartnerOnline ? 'online' : 'offline'"></div>
                   </q-avatar>
                 </div>
                 <div class="col">
                   <div class="support-name">
-                    <span class="ellipsis">{{ selectedChat ? (selectedChat.title || selectedChat.subject) : 'Soporte OrderWise' }}</span>
+                    <span class="ellipsis">{{ getChatName(selectedChat) }}</span>
                   </div>
                   <div class="support-status">
-                    <q-icon name="circle" size="8px" color="green-5" class="q-ml-none q-mr-xs" />
-                    <span class="status-text">Activo ahora</span>
+                    <span class="status-text">{{ isPartnerOnline ? 'Activo ahora' : 'Desconectado' }}</span>
                   </div>
                 </div>
                 <div class="row no-wrap items-center">
@@ -322,6 +327,45 @@ const chatInput = ref(null)
  * Current user
  */
 const currentUser = computed(() => authStore.userSession)
+
+const isRoot = computed(() => !!authStore.userSession?.is_root)
+
+const isPartnerOnline = computed(() => {
+  if (!selectedChat.value) return false
+  if (!isRoot.value) return true // El bot siempre está conectado
+
+  const partner = selectedChat.value.client || selectedChat.value.users?.find(u => u.id !== authStore.userSession?.id)
+  return partner?.status === 'online' || partner?.is_online || false
+})
+
+const getInitials = (name) => {
+  if (!name) return '?'
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
+}
+
+const getChatName = (chat) => {
+  if (!chat) return 'Soporte OrderWise'
+  if (isRoot.value) {
+    return chat.client?.name || chat.users?.find(u => u.id !== authStore.userSession?.id)?.name || 'Cliente'
+  }
+  return chat.title || chat.subject || 'Soporte OrderWise'
+}
+
+const getAvatarUrl = (chat) => {
+  if (!chat) return null
+  if (isRoot.value) {
+    return chat.client?.avatar || chat.users?.find(u => u.id !== authStore.userSession?.id)?.avatar
+  }
+  return null
+}
+
+const handleAvatarError = (chat) => {
+  if (!chat) return
+  if (isRoot.value) {
+    const partner = chat.client || chat.users?.find(u => u.id !== authStore.userSession?.id)
+    if (partner) partner.avatar = null
+  }
+}
 
 /**
  * Toggle mini chat
@@ -697,6 +741,10 @@ defineExpose({
 
   &.online {
     background-color: #31a24c;
+  }
+
+  &.offline {
+    background-color: #bcc0c4;
   }
 }
 
