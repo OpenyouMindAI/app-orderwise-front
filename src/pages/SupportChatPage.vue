@@ -417,7 +417,6 @@
               hint="El título se asigna automáticamente según el asunto"
             />
 
-
             <q-input
               v-model="newTicket.message"
               :label="newTicket.type === 'support' ? 'Descripción del problema *' : (newTicket.type === 'sales' ? '¿En qué te puede ayudar nuestro equipo de ventas? *' : '¿Qué quieres saber? *')"
