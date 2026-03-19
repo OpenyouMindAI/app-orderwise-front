@@ -68,36 +68,6 @@
         </div>
         <q-space />
 
-        <!-- Support Button (Only for Admins) -->
-        <div class="support-indicator" v-if="isRootOrSuperAdmin()">
-          <q-btn
-            v-if="userSession?.is_root"
-            flat
-            dense
-            no-caps
-            class="support-btn-header"
-            label="Suporte Admin"
-            @click="changeRoute('AdminSupport', 'Suporte Admin')"
-          >
-            <q-icon name="support_agent" size="20px" />
-            <q-tooltip>Centro de Soporte para Administradores</q-tooltip>
-          </q-btn>
-          <q-btn
-            v-else
-            flat
-            dense
-            no-caps
-            label="Contactanos"
-            class="support-btn-header"
-            @click="changeRoute('Support', 'Suporte')"
-          >
-            <q-icon name="support_agent" size="20px" />
-            <q-tooltip>Centro de Soporte y Ayuda</q-tooltip>
-          </q-btn>
-        </div>
-
-        <q-space />
-
         <!-- Right: Actions -->
         <div class="navbar-right">
           <!-- Botón Crear Mi Empresa (Escritorio/Tablet) -->
@@ -178,6 +148,26 @@
             @click="openQrScanner"
           >
             <q-tooltip>Escanear QR</q-tooltip>
+          </q-btn>
+
+          <!-- Soporte Chat -->
+          <q-btn
+            v-if="userSession"
+            flat
+            dense
+            round
+            icon="chat"
+            @click="handleChatButtonClick"
+            class="support-chat-toggle-btn"
+          >
+            <q-badge
+              v-if="totalSupportUnread > 0"
+              color="red"
+              floating
+            >
+              {{ totalSupportUnread }}
+            </q-badge>
+            <q-tooltip>Chat de Soporte</q-tooltip>
           </q-btn>
 
           <!-- Herramientas -->
@@ -727,10 +717,19 @@
       @back="showOtpVerification = false; showCreateCompanyDialog = true"
     />
 
-    <!-- Global Support Chat Bubble (Only for Admins) -->
+    <!-- Global Support Chat Bubble -->
     <SupportChatBubble
-      v-if="isRootOrSuperAdmin() && $route.name !== 'Support' && $route.name !== 'AdminSupport'"
+      v-if="$route.name !== 'Support' && $route.name !== 'AdminSupport'"
       ref="supportChat"
+    />
+
+    <SupportNotificationToast
+      ref="supportToast"
+      :avatar="toastData.avatar"
+      :name="toastData.name"
+      :message="toastData.message"
+      :duration="10000"
+      @click="handleChatButtonClick"
     />
 
     <bottom-nav v-if="!$route.meta.hideBottomNav" :data-menu="dataMenu" />
@@ -805,6 +804,7 @@ import { useDemoPersuasion } from 'src/composables/useDemoPersuasion'
 import { useCompanySetup } from 'src/composables/useCompanySetup'
 import ProPlanPromoBanner from 'src/components/ProPlanPromoBanner.vue'
 import SupportChatBubble from 'src/components/SupportChatBubble.vue'
+import SupportNotificationToast from 'src/components/SupportNotificationToast.vue'
 
 export default {
   name: 'MainLayout',
@@ -822,7 +822,8 @@ export default {
     IntegrationDynamic,
     BottomNav,
     ProPlanPromoBanner,
-    SupportChatBubble
+    SupportChatBubble,
+    SupportNotificationToast
   },
   data () {
     return {
@@ -973,7 +974,20 @@ export default {
        * Subscription renewal button state
        * @type {Boolean}
        */
-      showRenewButton: false
+      showRenewButton: false,
+      /**
+       * Total unread support messages
+       * @type {Number}
+       */
+      totalSupportUnread: 5,
+      /**
+       * Toast notification data
+       */
+      toastData: {
+        avatar: '',
+        name: '',
+        message: ''
+      }
     }
   },
   computed: {
@@ -1190,7 +1204,7 @@ export default {
         this.setNotification(notification)
       })
 
-    if (this.isRootOrSuperAdmin()) {
+    if (this.userSession?.id) {
       this.$echo.private(`support.user.${this.userSession.id}`)
         .listen('.message.sent', (data) => {
           this.handleGlobalSupportMessage(data)
@@ -1245,6 +1259,11 @@ export default {
 
     // Init demo persuasion logic (immediate trigger + timer)
     this.initDemoPersuasion()
+
+    // Mock Notification for Demonstration
+    setTimeout(() => {
+      this.testToast()
+    }, 1000)
   },
 
   beforeUnmount () {
@@ -1949,6 +1968,7 @@ export default {
 
       // Actualizar la campanita
       this.getDataNotification()
+      this.getSupportUnreadCount()
 
       this.setNotification({
         data: {
@@ -1957,6 +1977,16 @@ export default {
           name: 'SUPPORT_MESSAGE'
         },
         id: data.chat_id
+      })
+
+      // NEW: Trigger the custom popup toast
+      this.toastData = {
+        avatar: data.message.sender_avatar || data.message.sender?.avatar || '',
+        name: data.message.sender_name || data.message.sender?.name || 'Soporte',
+        message: data.message.content || ''
+      }
+      this.$nextTick(() => {
+        this.$refs.supportToast?.show()
       })
     },
 
@@ -1968,6 +1998,23 @@ export default {
         this.numberOfNotifications = data.data
       } catch (error) {
         console.log(error.message)
+      }
+    },
+
+    /**
+     * Get total unread support chat messages
+     */
+    async getSupportUnreadCount () {
+      this.totalSupportUnread = 5 // MOCK FOR DEMONSTRATION - KEEP IT FIXED
+      if (!this.userSession) return
+      try {
+        const params = {
+          is_root: this.isRootOrSuperAdmin() ? 1 : 0
+        }
+        await api.get('support-chats', { params })
+        // Real logic commented for mock focus
+      } catch (error) {
+        console.error('Error loading support unread count:', error)
       }
     },
 
@@ -2275,6 +2322,7 @@ export default {
       this.getDataNotification()
       this.getBrachOffice()
       this.loadSubscriptionInfo()
+      this.getSupportUnreadCount()
       this.cuit = this.userSession?.company_session?.document_number
       this.loadingTasks()
     },
@@ -2395,6 +2443,29 @@ export default {
       }
     },
 
+    /**
+     * Test notification toast with mock data
+     */
+    testToast () {
+      this.toastData = {
+        avatar: 'https://cdn.quasar.dev/img/avatar2.jpg',
+        name: 'Palma (Soporte)',
+        message: '¡Hola! ¿En qué puedo ayudarte hoy con tu pedido?'
+      }
+      this.$nextTick(() => {
+        this.$refs.supportToast?.show()
+      })
+    },
+    /**
+     * Handle chat button click based on screen size
+     */
+    handleChatButtonClick () {
+      if (this.$q.screen.xs) {
+        this.$router.push('/support')
+      } else {
+        this.$refs.supportChat?.toggleMiniChat()
+      }
+    },
     /**
      * Handle support click from the Facebook card in the drawer
      */
@@ -2576,6 +2647,20 @@ export default {
 }
 
 .tour-btn-navbar:active {
+  transform: scale(0.95);
+}
+
+/* Chat Toggle Button in Navbar */
+.support-chat-toggle-btn {
+  transition: all 0.3s ease;
+}
+
+.support-chat-toggle-btn:hover {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.support-chat-toggle-btn:active {
   transform: scale(0.95);
 }
 

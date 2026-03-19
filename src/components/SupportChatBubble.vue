@@ -1,19 +1,5 @@
 <template>
   <div class="support-chat-bubble">
-    <!-- FAB Button -->
-    <transition name="scale">
-      <q-btn
-        v-if="!showMiniChat"
-        fab
-        color="primary"
-        icon="chat"
-        class="chat-fab"
-        @click="toggleMiniChat"
-      >
-        <q-tooltip>Chat de Soporte</q-tooltip>
-      </q-btn>
-    </transition>
-
     <!-- Support Components (Card or Chat) -->
     <transition name="slide-up">
       <div v-if="showMiniChat" class="mini-chat-container">
@@ -638,9 +624,17 @@ watch(selectedChat, (newVal) => {
 
 // No scroll watchers needed — scroll is handled in selectChat()
 
+/**
+ * Open mini chat explicitly
+ */
+const openMiniChat = () => {
+  showMiniChat.value = true
+}
+
 // Expose methods for parent components
 defineExpose({
-  toggleMiniChat
+  toggleMiniChat,
+  openMiniChat
 })
 </script>
 
