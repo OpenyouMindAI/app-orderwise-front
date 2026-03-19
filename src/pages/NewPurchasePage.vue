@@ -747,275 +747,21 @@
           <q-space />
           <q-btn icon="close" flat round dense @click="closeModal" />
         </q-card-section>
-        <q-form @submit="saveProduct" ref="formAddProduct">
-          <q-card-section>
-            <div class="row q-col-gutter-sm">
-              <div class="row col-md-7 col-xs-12 col-sm-12">
-                <!-- Datos bí¡sicos -->
-                <div class="col-12">
-                  <q-card flat bordered class="q-pa-md q-mb-md">
-                    <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
-                      <q-icon name="info" class="q-mr-sm" />
-                      Datos bí¡sicos
-                    </div>
-                    <div class="row q-col-gutter-sm">
-                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
-                        <q-input
-                          filled
-                          v-model="product.barcode"
-                          autofocus
-                          label="Código de barra"
-                          dense
-                          @keyup.enter="getOneProduct(product.barcode)"
-                        >
-                          <template v-slot:append v-if="$q.platform.is.nativeMobile">
-                            <q-icon name="qr_code_scanner" size="sm" class="cursor-pointer" />
-                          </template>
-                        </q-input>
-                      </div>
-                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
-                        <q-input
-                          :rules="[val => !!val || 'El campo es requerido.']"
-                          filled
-                          v-model="product.name"
-                          label="Nombre"
-                          dense
-                        />
-                      </div>
-                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
-                        <q-select
-                          use-input
-                          filled
-                          label="Categorí­a"
-                          input-debounce="0"
-                          option-label="name"
-                          option-value="id"
-                          v-model="categoryAdd"
-                          :options="categories"
-                          :rules="[val => !!val || 'El campo es requerido.']"
-                          @filter="filterCategories"
-                          @update:model-value="setCategory"
-                          dense
-                        />
-                      </div>
-                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
-                        <q-select
-                          filled
-                          dense
-                          v-model="unitOfMeasure"
-                          :options="unitOfMeasures"
-                          option-label="name"
-                          option-value="id"
-                          label="Unidad de Medida"
-                          :rules="[val => !!val || 'Requerido']"
-                        />
-                      </div>
-                      <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
-                        <q-input
-                          filled
-                          dense
-                          v-model.number="product.base_quantity"
-                          label="Cantidad Base"
-                          type="number"
-                          step="0.01"
-                          min="0.01"
-                          hint="Cantidad para el costo (ej: 100 para $X por 100g)"
-                          :rules="[val => val > 0 || 'Debe ser mayor a 0']"
-                        />
-                      </div>
-                      <div class="col-12">
-                        <q-input
-                          filled
-                          v-model="product.description"
-                          type="textarea"
-                          autogrow
-                          label="Descripción"
-                          dense
-                        />
-                      </div>
-                    </div>
-                  </q-card>
-                </div>
 
-                <!-- Precios -->
-                <div class="col-12">
-                  <q-card flat bordered class="q-pa-md q-mb-md">
-                    <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
-                      <q-icon name="attach_money" class="q-mr-sm" />
-                      Precios
-                    </div>
-                    <div class="row q-col-gutter-sm q-mb-md">
-                      <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
-                        <q-input
-                          :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
-                          filled
-                          v-model="product.cost"
-                          label="Costo"
-                          type="number"
-                          dense
-                          @update:model-value="updateCost"
-                        />
-                      </div>
-                      <div class="col-xl-3 col-lg-3 col-md-3 col-sm-3 col-xs-12">
-                        <q-input
-                          :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
-                          filled
-                          v-model.number="product.profit_percentage"
-                          :model-value="Number(product?.profit_percentage).toFixed(2)"
-                          label="Margen %"
-                          min="0"
-                          dense
-                          @update:model-value="updateProfitPercentage"
-                        />
-                      </div>
-                      <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12">
-                        <q-input
-                          :rules="[val => !!val || 'El campo es requerido.']"
-                          filled
-                          v-model="product.price"
-                          label="Precio base"
-                          type="number"
-                          step=".01"
-                          dense
-                          @update:model-value="updatePrice"
-                        />
-                      </div>
-                      <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
-                        <q-input
-                          filled
-                          v-model="product.minimum_stock"
-                          label="Stock mí­nimo"
-                          type="number"
-                          step=".01"
-                          dense
-                        />
-                      </div>
-                      <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
-                        <q-select
-                          use-input
-                          filled
-                          label="Iva (%)"
-                          input-debounce="0"
-                          option-label="Desc"
-                          option-value="id"
-                          v-model="product.aliquot_type"
-                          :options="aliquotTypes"
-                          @filter="getAliquotTypes"
-                          dense
-                        />
-                      </div>
-                    </div>
-                  </q-card>
-                </div>
-              </div>
-
-              <!-- Sección de imí¡genes -->
-              <div class="col-md-5 col-xs-12 col-sm-12">
-                <q-card flat bordered class="q-pa-md">
-                  <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
-                    <q-icon name="image" class="q-mr-sm" />
-                    Imí¡genes
-                  </div>
-                  <q-card
-                    flat
-                    bordered
-                    class="dropzone-card q-mb-md"
-                    :class="{ 'dropzone-active': isDragOver }"
-                    @dragover.prevent="isDragOver = true"
-                    @dragleave.prevent="isDragOver = false"
-                    @drop.prevent="handleDrop"
-                  >
-                    <q-card-section class="text-center q-pa-xl q-gutter-y-md">
-                      <!-- Image Preview Grid -->
-                      <div class="col-12" v-if="product.images.length">
-                        <div class="text-subtitle2 text-primary q-mb-md">Vista Previa</div>
-                        <div class="row q-col-gutter-sm scroll q-pa-sm" style="max-height: 400px;">
-                          <div
-                            v-for="(image, index) in product.images"
-                            :key="index"
-                            class="col-6 col-sm-4 col-md-4"
-                          >
-                            <q-card flat class="image-preview-card">
-                              <q-img
-                                :src="image.url"
-                                :ratio="1"
-                                class="rounded-borders"
-                              >
-                                <div class="absolute-top-right bg-transparent">
-                                  <q-btn
-                                    size="sm"
-                                    icon="close"
-                                    color="negative"
-                                    round
-                                    dense
-                                    @click="deleteImage(image, index)"
-                                  />
-                                </div>
-                              </q-img>
-                            </q-card>
-                          </div>
-                        </div>
-                      </div>
-                      <div v-else>
-                        <q-icon name="cloud_upload" size="4rem" color="grey-5" class="q-mb-md" />
-                        <div class="text-h6 text-grey-7 q-mb-sm">
-                          Arrastra las imí¡genes aquí­
-                        </div>
-                        <div class="text-body2 text-grey-5 q-mb-md">
-                          o haz clic para seleccionar archivos
-                        </div>
-                      </div>
-                      <q-btn
-                        color="primary"
-                        label="Seleccionar Imí¡genes"
-                        @click="openFileDialog"
-                        unelevated
-                      />
-                      <input
-                        ref="fileInput"
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        style="display: none"
-                        @change="handleFileSelect"
-                      />
-                    </q-card-section>
-                  </q-card>
-                  <q-card flat bordered class="q-pa-md q-mb-md">
-                    <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
-                      <q-icon name="settings" class="q-mr-sm" />
-                      Configuración
-                    </div>
-                    <div class="row q-col-gutter-md">
-                      <div class="col-6">
-                        <q-toggle
-                          v-model="product.skip_stock"
-                          label="Facturar sin stock"
-                          :true-value="1"
-                          :false-value="0"
-                          color="positive"
-                        />
-                      </div>
-                      <div class="col-6">
-                        <q-toggle
-                          v-model="product.show_catalog"
-                          label="Mostrar en catí¡logo"
-                          :true-value="1"
-                          :false-value="0"
-                          color="positive"
-                        />
-                      </div>
-                    </div>
-                  </q-card>
-                </q-card>
-              </div>
-            </div>
-          </q-card-section>
-          <q-card-actions align="right" class="text-primary q-pa-md">
-            <q-btn color="secondary" label="Cancelar" @click="closeModal" />
-            <q-btn color="primary" label="Guardar" type="submit" :loading="visible" unelevated />
-          </q-card-actions>
-        </q-form>
+        <product-form
+          :value="product"
+          :categories="categories"
+          :unit-of-measures="unitOfMeasures"
+          :aliquot-types="aliquotTypes"
+          :is-edit="false"
+          :loading="visible"
+          @save="data => { product = data; saveProduct() }"
+          @cancel="closeModal"
+          @filter-categories="filterCategories"
+          @filter-aliquots="getAliquotTypes"
+          @delete-image="deleteImage"
+          @scanner="startScanner"
+        />
       </q-card>
     </q-dialog>
 
@@ -1712,11 +1458,13 @@ import {
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
+import ProductForm from 'src/components/Product/ProductForm.vue'
 export default {
   name: 'NewPurchasePage',
   components: {
     // StreamBarcodeReader,
-    FileComponent
+    FileComponent,
+    ProductForm
   },
   data () {
     return {
@@ -2089,19 +1837,11 @@ export default {
        */
       categories: [],
       /**
-       * The currently selected unit of measure (object)
-       * @type {object} selected UOM
+       * Visibility state of the modal used to add products manually
+       * @type {boolean} open add product modal state
        */
-      unitOfMeasure: null,
-      /**
-       * List of all available units of measure
-       * @type {array} unit of measures array
-       */
+      openAddProduct: false,
       unitOfMeasures: [],
-      /**
-       * Data object for a new product being created
-       * @type {object} product data object
-       */
       product: {
         show_catalog: 0,
         skip_stock: 0,
@@ -2109,31 +1849,6 @@ export default {
         images: [],
         base_quantity: 1
       },
-      /**
-       * List of price lists associated with a product
-       * @type {array} price lists array
-       */
-      priceLists: [],
-      /**
-       * Indicates if a file is currently being dragged over a drop zone
-       * @type {boolean} drag over state
-       */
-      isDragOver: false,
-      /**
-       * Visibility state of the modal used to add products manually
-       * @type {boolean} open add product modal state
-       */
-      openAddProduct: false,
-      /**
-       * List of addon products selected for the current item
-       * @type {array} addons products array
-       */
-      addonsProducts: [],
-      /**
-       * List of available options for addon products
-       * @type {array} addon product options array
-       */
-      addonsProductsOptions: [],
       /**
        * Indicates if products are currently being loaded from the API
        * @type {boolean} loading products state
@@ -2297,17 +2012,7 @@ export default {
         this.updateValues('quantity')
       }
     },
-    /**
-     * Updates the product's unit of measure ID when selecting a new UOM
-     * @params {number} data UOM ID
-     */
-    unitOfMeasure (data) {
-      if (data) {
-        this.product.unit_of_measure_id = typeof data === 'object' ? data.id : data
-      } else {
-        this.product.unit_of_measure_id = null
-      }
-    },
+
     /**
      * Updates the product's category ID when a category is selected in the add product form
      * @params {object} data category object
@@ -2713,24 +2418,6 @@ export default {
           user_created_id: this.userSession.id
         })
       }
-    },
-    /**
-     * Processes a list of selected files (images) and converts them to base64 for preview
-     * @params {array} files list of file objects
-     */
-    processFiles (files) {
-      files.forEach(file => {
-        if (file.type.startsWith('image/')) {
-          const reader = new FileReader()
-          reader.onload = (e) => {
-            this.product.images.push({
-              image: file,
-              url: e.target.result
-            })
-          }
-          reader.readAsDataURL(file)
-        }
-      })
     },
     /**
      * Fetches available payment methods from the server
@@ -3467,8 +3154,6 @@ export default {
      */
     closeModal () {
       this.openAddProduct = false
-      this.priceLists = []
-      this.unitOfMeasure = null
       this.categoryAdd = null
       this.product = {
         images: [],
@@ -3479,7 +3164,6 @@ export default {
         profit_percentage: 0,
         base_quantity: 1
       }
-      this.getUnitOfMeasures()
     },
     /**
      * Fetches available aliquot (tax) types from the metadata API
@@ -3577,36 +3261,6 @@ export default {
       }
     },
     /**
-     * Updates the product's selling price based on a profit percentage
-     * @params {number} newVal new profit percentage value
-     */
-    updateProfitPercentage (newVal) {
-      if (newVal && this.product.cost > 0) {
-        const price = this.product.cost * (1 + newVal / 100)
-        this.product.price = parseFloat(price.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0])
-      }
-    },
-    /**
-     * Updates the product's selling price when the cost changes
-     * @params {number} newVal new cost value
-     */
-    updateCost (newVal) {
-      if (newVal && this.product.profit_percentage != null) {
-        const price = newVal * (1 + this.product.profit_percentage / 100)
-        this.product.price = parseFloat(price.toString().match(/^-?\d+(?:\.\d{0,2})?/)[0])
-      }
-    },
-    /**
-     * Recalculates profit percentage when the selling price is manually updated
-     * @params {number} newVal new selling price value
-     */
-    updatePrice (newVal) {
-      if (newVal && this.product.cost > 0) {
-        const margin = ((newVal - this.product.cost) / this.product.cost) * 100
-        this.product.profit_percentage = Number(margin.toFixed(4)) // 85.7143%
-      }
-    },
-    /**
      * Prepares product data as FormData for uploading images and creation
      * @params {object} data raw product data
      * @params {boolean} put if true, adds _method=put for updates
@@ -3630,40 +3284,36 @@ export default {
         formData.append('aliquot_type', JSON.stringify(data.aliquot_type))
       }
 
-      data.images.forEach((element, index) => {
-        formData.append(`images[${index}]`, element.image)
-      })
+      // unit_of_measure_id from payload
+      if (data.unit_of_measure_id) {
+        formData.append('unit_of_measure_id', data.unit_of_measure_id)
+      }
 
-      if (this.addonsProducts.length > 0) {
-        this.addonsProducts.forEach((element, index) => {
+      // Only append new File images
+      if (data.images) {
+        data.images.forEach((element, index) => {
+          if (element.image instanceof File) {
+            formData.append(`images[${index}]`, element.image)
+          }
+        })
+      }
+
+      const addons = data.addons
+      if (addons && addons.length > 0) {
+        addons.forEach((element, index) => {
           formData.append(`addons[${index}]`, element.id)
         })
       }
 
-      if (this.priceLists.length > 0) {
-        this.priceLists.forEach((element, index) => {
+      const priceLists = data.price_lists
+      if (priceLists && priceLists.length > 0) {
+        priceLists.forEach((element, index) => {
           formData.append(`price_lists[${index}]`, JSON.stringify({ ...element, index }))
         })
       }
 
       formData.append('branch_office_ids[0]', this.branchOffice?.id)
       return formData
-    },
-    /**
-     * Handles file drop events for product images
-     * @params {event} event drop event object
-     */
-    handleDrop (event) {
-      this.isDragOver = false
-      const files = Array.from(event.dataTransfer.files)
-      this.processFiles(files)
-    },
-    /**
-     * Updates the product's aliquot type based on category selection
-     * @params {object} data category data object
-     */
-    setCategory (data) {
-      this.product.aliquot_type = data.aliquot_type
     },
 
     /**
