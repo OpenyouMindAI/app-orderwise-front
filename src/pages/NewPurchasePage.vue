@@ -2384,7 +2384,11 @@ export default {
      * @params {number} data UOM ID
      */
     unitOfMeasure (data) {
-      this.product.unit_of_measure_id = data
+      if (data) {
+        this.product.unit_of_measure_id = typeof data === 'object' ? data.id : data
+      } else {
+        this.product.unit_of_measure_id = null
+      }
     },
     /**
      * Updates the product's category ID when a category is selected in the add product form
@@ -3546,13 +3550,16 @@ export default {
     closeModal () {
       this.openAddProduct = false
       this.priceLists = []
+      this.unitOfMeasure = null
+      this.categoryAdd = null
       this.product = {
         images: [],
         is_bundle: 0,
         show_catalog: 0,
         is_addons: 0,
         skip_stock: 0,
-        profit_percentage: 0
+        profit_percentage: 0,
+        base_quantity: 1
       }
       this.getUnitOfMeasures()
     },

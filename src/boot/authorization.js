@@ -21,6 +21,20 @@ const CONFIG = {
     'business-types'
   ],
   ROUTES_WITHOUT_MODULE_CHECK: ['Profile', 'ChangeCompany', 'VerifySession'],
+  PREMIUM_MODULES: [
+    'SalesInventoryReport',
+    'ProductKardex',
+    'TransferProduct',
+    'Promotions',
+    'BranchOffice',
+    'Integrations',
+    'Company',
+    'Cashbox',
+    'Seller',
+    'Client',
+    'DeliveryPerson'
+  ],
+  ROOT_ONLY_ROUTES: ['AdminDashboard', 'DashboardManager'],
   DEBOUNCE_TIME: 2000
 }
 
@@ -76,8 +90,8 @@ const getDefaultRoute = (user) => {
 const validateModuleAccess = (store, to) => {
   const user = store.userSession
 
-  // Super usuarios tienen acceso total
-  if (user?.is_root || user?.is_super_admin) {
+  // Solo el Root tiene acceso total absoluto para evitar bloqueos del sistema
+  if (user?.is_root) {
     return null
   }
 
@@ -86,19 +100,36 @@ const validateModuleAccess = (store, to) => {
     return null
   }
 
-  const modules = user?.roles?.[0]?.modules
+  // Obtener todos los módulos de todos los roles del usuario
+  const modules = user?.roles?.reduce((acc, role) => {
+    return acc.concat(role.modules || [])
+  }, []) || []
 
-  // Sin módulos asignados, permitir acceso
-  if (!modules || modules.length === 0) {
-    return null
+  // 1. Validar rutas exclusivas de Root
+  if (CONFIG.ROOT_ONLY_ROUTES.includes(to.name) && !user?.is_root) {
+    return '/'
   }
 
-  // Validar acceso al módulo específico
-  if (user?.company_session_id) {
-    const hasModuleAccess = modules.some(module => module.link === to.name)
+  // 2. Validar restricciones de Plan (Módulos Premium) - Bloqueo absoluto por plan
+  const isDemo = store.isDemo || store.isClientDemo
+  const isFree = store.currentPlan?.slug === 'free' || store.subscriptionPlan === 'Free'
 
-    if (!hasModuleAccess && modules[0]?.link) {
-      return { name: modules[0].link }
+  if ((isDemo || isFree) && CONFIG.PREMIUM_MODULES.includes(to.name)) {
+    return '/'
+  }
+
+  // 3. Validar acceso por Módulos (RBAC)
+  if (user?.company_session_id) {
+    const userModules = modules.map(m => m.link)
+    const hasModuleAccess = userModules.includes(to.name)
+
+    // Si la ruta es un módulo premium o una de las rutas conocidas como "Módulos Principales",
+    // entonces validamos estrictamente que la tenga.
+    const isMainModule = CONFIG.PREMIUM_MODULES.includes(to.name) ||
+                        ['Product', 'Category', 'User', 'Role', 'Invoice', 'Cashbox', 'BranchOffice'].includes(to.name)
+
+    if (isMainModule && !hasModuleAccess) {
+      return '/'
     }
   }
 
