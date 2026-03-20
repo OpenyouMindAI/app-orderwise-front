@@ -1639,11 +1639,6 @@ export default {
       unitOfMeasure: null,
       tempRecipeIngredients: [],
       product: {
-        is_bundle: 0,
-        show_catalog: 0,
-        is_addons: 0,
-        skip_stock: 0,
-        profit_percentage: 0,
         images: [],
         product_type: 'PRODUCT',
         base_quantity: 1
@@ -2520,11 +2515,8 @@ export default {
       this.tempRecipeIngredients = []
       this.product = {
         images: [],
-        is_bundle: 0,
-        show_catalog: 0,
-        is_addons: 0,
-        skip_stock: 0,
-        profit_percentage: 0
+        product_type: 'PRODUCT',
+        base_quantity: 1
       }
       this.getUnitOfMeasures()
     },

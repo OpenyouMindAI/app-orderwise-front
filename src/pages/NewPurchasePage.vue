@@ -753,6 +753,7 @@
           :categories="categories"
           :unit-of-measures="unitOfMeasures"
           :aliquot-types="aliquotTypes"
+          :product-type-options="purchaseProductTypeOptions"
           :is-edit="false"
           :loading="visible"
           @save="data => { product = data; saveProduct() }"
@@ -1843,9 +1844,6 @@ export default {
       openAddProduct: false,
       unitOfMeasures: [],
       product: {
-        show_catalog: 0,
-        skip_stock: 0,
-        profit_percentage: 0,
         images: [],
         base_quantity: 1
       },
@@ -1854,6 +1852,10 @@ export default {
        * @type {boolean} loading products state
        */
       loadingProducts: false,
+      purchaseProductTypeOptions: [
+        { label: 'Producto', value: 'PRODUCT', description: 'Producto para venta' },
+        { label: 'Materia Prima', value: 'RAW_MATERIAL', description: 'Insumo básico para recetas' }
+      ],
       /**
        * Definition of columns for the desktop products selection table
        * @type {array} product columns configuration
@@ -3157,11 +3159,6 @@ export default {
       this.categoryAdd = null
       this.product = {
         images: [],
-        is_bundle: 0,
-        show_catalog: 0,
-        is_addons: 0,
-        skip_stock: 0,
-        profit_percentage: 0,
         base_quantity: 1
       }
     },

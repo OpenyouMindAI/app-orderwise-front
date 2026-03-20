@@ -166,9 +166,8 @@
                       dense
                       hide-bottom-space
                       class="profit-percentage-input"
-                      inputmode="numeric"
                       @update:model-value="handleProfitPercentageInput"
-                      @focus="initializeProfitPercentage"
+                      @focus="onMarginFocus"
                     />
                   </div>
                   <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12">
@@ -550,6 +549,10 @@ export default {
     initializeValues () {
       this.category = this.product.category
       this.unitOfMeasure = this.product.unit_of_measure
+      this.product.skip_stock = this.product.skip_stock || 0
+      this.product.is_bundle = this.product.is_bundle || 0
+      this.product.is_addons = this.product.is_addons || 0
+      this.product.show_catalog = this.product.show_catalog || 0
       this.priceLists = this.product.product_price_lists?.map(pl => {
         const margin = parseFloat(pl.profit_percentage || 0)
         return {
@@ -565,6 +568,16 @@ export default {
       const margin = parseFloat(this.product.profit_percentage || 0)
       this.profitPercentageValue = Math.round(margin * 100)
       this.profitPercentageDisplay = margin.toFixed(2)
+    },
+
+    onMarginFocus (e) {
+      this.initializeProfitPercentage()
+      setTimeout(() => {
+        if (e && e.target) {
+          const val = e.target.value
+          e.target.setSelectionRange(val.length, val.length)
+        }
+      }, 0)
     },
 
     handleProfitPercentageInput (val) {
