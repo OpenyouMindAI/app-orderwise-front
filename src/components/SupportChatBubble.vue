@@ -104,7 +104,6 @@
                           :key="vIdx"
                           class="video-group"
                         >
-                          <!-- Bubble 1: thumbnail clicable -->
                           <div class="message-bubble-wrapper">
                             <div class="message-bubble shadow-sm video-bubble" @click="openVideoModal(video)">
                               <div class="video-thumbnail-container">
@@ -118,7 +117,6 @@
                               </div>
                             </div>
                           </div>
-                          <!-- Bubble 2: video.message como mensaje separado -->
                           <div v-if="video.message" class="message-bubble-wrapper q-mt-xs">
                             <div class="message-bubble shadow-sm">
                               <div class="message-text">{{ video.message }}</div>
@@ -129,7 +127,28 @@
 
                       <!-- Mensaje normal -->
                       <div v-else class="message-bubble-wrapper">
-                        <div class="message-bubble shadow-sm">
+                        <!-- Audio -->
+                        <div v-if="message.type === 'audio' && message.attachment_url" class="message-bubble shadow-sm audio-bubble">
+                          <AudioPlayer :src="getFullUrl(message.attachment_url)" :is-own="false" />
+                        </div>
+                        <!-- Image -->
+                        <div v-else-if="message.type === 'image' && message.attachment_url" class="message-bubble shadow-sm" style="padding: 4px;">
+                          <q-img :src="getFullUrl(message.attachment_url)" style="max-width: 200px; border-radius: 10px;" />
+                          <div v-if="message.content" class="message-text q-mt-xs">{{ message.content }}</div>
+                        </div>
+                        <!-- Video attachment -->
+                        <div v-else-if="message.type === 'video' && message.attachment_url" class="message-bubble shadow-sm" style="padding: 4px;">
+                          <video :src="getFullUrl(message.attachment_url)" controls style="max-width: 200px; border-radius: 10px;"></video>
+                        </div>
+                        <!-- File -->
+                        <div v-else-if="message.type === 'file' && message.attachment_url" class="message-bubble shadow-sm">
+                          <a :href="getFullUrl(message.attachment_url)" target="_blank" class="row items-center no-wrap text-primary" style="text-decoration: none; gap: 6px;">
+                            <q-icon :name="getFileTypeIcon(message.attachment_mime)" size="20px" />
+                            <span class="ellipsis" style="font-size: 13px;">{{ message.attachment_name || 'Archivo' }}</span>
+                          </a>
+                        </div>
+                        <!-- Text -->
+                        <div v-else class="message-bubble shadow-sm">
                           <div v-if="message.content" class="message-text" v-html="formatMessageContent(message.content)"></div>
                         </div>
                         <div v-if="!isNextSameUser(message, messages.length - 1 - index)" class="message-time-caption">
@@ -147,7 +166,6 @@
                           :key="vIdx"
                           class="video-group"
                         >
-                          <!-- Bubble 1: thumbnail clicable -->
                           <div class="message-bubble-wrapper">
                             <div class="message-bubble shadow-sm video-bubble" @click="openVideoModal(video)">
                               <div class="video-thumbnail-container">
@@ -161,7 +179,6 @@
                               </div>
                             </div>
                           </div>
-                          <!-- Bubble 2: video.message como mensaje separado -->
                           <div v-if="video.message" class="message-bubble-wrapper q-mt-xs">
                             <div class="message-bubble shadow-sm">
                               <div class="message-text">{{ video.message }}</div>
@@ -172,7 +189,28 @@
 
                       <!-- Mensaje normal (propio) -->
                       <div v-else class="message-bubble-wrapper">
-                        <div class="message-bubble shadow-sm">
+                        <!-- Audio -->
+                        <div v-if="message.type === 'audio' && message.attachment_url" class="message-bubble shadow-sm audio-bubble own">
+                          <AudioPlayer :src="getFullUrl(message.attachment_url)" :is-own="true" />
+                        </div>
+                        <!-- Image -->
+                        <div v-else-if="message.type === 'image' && message.attachment_url" class="message-bubble shadow-sm" style="padding: 4px;">
+                          <q-img :src="getFullUrl(message.attachment_url)" style="max-width: 200px; border-radius: 10px;" />
+                          <div v-if="message.content" class="message-text q-mt-xs">{{ message.content }}</div>
+                        </div>
+                        <!-- Video attachment -->
+                        <div v-else-if="message.type === 'video' && message.attachment_url" class="message-bubble shadow-sm" style="padding: 4px;">
+                          <video :src="getFullUrl(message.attachment_url)" controls style="max-width: 200px; border-radius: 10px;"></video>
+                        </div>
+                        <!-- File -->
+                        <div v-else-if="message.type === 'file' && message.attachment_url" class="message-bubble shadow-sm">
+                          <a :href="getFullUrl(message.attachment_url)" target="_blank" class="row items-center no-wrap text-white" style="text-decoration: none; gap: 6px;">
+                            <q-icon :name="getFileTypeIcon(message.attachment_mime)" size="20px" />
+                            <span class="ellipsis" style="font-size: 13px;">{{ message.attachment_name || 'Archivo' }}</span>
+                          </a>
+                        </div>
+                        <!-- Text -->
+                        <div v-else class="message-bubble shadow-sm">
                           <div v-if="message.content" class="message-text">{{ message.content }}</div>
                         </div>
                         <div v-if="!isNextSameUser(message, messages.length - 1 - index)" class="message-time-caption">
@@ -192,31 +230,88 @@
                 <!-- Footer -->
                 <q-separator />
                 <q-card-section class="q-pa-md messenger-footer">
-                  <q-input
-                    ref="chatInput"
-                    v-model="newMessage"
-                    placeholder="Envía un mensaje..."
-                    dense
-                    rounded
-                    outlined
-                    bg-color="white"
-                    autogrow
-                    :max-rows="4"
-                    @keydown.enter.prevent="sendMessage"
-                    class="messenger-text-input"
-                  >
-                    <template v-slot:append>
-                      <q-btn
-                        flat
-                        round
-                        icon="send"
-                        :color="newMessage.trim() && !isTyping ? 'primary' : 'grey-5'"
-                        size="sm"
-                        @click="sendMessage"
-                        class="send-btn"
-                      />
-                    </template>
-                  </q-input>
+                  <!-- File preview -->
+                  <div v-if="selectedFile" class="row items-center no-wrap bg-grey-2 q-pa-xs rounded-borders q-mb-sm" style="gap: 8px;">
+                    <q-img v-if="selectedFilePreview" :src="selectedFilePreview" style="width: 40px; height: 40px; border-radius: 6px;" />
+                    <q-icon v-else :name="getFileIcon(selectedFile)" size="24px" color="primary" />
+                    <div class="col ellipsis text-caption">{{ selectedFile.name }}</div>
+                    <q-btn flat round dense icon="close" size="xs" @click="clearSelectedFile" />
+                  </div>
+
+                  <div class="row items-center no-wrap" style="gap: 4px;">
+                    <!-- Attachment button (Squared & Centered) -->
+                    <q-btn
+                      flat
+                      dense
+                      icon="attach_file"
+                      color="grey-7"
+                      class="attachment-btn-square"
+                    >
+                      <q-menu
+                        fit
+                        anchor="top left"
+                        self="bottom left"
+                        class="attachment-menu-top"
+                      >
+                        <q-list dense style="min-width: 160px;">
+                          <q-item clickable v-close-popup @click="openFilePicker">
+                            <q-item-section avatar><q-icon name="collections" color="primary" /></q-item-section>
+                            <q-item-section>Galería</q-item-section>
+                          </q-item>
+                          <q-item clickable v-close-popup @click="openCamera">
+                            <q-item-section avatar><q-icon name="photo_camera" color="secondary" /></q-item-section>
+                            <q-item-section>Cámara</q-item-section>
+                          </q-item>
+                          <q-item clickable v-close-popup @click="openVideoPicker">
+                            <q-item-section avatar><q-icon name="videocam" color="negative" /></q-item-section>
+                            <q-item-section>Video</q-item-section>
+                          </q-item>
+                          <q-item clickable v-close-popup @click="openDocumentPicker">
+                            <q-item-section avatar><q-icon name="description" color="warning" /></q-item-section>
+                            <q-item-section>Documento</q-item-section>
+                          </q-item>
+                        </q-list>
+                      </q-menu>
+                    </q-btn>
+
+                    <!-- Text input -->
+                    <q-input
+                      ref="chatInput"
+                      v-model="newMessage"
+                      placeholder="Envía un mensaje..."
+                      dense
+                      rounded
+                      outlined
+                      bg-color="white"
+                      autogrow
+                      :max-rows="4"
+                      :disable="sending"
+                      @keydown.enter.prevent="sendMessage"
+                      class="messenger-text-input col"
+                    >
+                      <template v-slot:append>
+                        <q-btn
+                          v-if="newMessage.trim() || selectedFile"
+                          flat round
+                          icon="send"
+                          :color="!isTyping ? 'primary' : 'grey-5'"
+                          size="sm"
+                          @click="sendMessage"
+                          :loading="sending"
+                          class="send-btn"
+                        />
+                      </template>
+                    </q-input>
+
+                    <!-- Audio recorder (shown when input is empty) -->
+                    <AudioRecorder v-if="!newMessage.trim() && !selectedFile" @send="sendAudioMessage" />
+                  </div>
+
+                  <!-- Hidden file inputs -->
+                  <input type="file" ref="fileInput" accept="image/*,video/*" @change="handleFileSelect" style="display: none" />
+                  <input type="file" ref="cameraInput" accept="image/*" capture="environment" @change="handleFileSelect" style="display: none" />
+                  <input type="file" ref="videoInput" accept="video/*" @change="handleFileSelect" style="display: none" />
+                  <input type="file" ref="documentInput" accept="application/pdf,.doc,.docx,.xls,.xlsx" @change="handleFileSelect" style="display: none" />
                 </q-card-section>
               </div>
             </div>
@@ -256,6 +351,8 @@ import { authentication } from 'src/stores/module-authentication'
 import SupportFacebookCard from './SupportFacebookCard.vue'
 import { useQuasar } from 'quasar'
 import { format } from 'date-fns'
+import AudioRecorder from 'src/components/AudioRecorder.vue'
+import AudioPlayer from 'src/components/AudioPlayer.vue'
 
 /**
  * Quasar instance
@@ -310,6 +407,17 @@ const currentVideoUrl = ref('')
 const chatInput = ref(null)
 
 /**
+ * File handling refs
+ */
+const fileInput = ref(null)
+const cameraInput = ref(null)
+const videoInput = ref(null)
+const documentInput = ref(null)
+const selectedFile = ref(null)
+const selectedFilePreview = ref(null)
+const sending = ref(false)
+
+/**
  * Current user
  */
 const currentUser = computed(() => authStore.userSession)
@@ -353,6 +461,51 @@ const handleAvatarError = (chat) => {
   }
 }
 
+const getFullUrl = (url) => {
+  if (!url) return ''
+  if (url.startsWith('http') || url.startsWith('data:')) return url
+  const baseUrl = import.meta.env.VITE_APP_API_URL?.replace(/\/api\/?$/, '') || ''
+  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
+}
+
+const getFileTypeIcon = (mimeType) => {
+  if (!mimeType) return 'attach_file'
+  if (mimeType.includes('pdf')) return 'picture_as_pdf'
+  if (mimeType.includes('word') || mimeType.includes('document')) return 'description'
+  if (mimeType.includes('image')) return 'image'
+  return 'attach_file'
+}
+
+const isImageFile = (file) => file.type.startsWith('image/')
+const isVideoFile = (file) => file.type.startsWith('video/')
+
+const getFileIcon = (file) => {
+  if (isImageFile(file)) return 'image'
+  if (isVideoFile(file)) return 'videocam'
+  return 'description'
+}
+
+const clearSelectedFile = () => {
+  selectedFile.value = null
+  selectedFilePreview.value = null
+}
+
+const handleFileSelect = (event) => {
+  const file = event.target.files?.[0]
+  if (!file) return
+  selectedFile.value = file
+  if (isImageFile(file)) {
+    const reader = new FileReader()
+    reader.onload = (e) => { selectedFilePreview.value = e.target.result }
+    reader.readAsDataURL(file)
+  }
+}
+
+const openFilePicker = () => fileInput.value?.click()
+const openCamera = () => cameraInput.value?.click()
+const openVideoPicker = () => videoInput.value?.click()
+const openDocumentPicker = () => documentInput.value?.click()
+
 /**
  * Toggle mini chat
  */
@@ -392,10 +545,13 @@ const selectChat = async (chat) => {
  * Send message
  */
 const sendMessage = async () => {
-  if (!newMessage.value.trim() || !selectedChat.value) return
+  if ((!newMessage.value.trim() && !selectedFile.value) || !selectedChat.value || sending.value) return
 
   const messageText = newMessage.value
+  const fileToSend = selectedFile.value
   newMessage.value = ''
+  clearSelectedFile()
+  sending.value = true
 
   // Add user message locally for immediate feedback
   const userMessage = {
@@ -403,6 +559,8 @@ const sendMessage = async () => {
     role: 'user',
     sender_id: authStore.userSession?.id,
     content: messageText,
+    type: fileToSend ? (isImageFile(fileToSend) ? 'image' : isVideoFile(fileToSend) ? 'video' : 'file') : 'text',
+    attachment_url: selectedFilePreview.value,
     created_at: new Date().toISOString()
   }
   messages.value.push(userMessage)
@@ -412,7 +570,6 @@ const sendMessage = async () => {
   scrollToBottom()
 
   try {
-    // If it's a new chat, create it on first message
     if (selectedChat.value.id === 'new') {
       const { data } = await api.post('ai-chats', {
         company_id: authStore.userSession?.company_session?.id,
@@ -420,8 +577,6 @@ const sendMessage = async () => {
         branch_office_id: authStore.branchOffice?.id
       })
 
-      // Update selected chat and message list
-      // Handle both full chat object or just response message
       const newChat = data.chat || (data.id ? data : null)
 
       if (newChat) {
@@ -430,7 +585,6 @@ const sendMessage = async () => {
         messages.value = newChat.messages || messages.value
       }
 
-      // If there's an assistant message in the response but not in the chat object
       const assistantMessage = data.assistant_message ||
                                (typeof data.message === 'string' && !data.id ? {
                                  id: Date.now() + 1,
@@ -443,18 +597,18 @@ const sendMessage = async () => {
         messages.value.push(assistantMessage)
       }
     } else {
-      const { data } = await api.post(`ai-chats/${selectedChat.value.id}/messages`, {
-        message: messageText,
-        branch_office_id: authStore.branchOffice?.id
+      const formData = new FormData()
+      if (messageText) formData.append('message', messageText)
+      if (fileToSend) formData.append('attachment', fileToSend)
+      formData.append('branch_office_id', authStore.branchOffice?.id)
+
+      const { data } = await api.post(`support-chats/${selectedChat.value.id}/messages`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       })
 
-      console.log('API Response (Message):', data)
-
-      // Replace the local mock user message with the real one from server if available
       const userIdx = messages.value.findIndex(m => m.id === userMessage.id)
       if (userIdx !== -1 && data.user_message) messages.value[userIdx] = data.user_message
 
-      // Handle assistant message from various possible locations in response
       const assistantMessage = data.assistant_message || {
         id: Date.now() + 1,
         role: 'assistant',
@@ -466,7 +620,6 @@ const sendMessage = async () => {
         messages.value.push(assistantMessage)
       }
 
-      // Update last message in chat list
       const chatIndex = chats.value.findIndex(c => c.id === selectedChat.value.id)
       if (chatIndex !== -1) {
         chats.value[chatIndex].last_message = assistantMessage
@@ -477,15 +630,48 @@ const sendMessage = async () => {
     await nextTick()
     scrollToBottom()
   } catch (error) {
-    console.error('Error sending AI message:', error)
+    console.error('Error sending message:', error)
     $q.notify({
       type: 'negative',
-      message: 'Error al enviar mensaje a la IA'
+      message: 'Error al enviar mensaje'
     })
-    // Rollback local message if it failed
     messages.value = messages.value.filter(m => m.id !== userMessage.id)
   } finally {
     isTyping.value = false
+    sending.value = false
+  }
+}
+
+/**
+ * Send audio message
+ */
+const sendAudioMessage = async (audioBlob) => {
+  if (sending.value || !selectedChat.value) return
+  sending.value = true
+
+  const tempId = Date.now()
+  messages.value.push({
+    id: tempId,
+    type: 'audio',
+    sender_id: authStore.userSession?.id,
+    attachment_url: URL.createObjectURL(audioBlob),
+    created_at: new Date().toISOString()
+  })
+  await nextTick()
+  scrollToBottom()
+
+  try {
+    const formData = new FormData()
+    formData.append('attachment', audioBlob, 'audio.webm')
+    formData.append('type', 'audio')
+    formData.append('branch_office_id', authStore.branchOffice?.id)
+    const { data } = await api.post(`support-chats/${selectedChat.value.id}/messages`, formData)
+    const index = messages.value.findIndex(m => m.id === tempId)
+    if (index !== -1) messages.value[index] = data.data || data
+  } catch (error) {
+    messages.value = messages.value.filter(m => m.id !== tempId)
+  } finally {
+    sending.value = false
   }
 }
 
@@ -493,7 +679,6 @@ const sendMessage = async () => {
  * Create new chat
  */
 const startNewChat = async () => {
-  // Option 1: Stay in bubble and show empty chat state with input
   selectedChat.value = { id: 'new', subject: 'Nueva conversación', title: 'Nueva conversación' }
   messages.value = []
 }
@@ -510,19 +695,13 @@ const isOwnMessage = (message) => {
  * Scroll to bottom
  */
 const scrollToBottom = () => {
-  // With column-reverse, scrollTop = 0 is the visual bottom.
-  // Just reset to 0 to snap to the latest message.
   if (messagesArea.value) {
     messagesArea.value.scrollTop = 0
   }
 }
 
-// NOTE: Scroll is managed exclusively inside selectChat() using the
-// visibility-masking pattern. No competing watchers here.
-
 const formatMessageContent = (content) => {
   if (!content) return ''
-  // If it's a JSON string that looks like our video data, Don't format it as text
   if (typeof content === 'string' && content.startsWith('[') && content.includes('"url"')) {
     return ''
   }
@@ -532,15 +711,11 @@ const formatMessageContent = (content) => {
 
 /**
  * Detect and parse video tutorial data.
- * Handles two shapes:
- *  1. Full response object:   { message: "[{...}]" }  (n8n webhook response)
- *  2. Plain JSON array string: "[{url, title, ...}]"
  */
 const getVideoData = (content) => {
   if (!content) return null
   try {
     let raw = content
-    // Shape 1: the response itself is an object with a `message` string
     if (typeof raw === 'object' && raw !== null && typeof raw.message === 'string') {
       raw = raw.message
     }
@@ -622,8 +797,6 @@ watch(selectedChat, (newVal) => {
   }
 })
 
-// No scroll watchers needed — scroll is handled in selectChat()
-
 /**
  * Open mini chat explicitly
  */
@@ -643,7 +816,7 @@ defineExpose({
   position: fixed;
   bottom: 24px;
   right: 24px;
-  z-index: 9999;
+  z-index: 3000; /* Lower z-index so Quasar menus (6000) show on top */
 }
 
 .chat-fab {
@@ -661,7 +834,7 @@ defineExpose({
   right: 24px;
   width: 360px;
   height: 500px;
-  z-index: 9999;
+  z-index: 3000;
 }
 
 .full-height-component {
@@ -675,38 +848,14 @@ defineExpose({
   border-radius: 12px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible; /* CRITICAL: Allows menus to show on top without being cut */
   transition: all 0.3s;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-/* active chat specific styles */
-.active-chat-window {
   border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 /* Messenger Theme Header */
 .card-header {
   background: white;
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 4px;
-  border-radius: 8px;
-  transition: background 0.2s;
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.05);
-  }
-}
-
-.messenger-avatar {
-  border: 1.5px solid #fff;
-  background: #f0f2f5;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
 .ai-avatar-bg {
@@ -747,12 +896,7 @@ defineExpose({
   box-shadow: 0 2px 8px rgba(0, 132, 255, 0.3);
 }
 
-.header-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.header-title {
+.support-name {
   font-weight: 700;
   font-size: 15px;
   color: #18181b;
@@ -760,7 +904,7 @@ defineExpose({
   letter-spacing: -0.2px;
 }
 
-.header-status {
+.support-status {
   display: flex;
   align-items: center;
 }
@@ -768,17 +912,6 @@ defineExpose({
 .status-text {
   font-size: 12px;
   color: #65676b;
-}
-
-.header-actions {
-  display: flex;
-  gap: 2px;
-}
-
-.messenger-action-btn {
-  width: 32px;
-  height: 32px;
-  color: #0084ff !important;
 }
 
 .mini-chat-content {
@@ -789,24 +922,16 @@ defineExpose({
   overflow: hidden;
 }
 
-.chat-list-mini {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
 .active-chat {
   flex: 1;
   min-height: 0; /* Critical: allows flex children to shrink properly */
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible; /* Changed to visible for dropdowns */
   background: white;
 }
 
-/* Messages scroll — column-reverse is the WhatsApp/Discord/Telegram pattern.
-   Items overflow from the BOTTOM, so the browser always starts at the end.
-   No JS scrolling needed on load. */
+/* Messages scroll — column-reverse is the WhatsApp/Discord/Telegram pattern. */
 .messages-area {
   flex: 1;
   min-height: 0;
@@ -818,7 +943,6 @@ defineExpose({
   position: relative;
   z-index: 1;
 
-  /* Smooth scrolling for new messages */
   scroll-behavior: smooth;
 
   &::-webkit-scrollbar {
@@ -845,13 +969,6 @@ defineExpose({
   color: #65676b;
   font-size: 12px;
   line-height: 1.4;
-
-  .learn-more {
-    color: #0084ff;
-    text-decoration: none;
-    font-weight: 600;
-    &:hover { text-decoration: underline; }
-  }
 }
 
 .date-separator {
@@ -866,7 +983,7 @@ defineExpose({
   display: grid;
   margin-bottom: 8px;
   position: relative;
-  align-items: flex-end; /* Align avatar with last line */
+  align-items: flex-end;
   gap: 8px;
 
   &.next-same {
@@ -880,21 +997,17 @@ defineExpose({
     .message-bubble {
       background-color: #f0f2f5;
       color: #050505;
-      /* Send by itself -> Tail at bottom-left */
       border-radius: 18px 18px 18px 0;
     }
 
-    /* Top message of a group (no prev, has next) -> no tail, flat bottom-left to connect */
     &.next-same:not(.sequential) .message-bubble {
       border-radius: 18px 18px 18px 4px;
     }
 
-    /* Middle message of a group (has prev, has next) -> flat top-left, flat bottom-left */
     &.sequential.next-same .message-bubble {
       border-radius: 4px 18px 18px 4px;
     }
 
-    /* Bottom message of a group (has prev, no next) -> flat top-left, tail at bottom-left */
     &.sequential:not(.next-same) .message-bubble {
       border-radius: 4px 18px 18px 0;
     }
@@ -902,27 +1015,23 @@ defineExpose({
 
   &.own {
     grid-template-columns: 1fr;
-    padding-left: 72px; /* Increase left space to match (other's avatar + gap + right padding) */
-    padding-right: 12px; /* Minimal right space as requested */
+    padding-left: 72px;
+    padding-right: 12px;
 
     .message-bubble {
       background-color: #0084ff;
       color: white;
-      /* Send by itself -> Tail at bottom-right */
       border-radius: 18px 18px 0 18px;
     }
 
-    /* Top message of a group (no prev, has next) -> no tail, flat bottom-right to connect */
     &.next-same:not(.sequential) .message-bubble {
       border-radius: 18px 18px 4px 18px;
     }
 
-    /* Middle message of a group (has prev, has next) -> flat top-right, flat bottom-right */
     &.sequential.next-same .message-bubble {
       border-radius: 18px 4px 4px 18px;
     }
 
-    /* Bottom message of a group (has prev, no next) -> flat top-right, tail at bottom-right */
     &.sequential:not(.next-same) .message-bubble {
       border-radius: 18px 4px 0 18px;
     }
@@ -958,6 +1067,13 @@ defineExpose({
     background-color: #f0f2f5;
     padding: 12px 16px;
     width: fit-content;
+  }
+
+  &.audio-bubble {
+    background: transparent !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    min-width: 220px;
   }
 }
 
@@ -1027,29 +1143,11 @@ defineExpose({
   margin-bottom: 4px;
 }
 
-.video-description {
-  font-size: 11px;
-  line-height: 1.2;
-  color: #5f6368;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.video-inner-message {
-  font-size: 13px;
-  line-height: 1.4;
-  color: #444;
-  white-space: pre-wrap;
-}
-
 .video-modal :deep(.q-dialog__inner) {
   padding: 0 !important;
   margin: 0 !important;
   overflow: hidden !important;
-  background: rgba(0, 0, 0, 0.8) !important; /* Semi-transparent backdrop look */
+  background: rgba(0, 0, 0, 0.8) !important;
 }
 
 .video-modal-container {
@@ -1094,12 +1192,24 @@ defineExpose({
 }
 
 .messenger-text-input {
-  width: 100%;
   font-size: 14px;
 }
 
 .send-btn {
   margin-left: 4px;
+}
+
+.attachment-btn-square {
+  background: #f0f2f5;
+  border-radius: 8px !important;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 !important;
+
+  &:hover {
+    background: #e4e6eb;
+  }
 }
 
 .rounded-pill {

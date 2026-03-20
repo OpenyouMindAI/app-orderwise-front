@@ -1,40 +1,33 @@
 <template>
-  <div class="audio-player">
-    <q-btn
-      flat
-      round
-      dense
-      :icon="isPlaying ? 'pause' : 'play_arrow'"
-      color="primary"
-      size="sm"
-      @click="togglePlay"
-    />
-
-    <div class="audio-progress">
-      <q-linear-progress
-        :value="progress"
-        color="primary"
-        class="progress-bar"
-        @click="seek"
+  <div class="audio-player-premium" :class="{ 'is-own': isOwn }">
+    <div class="player-controls">
+      <q-btn
+        flat
+        round
+        ripple
+        :icon="isPlaying ? 'pause' : 'play_arrow'"
+        :color="isOwn ? 'white' : 'primary'"
+        size="md"
+        class="play-btn"
+        @click="togglePlay"
       />
-      <div class="audio-time">
-        <span>{{ formattedCurrentTime }}</span>
-        <span class="text-grey-6">/</span>
-        <span>{{ formattedDuration }}</span>
-      </div>
     </div>
 
-    <q-btn
-      flat
-      round
-      dense
-      icon="download"
-      color="grey"
-      size="sm"
-      @click="download"
-    >
-      <q-tooltip>Descargar</q-tooltip>
-    </q-btn>
+    <div class="player-body">
+      <div class="waveform-container" @click="seek">
+        <div class="waveform-bg">
+          <div v-for="i in 15" :key="i" class="bar" :style="{ height: getBarHeight(i) }"></div>
+        </div>
+        <div class="waveform-progress" :style="{ width: (progress * 100) + '%' }">
+          <div v-for="i in 15" :key="i" class="bar" :style="{ height: getBarHeight(i) }"></div>
+        </div>
+      </div>
+      <div class="player-meta">
+        <span class="time-text">{{ formattedCurrentTime }}</span>
+        <q-space />
+        <q-icon v-if="isOwn" name="done_all" size="14px" class="status-icon" />
+      </div>
+    </div>
 
     <audio
       ref="audioElement"
@@ -50,7 +43,6 @@
 
 <script setup>
 import { ref, computed, onUnmounted } from 'vue'
-import { useQuasar } from 'quasar'
 
 /**
  * Props
@@ -63,42 +55,35 @@ const props = defineProps({
   filename: {
     type: String,
     default: 'audio.webm'
+  },
+  isOwn: {
+    type: Boolean,
+    default: false
   }
 })
 
 /**
- * Quasar instance
- * @type {object}
- */
-const $q = useQuasar()
-
-/**
  * Audio element ref
- * @type {import('vue').Ref<HTMLAudioElement|null>}
  */
 const audioElement = ref(null)
 
 /**
  * Is playing
- * @type {import('vue').Ref<boolean>}
  */
 const isPlaying = ref(false)
 
 /**
  * Current time
- * @type {import('vue').Ref<number>}
  */
 const currentTime = ref(0)
 
 /**
  * Duration
- * @type {import('vue').Ref<number>}
  */
 const duration = ref(0)
 
 /**
  * Progress
- * @type {import('vue').ComputedRef<number>}
  */
 const progress = computed(() => {
   if (duration.value === 0) return 0
@@ -107,20 +92,11 @@ const progress = computed(() => {
 
 /**
  * Formatted current time
- * @type {import('vue').ComputedRef<string>}
  */
-const formattedCurrentTime = computed(() => formatTime(currentTime.value))
-
-/**
- * Formatted duration
- * @type {import('vue').ComputedRef<string>}
- */
-const formattedDuration = computed(() => formatTime(duration.value))
+const formattedCurrentTime = computed(() => formatTime(currentTime.value || 0))
 
 /**
  * Format time
- * @param {number} seconds - Time in seconds
- * @returns {string}
  */
 const formatTime = (seconds) => {
   if (!seconds || isNaN(seconds)) return '0:00'
@@ -131,7 +107,6 @@ const formatTime = (seconds) => {
 
 /**
  * Toggle play/pause
- * @returns {void}
  */
 const togglePlay = () => {
   if (!audioElement.value) return
@@ -147,75 +122,44 @@ const togglePlay = () => {
 
 /**
  * Seek to position
- * @param {MouseEvent} event - Click event
- * @returns {void}
  */
 const seek = (event) => {
-  if (!audioElement.value) return
+  if (!audioElement.value || !duration.value) return
 
-  const progressBar = event.currentTarget
-  const rect = progressBar.getBoundingClientRect()
+  const container = event.currentTarget
+  const rect = container.getBoundingClientRect()
   const x = event.clientX - rect.left
   const percentage = x / rect.width
 
   audioElement.value.currentTime = percentage * duration.value
 }
 
-/**
- * On loaded metadata
- * @returns {void}
- */
+const getBarHeight = (i) => {
+  const heights = [30, 50, 80, 40, 60, 90, 70, 40, 50, 80, 60, 40, 30, 50, 20]
+  return heights[i - 1] + '%'
+}
+
 const onLoadedMetadata = () => {
   if (audioElement.value) {
     duration.value = audioElement.value.duration
   }
 }
 
-/**
- * On time update
- * @returns {void}
- */
 const onTimeUpdate = () => {
   if (audioElement.value) {
     currentTime.value = audioElement.value.currentTime
   }
 }
 
-/**
- * On ended
- * @returns {void}
- */
 const onEnded = () => {
   isPlaying.value = false
   currentTime.value = 0
 }
 
-/**
- * On error
- * @returns {void}
- */
 const onError = () => {
-  $q.notify({
-    type: 'negative',
-    message: 'Error al cargar el audio'
-  })
+  console.error('Audio load error:', props.src)
 }
 
-/**
- * Download audio
- * @returns {void}
- */
-const download = () => {
-  const link = document.createElement('a')
-  link.href = props.src
-  link.download = props.filename
-  link.target = '_blank'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-}
-
-// Cleanup on unmount
 onUnmounted(() => {
   if (audioElement.value) {
     audioElement.value.pause()
@@ -225,34 +169,88 @@ onUnmounted(() => {
 </script>
 
 <style scoped lang="scss">
-.audio-player {
+.audio-player-premium {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   padding: 8px 12px;
-  background: #f5f5f5;
-  border-radius: 20px;
-  max-width: 300px;
+  min-width: 220px;
+  border-radius: 12px;
+  background: white;
+  user-select: none;
+
+  &.is-own {
+    background: transparent;
+    color: white;
+
+    .waveform-bg .bar { background: rgba(255, 255, 255, 0.3); }
+    .waveform-progress .bar { background: white; }
+    .time-text { color: rgba(255, 255, 255, 0.9); }
+  }
+
+  &:not(.is-own) {
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    background: #f8f9fa;
+
+    .waveform-bg .bar { background: #e0e0e0; }
+    .waveform-progress .bar { background: var(--q-primary); }
+    .time-text { color: #666; }
+  }
 }
 
-.audio-progress {
+.player-controls {
+  flex-shrink: 0;
+}
+
+.play-btn {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.player-body {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.progress-bar {
+.waveform-container {
+  height: 24px;
+  position: relative;
   cursor: pointer;
-  border-radius: 4px;
-  height: 4px;
 }
 
-.audio-time {
+.waveform-bg, .waveform-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: #616161;
+  gap: 2px;
+  width: 100%;
+}
+
+.waveform-progress {
+  width: 0;
+  overflow: hidden;
+  transition: width 0.1s linear;
+  z-index: 10;
+}
+
+.bar {
+  flex: 1;
+  min-width: 2px;
+  border-radius: 1px;
+}
+
+.player-meta {
+  display: flex;
+  align-items: center;
+  font-size: 10px;
+}
+
+.status-icon {
+  margin-left: 4px;
+  opacity: 0.8;
 }
 </style>
