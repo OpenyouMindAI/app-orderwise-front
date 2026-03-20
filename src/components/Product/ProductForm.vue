@@ -50,6 +50,7 @@
                   <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                     <q-input
                       :rules="[val => !!val || 'El campo es requerido.']"
+                      lazy-rules
                       filled
                       v-model="product.name"
                       label="Nombre"
@@ -68,6 +69,7 @@
                       v-model="category"
                       :options="categories"
                       :rules="[val => !!val || 'El campo es requerido.']"
+                      lazy-rules
                       @filter="(val, update) => $emit('filter-categories', val, update)"
                       @update:model-value="onSetCategory"
                       dense
@@ -85,6 +87,7 @@
                       dense
                       hide-bottom-space
                       :rules="[val => !!val || 'Requerido']"
+                      lazy-rules
                     >
                       <template v-slot:option="scope">
                         <q-item v-bind="scope.itemProps">
@@ -107,6 +110,7 @@
                       label="Unidad de Medida"
                       hide-bottom-space
                       :rules="[val => !!val || 'Requerido']"
+                      lazy-rules
                       @update:model-value="onSetUom"
                     />
                   </div>
@@ -149,6 +153,7 @@
                   <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
                     <q-input
                       :rules="[val => val !== null && val !== undefined || 'El campo es requerido.']"
+                      lazy-rules
                       filled
                       v-model="product.cost"
                       label="Costo"
@@ -173,6 +178,7 @@
                   <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12">
                     <q-input
                       :rules="[val => !!val || 'El campo es requerido.']"
+                      lazy-rules
                       filled
                       v-model="product.price"
                       label="Precio base"
@@ -229,6 +235,7 @@
                             filled
                             dense
                             :rules="[val => !!val || 'Requerido']"
+                            lazy-rules
                           />
                         </div>
                         <div class="col">

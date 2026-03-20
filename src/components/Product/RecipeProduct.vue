@@ -241,6 +241,7 @@
                     @filter="filterProducts"
                     @update:model-value="setProduct"
                     :rules="[val => !!val || 'El ingrediente es requerido']"
+                    lazy-rules
                     :bg-color="$q.dark.isActive ? 'grey-9' : 'white'"
                   >
                     <template v-slot:prepend>
@@ -274,6 +275,7 @@
                     step="0.001"
                     min="0"
                     :rules="[val => val > 0 || 'Debe ser mayor a 0']"
+                    lazy-rules
                   />
                 </div>
                 <div class="col-6">
@@ -287,6 +289,7 @@
                       map-options
                       label="Unidad"
                       :rules="[val => !!val || 'Requerido']"
+                      lazy-rules
                     />
                 </div>
 

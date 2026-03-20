@@ -749,6 +749,7 @@
         </q-card-section>
 
         <product-form
+          v-if="openAddProduct"
           :value="product"
           :categories="categories"
           :unit-of-measures="unitOfMeasures"
