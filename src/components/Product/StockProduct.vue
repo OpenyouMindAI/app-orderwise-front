@@ -76,11 +76,13 @@
                 label="Sucursal"
                 readonly
                 :rules="[val => !!val || 'El campo es requerido.']"
+                lazy-rules
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
+                lazy-rules
                 filled
                 v-model.number="stockProduct.quantity"
                 type="number"
@@ -122,11 +124,13 @@
                 label="Sucursal"
                 readonly
                 :rules="[val => !!val || 'El campo es requerido.']"
+                lazy-rules
               />
             </div>
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
+                lazy-rules
                 filled
                 v-model.number="stockProduct.quantity"
                 type="number"
