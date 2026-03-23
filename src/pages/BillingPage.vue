@@ -4093,7 +4093,6 @@ export default {
         paginate: true,
         dataSearch: {
           name: this.filter,
-          code: this.filter,
           barcode: this.filter
         }
       }
