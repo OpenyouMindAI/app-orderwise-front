@@ -19,17 +19,6 @@
             <q-tooltip>Volver</q-tooltip>
           </q-btn>
           <q-btn
-            v-if="!showUserSelection"
-            flat round dense
-            icon="add_comment"
-            color="primary"
-            size="sm"
-            @click.stop="onNewChat"
-            class="new-chat-btn q-mr-xs"
-          >
-            <q-tooltip>Nueva conversación</q-tooltip>
-          </q-btn>
-          <q-btn
             flat round dense
             icon="close"
             color="grey-7"
@@ -155,93 +144,28 @@
           </div>
         </template>
 
-        <!-- Normal Chat List View -->
-        <template v-else>
-          <!-- Loading -->
-          <div v-if="loading" class="text-center q-pa-lg">
-            <q-spinner color="primary" size="32px" />
-          </div>
-
-          <!-- Empty state: usuario final sin chats -->
-          <div v-else-if="filteredChats.length === 0 && !searchQuery && statusFilter === 'all' && !isRoot" class="empty-state q-pa-xl text-center" @click="onNewChat">
-            <q-icon name="chat_bubble_outline" size="48px" color="grey-3" />
-            <div class="text-h6 text-grey-9 q-mt-md">¡Hola!</div>
-            <div class="text-body2 text-grey-6 q-mt-xs">Habla con Palma para resolver tus dudas.</div>
-            <q-btn
-              unelevated
-              color="primary"
-              label="Empezar a chatear"
-              icon="send"
-              class="q-mt-lg rounded-pill"
-              @click.stop="onNewChat"
-            />
-          </div>
-
-          <!-- Empty state: Admin sin chats -->
-          <div v-else-if="filteredChats.length === 0 && !searchQuery && statusFilter === 'all' && isRoot" class="empty-state q-pa-xl text-center">
-            <q-icon name="forum" size="48px" color="grey-3" />
-            <div class="text-h6 text-grey-9 q-mt-md">Bandeja vacía</div>
-            <div class="text-body2 text-grey-6 q-mt-xs">Selecciona un usuario para iniciar una conversación.</div>
-            <q-btn
-              unelevated
-              color="primary"
-              label="Iniciar conversación"
-              icon="add"
-              class="q-mt-lg rounded-pill"
-              @click.stop="onNewChat"
-            />
-          </div>
-
-          <!-- Empty state: filtro por estado activo sin resultados (admin) -->
-          <div v-else-if="filteredChats.length === 0 && statusFilter !== 'all' && !searchQuery" class="empty-state q-pa-xl text-center">
-            <q-icon name="inbox" size="48px" color="grey-4" />
-            <div class="text-h6 text-grey-9 q-mt-md">Sin chats</div>
-            <div class="text-body2 text-grey-6 q-mt-xs">
-              No hay chats con estado
-              <strong>{{ { open: 'Abierto', in_progress: 'En Progreso', closed: 'Cerrado' }[statusFilter] }}</strong>
-              en este momento.
-            </div>
-            <q-btn flat color="primary" label="Ver todos" size="sm" class="q-mt-md" @click="statusFilter = 'all'" />
-          </div>
-
-          <!-- Empty state: búsqueda sin resultados -->
-          <div v-else-if="filteredChats.length === 0 && searchQuery" class="empty-state q-pa-xl text-center">
-            <q-icon name="search_off" size="48px" color="grey-4" />
-            <div class="text-h6 text-grey-9 q-mt-md">Sin resultados</div>
-            <div class="text-body2 text-grey-6 q-mt-xs">No se encontraron chats que coincidan con la búsqueda.</div>
-          </div>
-
-          <!-- Chat items -->
-          <transition-group v-else name="list-stagger" tag="div" class="chat-items-list q-py-sm">
+          <!-- Chat items (Unified Channels) -->
+          <div v-else class="chat-items-list q-py-sm">
             <div
-              v-for="(chat, index) in filteredChats"
-              :key="chat.id"
+              v-for="chat in displayChannels"
+              :key="chat.type"
               class="chat-row"
-              :class="{ 'is-last': index === filteredChats.length - 1, 'unread': chat.unread_count > 0 }"
-              @click="onChatClick(chat)"
+              :class="{ 'unread': chat.unread_count > 0 }"
+              @click="handleChannelClick(chat)"
             >
               <div class="chat-row-avatar-container">
-                <q-avatar size="42px" class="chat-row-avatar shadow-1" :class="{ 'palma-avatar': !isRoot }">
-                  <template v-if="isRoot">
-                    <template v-if="getAvatarUrl(chat)">
-                      <img :src="getAvatarUrl(chat)" @error="handleAvatarError(chat)" />
-                    </template>
-                    <div v-else class="avatar-fallback bg-primary text-white">
-                      {{ getInitials(getChatName(chat)) }}
-                    </div>
-                  </template>
-                  <q-icon v-else name="auto_awesome" size="20px" color="white" />
+                <q-avatar size="42px" class="chat-row-avatar shadow-1" :class="chat.avatarClass">
+                  <q-icon :name="chat.icon" size="22px" color="white" />
                 </q-avatar>
                 <div v-if="chat.unread_count > 0" class="unread-dot"></div>
               </div>
 
               <div class="col overflow-hidden" style="min-width: 0;">
                 <div class="chat-row-title text-weight-bold text-no-wrap ellipsis">
-                  {{ getChatName(chat) }}
+                  {{ chat.subject }}
                 </div>
                 <div class="chat-row-subtitle text-grey-7 text-caption text-no-wrap ellipsis">
-                  <span v-if="chat.last_message?.sender_id === authStore.userSession?.id" class="text-primary text-weight-medium">Tú: </span>
-                  {{ formatLastMessage(chat.last_message?.content) }}
+                  {{ chat.last_message?.content || chat.description }}
                 </div>
               </div>
 
@@ -252,11 +176,12 @@
                   :label="chat.unread_count"
                   class="q-mb-xs"
                 />
-                <div class="text-caption text-grey-5">{{ formatDate(chat.last_message_at || chat.updated_at) }}</div>
+                <div v-if="chat.id" class="text-caption text-grey-5">
+                  {{ formatDate(chat.last_message_at || chat.updated_at) }}
+                </div>
               </div>
             </div>
-          </transition-group>
-        </template>
+          </div>
       </div>
     </div>
 
@@ -300,6 +225,33 @@ const loadingUsers = ref(false)
 
 const isRoot = computed(() => !!authStore.userSession?.is_root)
 
+/**
+ * Handle Purchase Mock Chat
+ */
+const getPurchaseMock = () => {
+  const stored = localStorage.getItem('mock_purchase_chat')
+  if (stored) return JSON.parse(stored)
+
+  // Default initial mock state
+  return {
+    id: 'mock-purchase',
+    type: 'purchase',
+    subject: 'Cargar Compra con IA',
+    icon: 'receipt_long',
+    avatarClass: 'bg-orange',
+    description: 'Sube tu factura y automatiza',
+    messages: [
+      {
+        id: 'welcome-msg',
+        content: '¡Hola! Soy tu asistente de compras. Sube una foto de tu factura para procesarla automáticamente.',
+        sender_id: 'ia-system',
+        created_at: new Date().toISOString()
+      }
+    ],
+    updated_at: new Date().toISOString()
+  }
+}
+
 const filteredUsers = computed(() => {
   const map = new Map()
   sessionUsers.value.forEach(session => {
@@ -328,51 +280,9 @@ const filteredUsers = computed(() => {
   )
 })
 
-const filteredChats = computed(() => {
-  return chats.value.filter(chat => {
-    // Filtrar por estado
-    if (statusFilter.value !== 'all') {
-      // Ignorar filter si chat.status no coincide (o consider open por defecto si no tiene status)
-      const chatStatus = chat.status || 'open'
-      if (chatStatus !== statusFilter.value) return false
-    }
-
-    // Filtrar por texto
-    if (searchQuery.value) {
-      const q = searchQuery.value.toLowerCase()
-      const chatName = getChatName(chat).toLowerCase()
-      const lastMsg = formatLastMessage(chat.last_message?.content).toLowerCase()
-      return chatName.includes(q) || lastMsg.includes(q)
-    }
-
-    return true
-  })
-})
-
 const getInitials = (name) => {
   if (!name) return '?'
   return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
-}
-
-const getChatName = (chat) => {
-  if (isRoot.value) {
-    return chat.client?.name || chat.users?.find(u => u.id !== authStore.userSession?.id)?.name || 'Cliente'
-  }
-  return chat.title || chat.subject || 'Soporte Palma'
-}
-
-const getAvatarUrl = (chat) => {
-  if (isRoot.value) {
-    return chat.client?.avatar || chat.users?.find(u => u.id !== authStore.userSession?.id)?.avatar
-  }
-  return null // O un avatar de AI si no es root
-}
-
-const handleAvatarError = (chat) => {
-  if (isRoot.value) {
-    const partner = chat.client || chat.users?.find(u => u.id !== authStore.userSession?.id)
-    if (partner) partner.avatar = null
-  }
 }
 
 const loadChats = async () => {
@@ -390,46 +300,63 @@ const loadChats = async () => {
   }
 }
 
-const loadUsers = async () => {
-  loadingUsers.value = true
-  try {
-    const { data } = await api.get('user-sessions', {
-      params: {
-        status: 'all',
-        per_page: 100
-      }
-    })
-    sessionUsers.value = data.data || []
-  } catch (e) {
-    console.error('Error loading users for card:', e)
-  } finally {
-    loadingUsers.value = false
-  }
-}
-
 const onChatClick = (chat) => {
   emit('chat-click', chat)
 }
 
-const onNewChat = () => {
-  if (isRoot.value) {
-    showUserSelection.value = true
-    loadUsers()
-  } else {
-    emit('new-chat')
-  }
-}
+/**
+ * Display channels logic
+ */
+const displayChannels = computed(() => {
+  const types = [
+    { type: 'ai', subject: 'Asistente IA', icon: 'auto_awesome', avatarClass: 'palma-avatar', description: 'Resuelve tus dudas con IA' },
+    { type: 'support', subject: 'Soporte Técnico', icon: 'headset_mic', avatarClass: 'bg-primary', description: 'Chatea con nuestro equipo' },
+    { type: 'purchase', subject: 'Cargar Compra con IA', icon: 'receipt_long', avatarClass: 'bg-orange', description: 'Sube tu factura y automatiza' }
+  ]
 
-const onUserClick = async (user) => {
-  loading.value = true
-  try {
-    const { data } = await api.post('support-chats/open-direct', { user_id: user.id })
-    showUserSelection.value = false
-    emit('chat-click', data.chat)
-  } catch (e) {
-    console.error('Error opening direct chat from card:', e)
-  } finally {
-    loading.value = false
+  const mockPurchase = getPurchaseMock()
+
+  return types.map(config => {
+    let base = {}
+    if (config.type === 'purchase') {
+      base = chats.value.find(c => c.type === 'purchase') || mockPurchase
+    } else {
+      base = chats.value.find(c => c.type === config.type) || {}
+    }
+
+    return {
+      ...base,
+      ...config, // UI Config always stays
+      unread_count: base.unread_count || 0
+    }
+  })
+})
+
+const handleChannelClick = async (channel) => {
+  if (channel.id === 'mock-purchase') {
+    onChatClick(channel)
+    return
+  }
+
+  if (channel.id) {
+    onChatClick(channel)
+  } else {
+    loading.value = true
+    try {
+      const { data } = await api.post('support-chats', {
+        subject: channel.subject,
+        type: channel.type,
+        priority: 'medium',
+        message: 'Hola, me gustaría iniciar una conversación.'
+      })
+      const newChat = data.raw_data || data.data || data
+      chats.value.push(newChat)
+      onChatClick(newChat)
+    } catch (e) {
+      console.error('Error opening channel:', e)
+    } finally {
+      loading.value = false
+    }
   }
 }
 
@@ -441,29 +368,6 @@ const formatDate = (dateStr) => {
   if (!dateStr) return ''
   const d = new Date(dateStr)
   return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
-}
-
-const formatLastMessage = (content) => {
-  if (!content) return 'Ver conversación'
-  try {
-    let raw = content
-    // Handle nested message property from n8n/other sources
-    if (typeof raw === 'object' && raw !== null && raw.message) {
-      raw = raw.message
-    }
-
-    if (typeof raw === 'string' && (raw.trim().startsWith('[') || raw.trim().startsWith('{'))) {
-      const parsed = JSON.parse(raw)
-      const data = Array.isArray(parsed) ? parsed[0] : (parsed.message ? JSON.parse(parsed.message)[0] : parsed)
-
-      if (data && (data.message || data.title)) {
-        return data.message || data.title
-      }
-    }
-    return typeof raw === 'string' ? raw : 'Ver conversación'
-  } catch (e) {
-    return content
-  }
 }
 
 onMounted(() => {
@@ -613,7 +517,6 @@ onMounted(() => {
 
 .chat-row-avatar {
   background: #f0f4ff;
-  border: 1.5px solid #dde4ff;
   flex-shrink: 0;
 }
 

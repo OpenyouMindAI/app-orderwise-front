@@ -19,14 +19,8 @@
             <q-card-section class="card-header q-pa-md">
               <div class="row items-center no-wrap">
                 <div class="avatar-container q-mr-sm">
-                  <q-avatar size="44px" :class="{ 'palma-avatar': !isRoot, 'shadow-1 bg-primary text-white': isRoot }">
-                    <template v-if="isRoot && selectedChat">
-                      <img v-if="getAvatarUrl(selectedChat)" :src="getAvatarUrl(selectedChat)" @error="handleAvatarError(selectedChat)" />
-                      <div v-else class="full-width full-height row flex-center text-weight-bold" style="font-size: 18px;">
-                        {{ getInitials(getChatName(selectedChat)) }}
-                      </div>
-                    </template>
-                    <q-icon v-else name="auto_awesome" size="22px" color="white" />
+                  <q-avatar size="44px" :class="selectedChat?.avatarClass || 'palma-avatar'">
+                    <q-icon :name="selectedChat?.icon || 'auto_awesome'" size="22px" color="white" />
                     <div class="status-indicator" :class="isPartnerOnline ? 'online' : 'offline'"></div>
                   </q-avatar>
                 </div>
@@ -132,13 +126,16 @@
                           <AudioPlayer :src="getFullUrl(message.attachment_url)" :is-own="false" />
                         </div>
                         <!-- Image -->
-                        <div v-else-if="message.type === 'image' && message.attachment_url" class="message-bubble shadow-sm" style="padding: 4px;">
-                          <q-img :src="getFullUrl(message.attachment_url)" style="max-width: 200px; border-radius: 10px;" />
-                          <div v-if="message.content" class="message-text q-mt-xs">{{ message.content }}</div>
+                        <div v-else-if="message.type === 'image' && message.attachment_url"
+                             class="message-bubble shadow-sm image-message-bubble"
+                             :class="{ 'image-only': !message.content || message.content.trim() === '' }">
+                          <q-img :src="getFullUrl(message.attachment_url)" class="chat-image" />
+                          <div v-if="message.content && message.content.trim() !== ''" class="message-text" v-html="formatMessageContent(message.content)"></div>
                         </div>
                         <!-- Video attachment -->
-                        <div v-else-if="message.type === 'video' && message.attachment_url" class="message-bubble shadow-sm" style="padding: 4px;">
-                          <video :src="getFullUrl(message.attachment_url)" controls style="max-width: 200px; border-radius: 10px;"></video>
+                        <div v-else-if="message.type === 'video' && message.attachment_url" class="message-bubble shadow-sm image-message-bubble" :class="{ 'image-only': !message.content || message.content.trim() === '' }">
+                          <video :src="getFullUrl(message.attachment_url)" controls class="chat-video"></video>
+                          <div v-if="message.content && message.content.trim() !== ''" class="message-text q-mt-xs" v-html="formatMessageContent(message.content)"></div>
                         </div>
                         <!-- File -->
                         <div v-else-if="message.type === 'file' && message.attachment_url" class="message-bubble shadow-sm">
@@ -148,8 +145,8 @@
                           </a>
                         </div>
                         <!-- Text -->
-                        <div v-else class="message-bubble shadow-sm">
-                          <div v-if="message.content" class="message-text" v-html="formatMessageContent(message.content)"></div>
+                        <div v-else-if="message.content && message.content.trim() !== ''" class="message-bubble shadow-sm">
+                          <div class="message-text" v-html="formatMessageContent(message.content)"></div>
                         </div>
                         <div v-if="!isNextSameUser(message, messages.length - 1 - index)" class="message-time-caption">
                           {{ formatTimeShort(message.created_at) }}
@@ -194,13 +191,16 @@
                           <AudioPlayer :src="getFullUrl(message.attachment_url)" :is-own="true" />
                         </div>
                         <!-- Image -->
-                        <div v-else-if="message.type === 'image' && message.attachment_url" class="message-bubble shadow-sm" style="padding: 4px;">
-                          <q-img :src="getFullUrl(message.attachment_url)" style="max-width: 200px; border-radius: 10px;" />
-                          <div v-if="message.content" class="message-text q-mt-xs">{{ message.content }}</div>
+                        <div v-else-if="message.type === 'image' && message.attachment_url"
+                             class="message-bubble shadow-sm image-message-bubble own"
+                             :class="{ 'image-only': !message.content || message.content.trim() === '' }">
+                          <q-img :src="getFullUrl(message.attachment_url)" class="chat-image" />
+                          <div v-if="message.content && message.content.trim() !== ''" class="message-text">{{ message.content }}</div>
                         </div>
                         <!-- Video attachment -->
-                        <div v-else-if="message.type === 'video' && message.attachment_url" class="message-bubble shadow-sm" style="padding: 4px;">
-                          <video :src="getFullUrl(message.attachment_url)" controls style="max-width: 200px; border-radius: 10px;"></video>
+                        <div v-else-if="message.type === 'video' && message.attachment_url" class="message-bubble shadow-sm image-message-bubble own" :class="{ 'image-only': !message.content || message.content.trim() === '' }">
+                          <video :src="getFullUrl(message.attachment_url)" controls class="chat-video"></video>
+                          <div v-if="message.content && message.content.trim() !== ''" class="message-text q-mt-xs">{{ message.content }}</div>
                         </div>
                         <!-- File -->
                         <div v-else-if="message.type === 'file' && message.attachment_url" class="message-bubble shadow-sm">
@@ -210,8 +210,8 @@
                           </a>
                         </div>
                         <!-- Text -->
-                        <div v-else class="message-bubble shadow-sm">
-                          <div v-if="message.content" class="message-text">{{ message.content }}</div>
+                        <div v-else-if="message.content && message.content.trim() !== ''" class="message-bubble shadow-sm">
+                          <div class="message-text">{{ message.content }}</div>
                         </div>
                         <div v-if="!isNextSameUser(message, messages.length - 1 - index)" class="message-time-caption">
                           {{ formatTimeShort(message.created_at) }}
@@ -312,6 +312,8 @@
                   <input type="file" ref="cameraInput" accept="image/*" capture="environment" @change="handleFileSelect" style="display: none" />
                   <input type="file" ref="videoInput" accept="video/*" @change="handleFileSelect" style="display: none" />
                   <input type="file" ref="documentInput" accept="application/pdf,.doc,.docx,.xls,.xlsx" @change="handleFileSelect" style="display: none" />
+
+                  <CameraCapture v-model="showCamera" @capture="handleCameraCapture" />
                 </q-card-section>
               </div>
             </div>
@@ -353,6 +355,7 @@ import { useQuasar } from 'quasar'
 import { format } from 'date-fns'
 import AudioRecorder from 'src/components/AudioRecorder.vue'
 import AudioPlayer from 'src/components/AudioPlayer.vue'
+import CameraCapture from 'src/components/CameraCapture.vue'
 
 /**
  * Quasar instance
@@ -416,6 +419,7 @@ const documentInput = ref(null)
 const selectedFile = ref(null)
 const selectedFilePreview = ref(null)
 const sending = ref(false)
+const showCamera = ref(false)
 
 /**
  * Current user
@@ -432,11 +436,6 @@ const isPartnerOnline = computed(() => {
   return partner?.status === 'online' || partner?.is_online || false
 })
 
-const getInitials = (name) => {
-  if (!name) return '?'
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
-}
-
 const getChatName = (chat) => {
   if (!chat) return 'Soporte OrderWise'
   if (isRoot.value) {
@@ -445,25 +444,9 @@ const getChatName = (chat) => {
   return chat.title || chat.subject || 'Soporte OrderWise'
 }
 
-const getAvatarUrl = (chat) => {
-  if (!chat) return null
-  if (isRoot.value) {
-    return chat.client?.avatar || chat.users?.find(u => u.id !== authStore.userSession?.id)?.avatar
-  }
-  return null
-}
-
-const handleAvatarError = (chat) => {
-  if (!chat) return
-  if (isRoot.value) {
-    const partner = chat.client || chat.users?.find(u => u.id !== authStore.userSession?.id)
-    if (partner) partner.avatar = null
-  }
-}
-
 const getFullUrl = (url) => {
   if (!url) return ''
-  if (url.startsWith('http') || url.startsWith('data:')) return url
+  if (url.startsWith('blob:') || url.startsWith('http') || url.startsWith('data:')) return url
   const baseUrl = import.meta.env.VITE_APP_API_URL?.replace(/\/api\/?$/, '') || ''
   return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
 }
@@ -476,8 +459,8 @@ const getFileTypeIcon = (mimeType) => {
   return 'attach_file'
 }
 
-const isImageFile = (file) => file.type.startsWith('image/')
-const isVideoFile = (file) => file.type.startsWith('video/')
+const isImageFile = (file) => file && file.type && file.type.startsWith('image/')
+const isVideoFile = (file) => file && file.type && file.type.startsWith('video/')
 
 const getFileIcon = (file) => {
   if (isImageFile(file)) return 'image'
@@ -486,23 +469,46 @@ const getFileIcon = (file) => {
 }
 
 const clearSelectedFile = () => {
+  // If preview was an object URL (videos), we should ideally revoke it,
+  // but since it's used in the message list too, we have to be careful.
+  // For now, let's just clear the refs.
   selectedFile.value = null
   selectedFilePreview.value = null
+  if (fileInput.value) fileInput.value.value = ''
+  if (cameraInput.value) cameraInput.value.value = ''
+  if (videoInput.value) videoInput.value.value = ''
+  if (documentInput.value) documentInput.value.value = ''
 }
 
 const handleFileSelect = (event) => {
   const file = event.target.files?.[0]
-  if (!file) return
+  if (!file) {
+    event.target.value = ''
+    return
+  }
   selectedFile.value = file
   if (isImageFile(file)) {
     const reader = new FileReader()
     reader.onload = (e) => { selectedFilePreview.value = e.target.result }
     reader.readAsDataURL(file)
+  } else if (isVideoFile(file)) {
+    selectedFilePreview.value = URL.createObjectURL(file)
   }
+
+  // Clear file input value to allow selecting the same file again
+  event.target.value = ''
 }
 
 const openFilePicker = () => fileInput.value?.click()
-const openCamera = () => cameraInput.value?.click()
+const openCamera = () => {
+  showCamera.value = true
+}
+const handleCameraCapture = (file) => {
+  selectedFile.value = file
+  const reader = new FileReader()
+  reader.onload = (e) => { selectedFilePreview.value = e.target.result }
+  reader.readAsDataURL(file)
+}
 const openVideoPicker = () => videoInput.value?.click()
 const openDocumentPicker = () => documentInput.value?.click()
 
@@ -527,17 +533,43 @@ const loadChats = async () => {
   }
 }
 
-/**
- * Select chat
- */
 const selectChat = async (chat) => {
   selectedChat.value = chat
   messages.value = []
+
+  if (chat.id === 'mock-purchase') {
+    const stored = localStorage.getItem('mock_purchase_chat')
+    if (stored) {
+      const mock = JSON.parse(stored)
+      messages.value = mock.messages || []
+    } else {
+      messages.value = chat.messages || []
+    }
+    await nextTick()
+    scrollToBottom()
+    return
+  }
+
   try {
-    const { data } = await api.get(`ai-chats/${chat.id}`)
+    const { data } = await api.get(`support-chats/${chat.id}`)
     messages.value = data.messages || []
+    // Si el chat por alguna razón no tiene la metadata visual, le ponemos el default basado en su tipo
+    if (!selectedChat.value.icon) {
+      if (selectedChat.value.type === 'ai') {
+        selectedChat.value.icon = 'auto_awesome'
+        selectedChat.value.avatarClass = 'palma-avatar'
+      } else if (selectedChat.value.type === 'support') {
+        selectedChat.value.icon = 'headset_mic'
+        selectedChat.value.avatarClass = 'bg-primary'
+      } else {
+        selectedChat.value.icon = 'receipt_long'
+        selectedChat.value.avatarClass = 'bg-orange'
+      }
+    }
+    await nextTick()
+    scrollToBottom()
   } catch (error) {
-    console.error('Error loading AI chat:', error)
+    console.error('Error loading chat:', error)
   }
 }
 
@@ -549,6 +581,8 @@ const sendMessage = async () => {
 
   const messageText = newMessage.value
   const fileToSend = selectedFile.value
+  const filePreview = selectedFilePreview.value
+
   newMessage.value = ''
   clearSelectedFile()
   sending.value = true
@@ -560,7 +594,7 @@ const sendMessage = async () => {
     sender_id: authStore.userSession?.id,
     content: messageText,
     type: fileToSend ? (isImageFile(fileToSend) ? 'image' : isVideoFile(fileToSend) ? 'video' : 'file') : 'text',
-    attachment_url: selectedFilePreview.value,
+    attachment_url: filePreview,
     created_at: new Date().toISOString()
   }
   messages.value.push(userMessage)
@@ -570,75 +604,57 @@ const sendMessage = async () => {
   scrollToBottom()
 
   try {
-    if (selectedChat.value.id === 'new') {
-      const { data } = await api.post('ai-chats', {
-        company_id: authStore.userSession?.company_session?.id,
-        message: messageText,
-        branch_office_id: authStore.branchOffice?.id
-      })
-
-      const newChat = data.chat || (data.id ? data : null)
-
-      if (newChat) {
-        selectedChat.value = newChat
-        chats.value.unshift(newChat)
-        messages.value = newChat.messages || messages.value
+    if (selectedChat.value.id === 'mock-purchase') {
+      const mockMsg = {
+        id: Date.now(),
+        content: messageText,
+        sender_id: authStore.userSession?.id,
+        created_at: new Date().toISOString(),
+        type: fileToSend ? (isImageFile(fileToSend) ? 'image' : isVideoFile(fileToSend) ? 'video' : 'file') : 'text',
+        attachment_url: filePreview
       }
+      const stored = localStorage.getItem('mock_purchase_chat')
+      const mockChat = stored ? JSON.parse(stored) : { id: 'mock-purchase', messages: [] }
+      mockChat.messages.push(mockMsg)
+      mockChat.updated_at = new Date().toISOString()
+      localStorage.setItem('mock_purchase_chat', JSON.stringify(mockChat))
 
-      const assistantMessage = data.assistant_message ||
-                               (typeof data.message === 'string' && !data.id ? {
-                                 id: Date.now() + 1,
-                                 role: 'assistant',
-                                 content: data.message,
-                                 created_at: new Date().toISOString()
-                               } : null)
+      isTyping.value = false
+      sending.value = false
+      await nextTick()
+      scrollToBottom()
+      return
+    }
 
-      if (assistantMessage && !messages.value.some(m => m.role === 'assistant')) {
-        messages.value.push(assistantMessage)
-      }
-    } else {
-      const formData = new FormData()
-      if (messageText) formData.append('message', messageText)
-      if (fileToSend) formData.append('attachment', fileToSend)
-      formData.append('branch_office_id', authStore.branchOffice?.id)
+    const formData = new FormData()
+    if (messageText) formData.append('message', messageText)
+    if (fileToSend) {
+      formData.append('attachment', fileToSend)
+      formData.append('type', userMessage.type)
+    }
+    formData.append('branch_office_id', authStore.branchOffice?.id)
 
-      const { data } = await api.post(`support-chats/${selectedChat.value.id}/messages`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
+    const { data } = await api.post(`support-chats/${selectedChat.value.id}/messages`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
 
-      const userIdx = messages.value.findIndex(m => m.id === userMessage.id)
-      if (userIdx !== -1 && data.user_message) messages.value[userIdx] = data.user_message
-
-      const assistantMessage = data.assistant_message || {
-        id: Date.now() + 1,
-        role: 'assistant',
-        content: data.output || data.message || (typeof data === 'string' ? data : ''),
-        created_at: new Date().toISOString()
-      }
-
-      if (assistantMessage.content) {
-        messages.value.push(assistantMessage)
-      }
-
-      const chatIndex = chats.value.findIndex(c => c.id === selectedChat.value.id)
-      if (chatIndex !== -1) {
-        chats.value[chatIndex].last_message = assistantMessage
-        chats.value[chatIndex].updated_at = new Date().toISOString()
-      }
+    // Update local list if server returned enriched messages
+    if (data.user_message) {
+      const idx = messages.value.findIndex(m => m.id === userMessage.id)
+      if (idx !== -1) messages.value[idx] = data.user_message
+    }
+    if (data.assistant_message) {
+      messages.value.push(data.assistant_message)
     }
 
     await nextTick()
     scrollToBottom()
   } catch (error) {
     console.error('Error sending message:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Error al enviar mensaje'
-    })
-    messages.value = messages.value.filter(m => m.id !== userMessage.id)
+    $q.notify({ type: 'negative', message: 'Error al enviar mensaje' })
   } finally {
-    isTyping.value = false
     sending.value = false
+    isTyping.value = false
   }
 }
 
@@ -1056,7 +1072,7 @@ defineExpose({
 }
 
 .message-bubble {
-  padding: 8px 12px;
+  padding: 0.5rem 0.75rem;
   font-size: 14px;
   line-height: 1.4;
   overflow-wrap: break-word;
@@ -1067,6 +1083,28 @@ defineExpose({
     background-color: #f0f2f5;
     padding: 12px 16px;
     width: fit-content;
+  }
+
+  &.image-message-bubble {
+    padding: 0.25rem;
+    width: 100%;
+    max-width: 300px;
+    min-width: 200px;
+    background: #f0f2f5;
+
+    &.own {
+      background: #0084ff;
+    }
+
+    &.image-only {
+      background: transparent !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      max-width: 260px; /* Slightly narrower when no bubble frame */
+    }
+    > .message-text {
+      padding: 0.25rem 0.5rem;
+    }
   }
 
   &.audio-bubble {
@@ -1210,6 +1248,18 @@ defineExpose({
   &:hover {
     background: #e4e6eb;
   }
+}
+
+.chat-image, .chat-video {
+  width: 100%;
+  border-radius: 14px;
+  display: block;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.chat-video {
+  max-width: 100%;
+  height: auto;
 }
 
 .rounded-pill {
