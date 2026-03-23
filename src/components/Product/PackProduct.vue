@@ -53,6 +53,7 @@
                 clearable
                 autofocus
                 :rules="[val => !!val || 'El campo es requerido.']"
+                lazy-rules
                 v-model="productBundle.bundle"
                 :option-label="row => `${row.barcode ?? ''} | ${row.name}`"
                 :options="products"
@@ -62,6 +63,7 @@
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
+                lazy-rules
                 filled
                 v-model.number="productBundle.quantity"
                 type="number"
@@ -96,6 +98,7 @@
                 clearable
                 autofocus
                 :rules="[val => !!val || 'El campo es requerido.']"
+                lazy-rules
                 v-model="productBundle.bundle"
                 :option-label="row => `${row.barcode ?? ''} | ${row.name}`"
                 :options="products"
@@ -105,6 +108,7 @@
             <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
               <q-input
                 :rules="[val => !!val || 'El campo es requerido.']"
+                lazy-rules
                 filled
                 v-model.number="productBundle.quantity"
                 type="number"
