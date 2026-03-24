@@ -401,6 +401,22 @@
                       </a>
                     </div>
 
+                    <!-- Invoice Review Card -->
+                    <div v-if="getInvoiceData(message.content)" class="message-attachment invoice-attachment q-mb-sm">
+                      <InvoiceReviewCard
+                        :data="getInvoiceData(message.content)"
+                        @confirm="(confirmedData) => {
+                          eventBus.emit('apply-invoice-data', confirmedData);
+                          $emit('open-invoice', confirmedData);
+                        }"
+                        @discard="() => {
+                          deleteMockMessage(message.id);
+                          const idx = messages.indexOf(message);
+                          if (idx !== -1) messages.splice(idx, 1);
+                        }"
+                      />
+                    </div>
+
                     <div v-if="message.content" class="message-content">{{ message.content }}</div>
                     <div class="message-footer">
                       <span class="message-time">{{ formatTime(message.created_at) }}</span>
@@ -711,6 +727,9 @@ import { es } from 'date-fns/locale'
 
 import AudioRecorder from 'src/components/AudioRecorder.vue'
 import AudioPlayer from 'src/components/AudioPlayer.vue'
+import { useSupportChat } from 'src/composables/useSupportChat'
+import InvoiceReviewCard from 'src/components/InvoiceReviewCard.vue'
+import eventBus from 'src/utils/eventBus'
 
 /**
  * Quasar instance
@@ -723,6 +742,35 @@ const $q = useQuasar()
  * @type {object}
  */
 const authStore = authentication()
+
+// ─── Shared support chat logic via composable ─────────────────────────────────
+const {
+  selectedFile,
+  selectedFilePreview,
+  fileInput,
+  cameraInput,
+  videoInput,
+  documentInput,
+  isImageFile,
+  getFileIcon,
+  getFileTypeIcon,
+  getFullUrl,
+  clearSelectedFile,
+  handleFileSelect,
+  openFilePicker,
+  openVideoPicker,
+  openDocumentPicker,
+  buildLocalMessage,
+  sendChatMessage,
+  sendAudioChatMessage,
+  saveMockPurchaseMessage,
+  deleteMockMessage,
+  getInvoiceData,
+  formatFileSize
+} = useSupportChat()
+
+// openCamera for SupportChatPage just clicks the camera input directly
+const openCamera = () => cameraInput.value?.click()
 
 /**
  * Lista de chats de soporte
@@ -917,13 +965,6 @@ const offlineUsersFiltered = computed(() => {
   return filteredUsers.value.filter(u => u.status !== 'online')
 })
 
-const getFullUrl = (url) => {
-  if (!url) return ''
-  if (url.startsWith('http') || url.startsWith('data:')) return url
-  const baseUrl = import.meta.env.VITE_APP_API_URL?.replace(/\/api\/?$/, '') || ''
-  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
-}
-
 /**
  * Envía un mensaje de audio
  */
@@ -931,7 +972,6 @@ const sendAudioMessage = async (audioBlob) => {
   if (sending.value || !selectedChat.value) return
   sending.value = true
 
-  // Mensaje temporal
   const tempId = Date.now()
   const tempMessage = {
     id: tempId,
@@ -949,15 +989,7 @@ const sendAudioMessage = async (audioBlob) => {
   scrollToBottom()
 
   try {
-    const formData = new FormData()
-    formData.append('attachment', audioBlob, 'voice-message.webm')
-    formData.append('type', 'audio')
-
-    const { data } = await api.post(`support-chats/${selectedChat.value.id}/messages`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
-
-    // Reemplazar mensaje temporal
+    const data = await sendAudioChatMessage(selectedChat.value.id, audioBlob)
     const index = messages.value.findIndex(m => m.id === tempId)
     if (index !== -1) messages.value[index] = data.data
   } catch (error) {
@@ -980,42 +1012,6 @@ const isUserScrolledUp = ref(false)
  * @type {import('vue').ComputedRef<string>}
  */
 const currentPreviewImage = computed(() => previewImages.value[currentPreviewIndex.value] || '')
-
-/**
- * Referencia al input de archivo
- * @type {import('vue').Ref<HTMLElement|null>}
- */
-const fileInput = ref(null)
-
-/**
- * Referencia al input de cámara
- * @type {import('vue').Ref<HTMLElement|null>}
- */
-const cameraInput = ref(null)
-
-/**
- * Referencia al input de video
- * @type {import('vue').Ref<HTMLElement|null>}
- */
-const videoInput = ref(null)
-
-/**
- * Referencia al input de documento
- * @type {import('vue').Ref<HTMLElement|null>}
- */
-const documentInput = ref(null)
-
-/**
- * Archivo seleccionado para enviar
- * @type {import('vue').Ref<File|null>}
- */
-const selectedFile = ref(null)
-
-/**
- * Preview URL del archivo seleccionado
- * @type {import('vue').Ref<string|null>}
- */
-const selectedFilePreview = ref(null)
 
 /**
  * Datos del nuevo ticket
@@ -1289,190 +1285,63 @@ const sendMessage = async () => {
 
   const messageText = newMessage.value
   const fileToSend = selectedFile.value
+  const filePreview = selectedFilePreview.value
   newMessage.value = ''
   clearSelectedFile()
   sending.value = true
 
-  // Agregar mensaje temporalmente
-  const tempMessage = {
-    id: Date.now(),
-    content: messageText,
-    type: fileToSend ? (isImageFile(fileToSend) ? 'image' : isVideoFile(fileToSend) ? 'video' : 'file') : 'text',
-    sender_id: currentUser.value?.id,
-    sender: { name: currentUser.value?.name },
-    is_read: false,
-    created_at: new Date().toISOString()
-  }
+  // Build optimistic message
+  const tempMessage = buildLocalMessage({ messageText, fileToSend, filePreview })
+  tempMessage.sender = { name: currentUser.value?.name }
+  tempMessage.is_read = false
   messages.value.push(tempMessage)
 
   await nextTick()
   scrollToBottom()
 
   try {
-    const formData = new FormData()
-    if (messageText) {
-      formData.append('message', messageText)
-    }
-    if (fileToSend) {
-      formData.append('attachment', fileToSend)
-    }
+    const data = await sendChatMessage(selectedChat.value.id, messageText, fileToSend, tempMessage.type)
 
-    const { data } = await api.post(`support-chats/${selectedChat.value.id}/messages`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
+    // Handle mock-purchase AI response simulation (since it's not a real API)
+    if (selectedChat.value.id === 'mock-purchase') {
+      const aiResponse = await saveMockPurchaseMessage(tempMessage)
+      if (aiResponse) {
+        isTyping.value = true
+        setTimeout(async () => {
+          messages.value.push({
+            ...aiResponse,
+            sender: { name: 'Asistente IA' }
+          })
+          isTyping.value = false
+          await nextTick()
+          scrollToBottom()
+        }, 1500)
       }
-    })
+    }
 
     // Reemplazar mensaje temporal con el real
     const tempIndex = messages.value.findIndex(m => m.id === tempMessage.id)
     if (tempIndex !== -1) {
-      // Verificar si ya existe el mensaje real (por evento de socket)
-      if (messages.value.find(m => m.id === data.data.id)) {
+      if (messages.value.find(m => m.id === data.data?.id)) {
         messages.value.splice(tempIndex, 1)
       } else {
-        messages.value[tempIndex] = data.data
+        messages.value[tempIndex] = data.data || tempMessage
       }
     }
 
     // Actualizar último mensaje en la lista
     const chatIndex = chats.value.findIndex(c => c.id === selectedChat.value.id)
-    if (chatIndex !== -1) {
+    if (chatIndex !== -1 && data.data) {
       chats.value[chatIndex].last_message = data.data
       chats.value[chatIndex].last_message_at = data.data.created_at
     }
   } catch (error) {
     console.error('Error sending message:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Error al enviar el mensaje'
-    })
-    // Remover mensaje temporal en caso de error
+    $q.notify({ type: 'negative', message: 'Error al enviar el mensaje' })
     messages.value = messages.value.filter(m => m.id !== tempMessage.id)
   } finally {
     sending.value = false
   }
-}
-
-/**
- * Abre el selector de archivos
- * @returns {void}
- */
-const openFilePicker = () => {
-  fileInput.value?.click()
-}
-
-/**
- * Abre la cámara para tomar foto
- * @returns {void}
- */
-const openCamera = () => {
-  cameraInput.value?.click()
-}
-
-/**
- * Abre el selector de video
- * @returns {void}
- */
-const openVideoPicker = () => {
-  videoInput.value?.click()
-}
-
-/**
- * Abre el selector de documentos
- * @returns {void}
- */
-const openDocumentPicker = () => {
-  documentInput.value?.click()
-}
-
-/**
- * Maneja la selección de archivo
- * @param {Event} event - Evento de cambio del input
- * @returns {void}
- */
-const handleFileSelect = (event) => {
-  const file = event.target.files?.[0]
-  if (!file) return
-
-  // Validar tamaño (20MB max)
-  const maxSize = 20 * 1024 * 1024
-  if (file.size > maxSize) {
-    $q.notify({
-      type: 'warning',
-      message: 'El archivo no puede superar los 20MB'
-    })
-    event.target.value = ''
-    return
-  }
-
-  selectedFile.value = file
-
-  // Crear preview si es imagen
-  if (isImageFile(file)) {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      selectedFilePreview.value = e.target.result
-    }
-    reader.readAsDataURL(file)
-  } else {
-    selectedFilePreview.value = null
-  }
-
-  // Limpiar el input para permitir seleccionar el mismo archivo
-  event.target.value = ''
-}
-
-/**
- * Limpia el archivo seleccionado
- * @returns {void}
- */
-const clearSelectedFile = () => {
-  selectedFile.value = null
-  selectedFilePreview.value = null
-}
-
-/**
- * Verifica si el archivo es una imagen
- * @param {File} file - Archivo a verificar
- * @returns {boolean}
- */
-const isImageFile = (file) => {
-  return file.type.startsWith('image/')
-}
-
-/**
- * Verifica si el archivo es un video
- * @param {File} file - Archivo a verificar
- * @returns {boolean}
- */
-const isVideoFile = (file) => {
-  return file.type.startsWith('video/')
-}
-
-/**
- * Obtiene el icono según el tipo de archivo
- * @param {File} file - Archivo
- * @returns {string}
- */
-const getFileIcon = (file) => {
-  if (isImageFile(file)) return 'image'
-  if (isVideoFile(file)) return 'videocam'
-  if (file.type.includes('pdf')) return 'picture_as_pdf'
-  if (file.type.includes('word') || file.name.endsWith('.doc') || file.name.endsWith('.docx')) return 'description'
-  if (file.type.includes('excel') || file.name.endsWith('.xls') || file.name.endsWith('.xlsx')) return 'table_chart'
-  return 'attach_file'
-}
-
-/**
- * Formatea el tamaño del archivo
- * @param {number} bytes - Tamaño en bytes
- * @returns {string}
- */
-const formatFileSize = (bytes) => {
-  if (!bytes) return ''
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
 }
 
 /**
@@ -1556,21 +1425,6 @@ const downloadImage = () => {
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
-}
-
-/**
- * Obtiene el icono según el tipo MIME del archivo
- * @param {string} mimeType - Tipo MIME
- * @returns {string}
- */
-const getFileTypeIcon = (mimeType) => {
-  if (!mimeType) return 'attach_file'
-  if (mimeType.includes('pdf')) return 'picture_as_pdf'
-  if (mimeType.includes('word') || mimeType.includes('document')) return 'description'
-  if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return 'table_chart'
-  if (mimeType.includes('image')) return 'image'
-  if (mimeType.includes('video')) return 'videocam'
-  return 'attach_file'
 }
 
 /**

@@ -119,6 +119,36 @@
                         </div>
                       </template>
 
+                      <!-- Invoice Review Card (Artificial intelligence process) -->
+                      <div v-else-if="getInvoiceData(message.content)" class="message-bubble-wrapper">
+                        <InvoiceReviewCard
+                          :data="getInvoiceData(message.content)"
+                          @confirm="(confirmedData) => {
+                            if (confirmedData.handledInChat) {
+                              messages.push({
+                                id: 'msg-success-' + Date.now(),
+                                type: 'text',
+                                content: '¡Factura integrada con éxito! ✅ Los productos y la compra han sido registrados en el sistema.',
+                                role: 'ai',
+                                created_at: new Date().toISOString()
+                              });
+                              scrollToBottom();
+                            } else {
+                              eventBus.emit('apply-invoice-data', confirmedData);
+                              $emit('open-invoice', confirmedData);
+                            }
+                          }"
+                          @discard="() => {
+                            deleteMockMessage(message.id);
+                            const idx = messages.indexOf(message);
+                            if (idx !== -1) messages.splice(idx, 1);
+                          }"
+                        />
+                        <div v-if="!isNextSameUser(message, messages.length - 1 - index)" class="message-time-caption">
+                          {{ formatTimeShort(message.created_at) }}
+                        </div>
+                      </div>
+
                       <!-- Mensaje normal -->
                       <div v-else class="message-bubble-wrapper">
                         <!-- Audio -->
@@ -137,12 +167,19 @@
                           <video :src="getFullUrl(message.attachment_url)" controls class="chat-video"></video>
                           <div v-if="message.content && message.content.trim() !== ''" class="message-text q-mt-xs" v-html="formatMessageContent(message.content)"></div>
                         </div>
-                        <!-- File -->
-                        <div v-else-if="message.type === 'file' && message.attachment_url" class="message-bubble shadow-sm">
-                          <a :href="getFullUrl(message.attachment_url)" target="_blank" class="row items-center no-wrap text-primary" style="text-decoration: none; gap: 6px;">
-                            <q-icon :name="getFileTypeIcon(message.attachment_mime)" size="20px" />
-                            <span class="ellipsis" style="font-size: 13px;">{{ message.attachment_name || 'Archivo' }}</span>
+                        <!-- File (Document) -->
+                        <div v-else-if="message.type === 'file' && message.attachment_url" class="message-bubble shadow-sm doc-message-bubble">
+                          <a :href="getFullUrl(message.attachment_url)" target="_blank" class="doc-card row items-center no-wrap">
+                            <div class="doc-icon-container">
+                              <q-icon :name="getFileTypeIcon(message.attachment_mime)" size="24px" color="primary" />
+                            </div>
+                            <div class="col q-px-sm overflow-hidden">
+                              <div class="doc-name ellipsis">{{ message.attachment_name || 'Documento' }}</div>
+                              <div class="doc-meta">{{ message.attachment_mime?.split('/')[1]?.toUpperCase() || 'FILE' }}</div>
+                            </div>
+                            <q-icon name="download" size="18px" color="grey-7" class="q-ml-xs" />
                           </a>
+                          <div v-if="message.content && message.content.trim() !== ''" class="message-text q-mt-xs" v-html="formatMessageContent(message.content)"></div>
                         </div>
                         <!-- Text -->
                         <div v-else-if="message.content && message.content.trim() !== ''" class="message-bubble shadow-sm">
@@ -202,12 +239,19 @@
                           <video :src="getFullUrl(message.attachment_url)" controls class="chat-video"></video>
                           <div v-if="message.content && message.content.trim() !== ''" class="message-text q-mt-xs">{{ message.content }}</div>
                         </div>
-                        <!-- File -->
-                        <div v-else-if="message.type === 'file' && message.attachment_url" class="message-bubble shadow-sm">
-                          <a :href="getFullUrl(message.attachment_url)" target="_blank" class="row items-center no-wrap text-white" style="text-decoration: none; gap: 6px;">
-                            <q-icon :name="getFileTypeIcon(message.attachment_mime)" size="20px" />
-                            <span class="ellipsis" style="font-size: 13px;">{{ message.attachment_name || 'Archivo' }}</span>
+                        <!-- File (Document) -->
+                        <div v-else-if="message.type === 'file' && message.attachment_url" class="message-bubble shadow-sm doc-message-bubble own">
+                          <a :href="getFullUrl(message.attachment_url)" target="_blank" class="doc-card own row items-center no-wrap">
+                            <div class="doc-icon-container">
+                              <q-icon :name="getFileTypeIcon(message.attachment_mime)" size="24px" color="primary" />
+                            </div>
+                            <div class="col q-px-sm overflow-hidden">
+                              <div class="doc-name ellipsis">{{ message.attachment_name || 'Documento' }}</div>
+                              <div class="doc-meta">{{ message.attachment_mime?.split('/')[1]?.toUpperCase() || 'FILE' }}</div>
+                            </div>
+                            <q-icon name="download" size="18px" color="grey-4" class="q-ml-xs" />
                           </a>
+                          <div v-if="message.content && message.content.trim() !== ''" class="message-text q-mt-xs">{{ message.content }}</div>
                         </div>
                         <!-- Text -->
                         <div v-else-if="message.content && message.content.trim() !== ''" class="message-bubble shadow-sm">
@@ -356,6 +400,9 @@ import { format } from 'date-fns'
 import AudioRecorder from 'src/components/AudioRecorder.vue'
 import AudioPlayer from 'src/components/AudioPlayer.vue'
 import CameraCapture from 'src/components/CameraCapture.vue'
+import { useSupportChat } from 'src/composables/useSupportChat'
+import InvoiceReviewCard from 'src/components/InvoiceReviewCard.vue'
+import eventBus from 'src/utils/eventBus'
 
 /**
  * Quasar instance
@@ -366,6 +413,34 @@ const $q = useQuasar()
  * Auth store
  */
 const authStore = authentication()
+
+// ─── Shared support chat logic ──────────────────────────────────────────────
+const {
+  selectedFile,
+  selectedFilePreview,
+  fileInput,
+  cameraInput,
+  videoInput,
+  documentInput,
+  getFileIcon,
+  getFileTypeIcon,
+  getFullUrl,
+  getFileUrl,
+  clearSelectedFile,
+  handleFileSelect,
+  handleCameraCapture: _handleCameraCapture,
+  openFilePicker,
+  openVideoPicker,
+  openDocumentPicker,
+  getVideoData,
+  getInvoiceData,
+  saveMockPurchaseMessage,
+  deleteMockMessage,
+  buildLocalMessage,
+  sendChatMessage,
+  sendAudioChatMessage,
+  formatMessageContent
+} = useSupportChat()
 
 const showMiniChat = ref(false)
 
@@ -409,29 +484,18 @@ const currentVideoUrl = ref('')
  */
 const chatInput = ref(null)
 
-/**
- * File handling refs
- */
-const fileInput = ref(null)
-const cameraInput = ref(null)
-const videoInput = ref(null)
-const documentInput = ref(null)
-const selectedFile = ref(null)
-const selectedFilePreview = ref(null)
-const sending = ref(false)
 const showCamera = ref(false)
+const sending = ref(false)
 
 /**
  * Current user
  */
 const currentUser = computed(() => authStore.userSession)
-
 const isRoot = computed(() => !!authStore.userSession?.is_root)
 
 const isPartnerOnline = computed(() => {
   if (!selectedChat.value) return false
-  if (!isRoot.value) return true // El bot siempre está conectado
-
+  if (!isRoot.value) return true
   const partner = selectedChat.value.client || selectedChat.value.users?.find(u => u.id !== authStore.userSession?.id)
   return partner?.status === 'online' || partner?.is_online || false
 })
@@ -444,73 +508,15 @@ const getChatName = (chat) => {
   return chat.title || chat.subject || 'Soporte OrderWise'
 }
 
-const getFullUrl = (url) => {
-  if (!url) return ''
-  if (url.startsWith('blob:') || url.startsWith('http') || url.startsWith('data:')) return url
-  const baseUrl = import.meta.env.VITE_APP_API_URL?.replace(/\/api\/?$/, '') || ''
-  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
+// Wrap handleCameraCapture to also close the camera modal
+const handleCameraCapture = (file) => {
+  _handleCameraCapture(file)
+  showCamera.value = false
 }
 
-const getFileTypeIcon = (mimeType) => {
-  if (!mimeType) return 'attach_file'
-  if (mimeType.includes('pdf')) return 'picture_as_pdf'
-  if (mimeType.includes('word') || mimeType.includes('document')) return 'description'
-  if (mimeType.includes('image')) return 'image'
-  return 'attach_file'
-}
-
-const isImageFile = (file) => file && file.type && file.type.startsWith('image/')
-const isVideoFile = (file) => file && file.type && file.type.startsWith('video/')
-
-const getFileIcon = (file) => {
-  if (isImageFile(file)) return 'image'
-  if (isVideoFile(file)) return 'videocam'
-  return 'description'
-}
-
-const clearSelectedFile = () => {
-  // If preview was an object URL (videos), we should ideally revoke it,
-  // but since it's used in the message list too, we have to be careful.
-  // For now, let's just clear the refs.
-  selectedFile.value = null
-  selectedFilePreview.value = null
-  if (fileInput.value) fileInput.value.value = ''
-  if (cameraInput.value) cameraInput.value.value = ''
-  if (videoInput.value) videoInput.value.value = ''
-  if (documentInput.value) documentInput.value.value = ''
-}
-
-const handleFileSelect = (event) => {
-  const file = event.target.files?.[0]
-  if (!file) {
-    event.target.value = ''
-    return
-  }
-  selectedFile.value = file
-  if (isImageFile(file)) {
-    const reader = new FileReader()
-    reader.onload = (e) => { selectedFilePreview.value = e.target.result }
-    reader.readAsDataURL(file)
-  } else if (isVideoFile(file)) {
-    selectedFilePreview.value = URL.createObjectURL(file)
-  }
-
-  // Clear file input value to allow selecting the same file again
-  event.target.value = ''
-}
-
-const openFilePicker = () => fileInput.value?.click()
 const openCamera = () => {
   showCamera.value = true
 }
-const handleCameraCapture = (file) => {
-  selectedFile.value = file
-  const reader = new FileReader()
-  reader.onload = (e) => { selectedFilePreview.value = e.target.result }
-  reader.readAsDataURL(file)
-}
-const openVideoPicker = () => videoInput.value?.click()
-const openDocumentPicker = () => documentInput.value?.click()
 
 /**
  * Toggle mini chat
@@ -587,16 +593,8 @@ const sendMessage = async () => {
   clearSelectedFile()
   sending.value = true
 
-  // Add user message locally for immediate feedback
-  const userMessage = {
-    id: Date.now(),
-    role: 'user',
-    sender_id: authStore.userSession?.id,
-    content: messageText,
-    type: fileToSend ? (isImageFile(fileToSend) ? 'image' : isVideoFile(fileToSend) ? 'video' : 'file') : 'text',
-    attachment_url: filePreview,
-    created_at: new Date().toISOString()
-  }
+  // Build optimistic message using composable helper
+  const userMessage = buildLocalMessage({ messageText, fileToSend, filePreview })
   messages.value.push(userMessage)
 
   isTyping.value = true
@@ -605,40 +603,30 @@ const sendMessage = async () => {
 
   try {
     if (selectedChat.value.id === 'mock-purchase') {
-      const mockMsg = {
-        id: Date.now(),
-        content: messageText,
-        sender_id: authStore.userSession?.id,
-        created_at: new Date().toISOString(),
-        type: fileToSend ? (isImageFile(fileToSend) ? 'image' : isVideoFile(fileToSend) ? 'video' : 'file') : 'text',
-        attachment_url: filePreview
-      }
-      const stored = localStorage.getItem('mock_purchase_chat')
-      const mockChat = stored ? JSON.parse(stored) : { id: 'mock-purchase', messages: [] }
-      mockChat.messages.push(mockMsg)
-      mockChat.updated_at = new Date().toISOString()
-      localStorage.setItem('mock_purchase_chat', JSON.stringify(mockChat))
+      const aiResponse = await saveMockPurchaseMessage(userMessage)
 
-      isTyping.value = false
+      if (aiResponse) {
+        // Simulate thinking time for the AI
+        isTyping.value = true
+        setTimeout(async () => {
+          messages.value.push(aiResponse)
+          isTyping.value = false
+          await nextTick()
+          scrollToBottom()
+        }, 1500)
+      } else {
+        isTyping.value = false
+      }
+
       sending.value = false
       await nextTick()
       scrollToBottom()
       return
     }
 
-    const formData = new FormData()
-    if (messageText) formData.append('message', messageText)
-    if (fileToSend) {
-      formData.append('attachment', fileToSend)
-      formData.append('type', userMessage.type)
-    }
-    formData.append('branch_office_id', authStore.branchOffice?.id)
+    const data = await sendChatMessage(selectedChat.value.id, messageText, fileToSend, userMessage.type)
 
-    const { data } = await api.post(`support-chats/${selectedChat.value.id}/messages`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
-
-    // Update local list if server returned enriched messages
+    // Update local message if server returned enriched data
     if (data.user_message) {
       const idx = messages.value.findIndex(m => m.id === userMessage.id)
       if (idx !== -1) messages.value[idx] = data.user_message
@@ -677,11 +665,7 @@ const sendAudioMessage = async (audioBlob) => {
   scrollToBottom()
 
   try {
-    const formData = new FormData()
-    formData.append('attachment', audioBlob, 'audio.webm')
-    formData.append('type', 'audio')
-    formData.append('branch_office_id', authStore.branchOffice?.id)
-    const { data } = await api.post(`support-chats/${selectedChat.value.id}/messages`, formData)
+    const data = await sendAudioChatMessage(selectedChat.value.id, audioBlob)
     const index = messages.value.findIndex(m => m.id === tempId)
     if (index !== -1) messages.value[index] = data.data || data
   } catch (error) {
@@ -714,45 +698,6 @@ const scrollToBottom = () => {
   if (messagesArea.value) {
     messagesArea.value.scrollTop = 0
   }
-}
-
-const formatMessageContent = (content) => {
-  if (!content) return ''
-  if (typeof content === 'string' && content.startsWith('[') && content.includes('"url"')) {
-    return ''
-  }
-  return content
-    .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="chat-link" style="color: #0084ff; text-decoration: none; font-weight: 500;">$1</a>')
-}
-
-/**
- * Detect and parse video tutorial data.
- */
-const getVideoData = (content) => {
-  if (!content) return null
-  try {
-    let raw = content
-    if (typeof raw === 'object' && raw !== null && typeof raw.message === 'string') {
-      raw = raw.message
-    }
-    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
-    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].url) {
-      return parsed
-    }
-    return null
-  } catch (e) {
-    return null
-  }
-}
-
-/**
- * Get absolute URL for files (video/images)
- */
-const getFileUrl = (path) => {
-  if (!path) return ''
-  if (path.startsWith('http')) return path
-  const r2Domain = 'https://pub-1ee8b00ceed2443c917a8188cf6ed6a4.r2.dev'
-  return `${r2Domain}/${path}`
 }
 
 /**
@@ -1113,6 +1058,91 @@ defineExpose({
     box-shadow: none !important;
     min-width: 220px;
   }
+
+  &.doc-message-bubble {
+    padding: 4px !important;
+    background: #f8f9fa;
+    border-radius: 12px;
+
+    &.own {
+      background: #0084ff;
+    }
+  }
+}
+
+.doc-card {
+  display: flex;
+  background: white;
+  border-radius: 10px;
+  padding: 8px;
+  text-decoration: none;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  min-width: 180px;
+  max-width: 280px;
+
+  &.own {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+
+    .doc-name { color: white; }
+    .doc-meta { color: rgba(255, 255, 255, 0.7); }
+    .doc-icon-container { background: white; }
+  }
+}
+
+.doc-icon-container {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f2f5;
+  border-radius: 8px;
+}
+
+.doc-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1c1e21;
+  line-height: 1.2;
+}
+
+.doc-meta {
+  font-size: 11px;
+  color: #65676b;
+  margin-top: 2px;
+}
+
+.invoice-bubble {
+  padding: 12px !important;
+  background: white !important;
+  border: 1px solid rgba(0,0,0,0.08);
+  min-width: 240px;
+  max-width: 300px;
+  color: #1c1e21 !important;
+
+  &.own {
+    background: #0084ff !important;
+    color: white !important;
+    border: none;
+  }
+}
+
+.invoice-card-header {
+  margin-bottom: 8px;
+}
+
+.invoice-number {
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.invoice-date {
+  font-size: 11px;
+}
+
+.opacity-70 {
+  opacity: 0.7;
 }
 
 .message-text {

@@ -1543,6 +1543,7 @@ import {
 } from '@capacitor/barcode-scanner'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import ProductForm from 'src/components/Product/ProductForm.vue'
+import eventBus from 'src/utils/eventBus'
 export default {
   name: 'NewPurchasePage',
   components: {
@@ -2192,6 +2193,7 @@ export default {
     window.removeEventListener('keydown', () => {
       this.dialogPayment = true
     })
+    eventBus.off('apply-invoice-data')
   },
   /**
    * Loads initial configuration from local storage and fetches available payment methods
@@ -2202,6 +2204,18 @@ export default {
     if (this.$route?.query?.id) {
       this.$router.replace({ name: 'NewPurchase' })
     }
+
+    // Listen for AI Invoice data from chat
+    eventBus.on('apply-invoice-data', (data) => {
+      this.analysisData = data
+      const hasNewItems = data.items.some(i => i.is_new)
+      if (hasNewItems) {
+        this.showAnalysisModal = true
+        notify('Completa la categoría y unidad de los productos nuevos', 'info', 'auto_awesome')
+      } else {
+        this.applyAnalysisData()
+      }
+    })
   },
   methods: {
     /**
@@ -4644,7 +4658,7 @@ export default {
   .q-dialog__inner--minimized > div {
     max-width: 100vw !important;
   }
-  
+
   .item-card-minimal {
     margin-left: 0 !important;
     margin-right: 0 !important;
