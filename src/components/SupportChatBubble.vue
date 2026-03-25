@@ -124,18 +124,23 @@
                         <InvoiceReviewCard
                           :data="getInvoiceData(message.content)"
                           @confirm="(confirmedData) => {
-                            if (confirmedData.handledInChat) {
-                              messages.push({
+                            if (selectedChat?.id === 'mock-purchase') {
+                              const updated = updateMockMessage(message.id, { ...confirmedData, saveSuccess: true });
+                              if (updated) message.content = updated.content;
+
+                              const successMsg = {
                                 id: 'msg-success-' + Date.now(),
                                 type: 'text',
+                                role: 'assistant',
                                 content: '¡Factura integrada con éxito! ✅ Los productos y la compra han sido registrados en el sistema.',
-                                role: 'ai',
+                                sender_id: 'ia-system',
                                 created_at: new Date().toISOString()
-                              });
+                              };
+                              messages.push(successMsg);
+                              saveMockPurchaseMessage(successMsg);
                               scrollToBottom();
                             } else {
                               eventBus.emit('apply-invoice-data', confirmedData);
-                              $emit('open-invoice', confirmedData);
                             }
                           }"
                           @discard="() => {
@@ -306,11 +311,11 @@
                             <q-item-section avatar><q-icon name="photo_camera" color="secondary" /></q-item-section>
                             <q-item-section>Cámara</q-item-section>
                           </q-item>
-                          <q-item clickable v-close-popup @click="openVideoPicker">
+                          <q-item v-if="selectedChat?.id !== 'mock-purchase'" clickable v-close-popup @click="openVideoPicker">
                             <q-item-section avatar><q-icon name="videocam" color="negative" /></q-item-section>
                             <q-item-section>Video</q-item-section>
                           </q-item>
-                          <q-item clickable v-close-popup @click="openDocumentPicker">
+                          <q-item v-if="selectedChat?.id !== 'mock-purchase'" clickable v-close-popup @click="openDocumentPicker">
                             <q-item-section avatar><q-icon name="description" color="warning" /></q-item-section>
                             <q-item-section>Documento</q-item-section>
                           </q-item>
@@ -330,6 +335,7 @@
                       autogrow
                       :max-rows="4"
                       :disable="sending"
+                      hide-bottom-space
                       @keydown.enter.prevent="sendMessage"
                       class="messenger-text-input col"
                     >
@@ -347,8 +353,8 @@
                       </template>
                     </q-input>
 
-                    <!-- Audio recorder (shown when input is empty) -->
-                    <AudioRecorder v-if="!newMessage.trim() && !selectedFile" @send="sendAudioMessage" />
+                    <!-- Audio recorder (shown when input is empty and not AI purchase) -->
+                    <AudioRecorder v-if="!newMessage.trim() && !selectedFile && selectedChat?.id !== 'mock-purchase'" @send="sendAudioMessage" />
                   </div>
 
                   <!-- Hidden file inputs -->
@@ -435,6 +441,7 @@ const {
   getVideoData,
   getInvoiceData,
   saveMockPurchaseMessage,
+  updateMockMessage,
   deleteMockMessage,
   buildLocalMessage,
   sendChatMessage,

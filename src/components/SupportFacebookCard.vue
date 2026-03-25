@@ -8,6 +8,17 @@
         </div>
         <div class="row no-wrap items-center">
           <q-btn
+            v-if="isRoot && !showUserSelection"
+            flat round dense
+            icon="person_add"
+            color="primary"
+            size="sm"
+            @click.stop="showUserSelection = true; fetchUsers()"
+            class="q-mr-xs"
+          >
+            <q-tooltip>Nueva conversación</q-tooltip>
+          </q-btn>
+          <q-btn
             v-if="isRoot && showUserSelection"
             flat round dense
             icon="arrow_back"
@@ -144,43 +155,98 @@
           </div>
         </template>
 
-          <!-- Chat items (Unified Channels) -->
+          <!-- Chat items (Unified Channels for users, Real chats for root) -->
           <div v-else class="chat-items-list q-py-sm">
-            <div
-              v-for="chat in displayChannels"
-              :key="chat.type"
-              class="chat-row"
-              :class="{ 'unread': chat.unread_count > 0 }"
-              @click="handleChannelClick(chat)"
-            >
-              <div class="chat-row-avatar-container">
-                <q-avatar size="42px" class="chat-row-avatar shadow-1" :class="chat.avatarClass">
-                  <q-icon :name="chat.icon" size="22px" color="white" />
-                </q-avatar>
-                <div v-if="chat.unread_count > 0" class="unread-dot"></div>
-              </div>
+            <template v-if="isRoot">
+              <div
+                v-for="chat in chats"
+                :key="chat.id"
+                class="chat-row"
+                :class="{ 'unread': chat.unread_count > 0 }"
+                @click="onChatClick(chat)"
+              >
+                <div class="chat-row-avatar-container">
+                  <q-avatar size="42px" class="chat-row-avatar shadow-1">
+                    <img v-if="chat.client?.avatar" :src="chat.client.avatar" @error="chat.client.avatar = null" />
+                    <div v-else class="avatar-fallback bg-primary text-white">
+                      {{ getInitials(chat.client?.name) }}
+                    </div>
+                  </q-avatar>
+                  <div v-if="chat.unread_count > 0" class="unread-dot"></div>
+                </div>
 
-              <div class="col overflow-hidden" style="min-width: 0;">
-                <div class="chat-row-title text-weight-bold text-no-wrap ellipsis">
-                  {{ chat.subject }}
+                <div class="col overflow-hidden" style="min-width: 0;">
+                  <div class="chat-row-title text-weight-bold text-no-wrap ellipsis">
+                    {{ chat.client?.name || 'Usuario' }}
+                  </div>
+                  <div class="chat-row-subtitle text-grey-7 text-caption text-no-wrap ellipsis">
+                    <q-icon
+                      v-if="chat.type === 'ai'"
+                      name="auto_awesome"
+                      size="14px"
+                      class="q-mr-xs text-blue"
+                    />
+                    {{ chat.last_message?.content || chat.subject }}
+                  </div>
                 </div>
-                <div class="chat-row-subtitle text-grey-7 text-caption text-no-wrap ellipsis">
-                  {{ chat.last_message?.content || chat.description }}
-                </div>
-              </div>
 
-              <div class="column items-end">
-                <q-badge
-                  v-if="chat.unread_count > 0"
-                  color="primary"
-                  :label="chat.unread_count"
-                  class="q-mb-xs"
-                />
-                <div v-if="chat.id" class="text-caption text-grey-5">
-                  {{ formatDate(chat.last_message_at || chat.updated_at) }}
+                <div class="column items-end">
+                  <q-badge
+                    v-if="chat.status && chat.status !== 'closed'"
+                    :color="getStatusColor(chat.status)"
+                    class="q-mb-xs"
+                    style="font-size: 9px;"
+                  >
+                    {{ getStatusLabel(chat.status) }}
+                  </q-badge>
+                  <div v-if="chat.id" class="text-caption text-grey-5" style="font-size: 10px;">
+                    {{ formatDate(chat.last_message_at || chat.updated_at) }}
+                  </div>
                 </div>
               </div>
-            </div>
+              <div v-if="chats.length === 0 && !loading" class="empty-state q-pa-xl text-center">
+                <q-icon name="chat_bubble_outline" size="48px" color="grey-3" />
+                <div class="text-grey-6 q-mt-md">No hay chats activos</div>
+              </div>
+            </template>
+
+            <template v-else>
+              <div
+                v-for="chat in displayChannels"
+                :key="chat.type"
+                class="chat-row"
+                :class="{ 'unread': chat.unread_count > 0 }"
+                @click="handleChannelClick(chat)"
+              >
+                <div class="chat-row-avatar-container">
+                  <q-avatar size="42px" class="chat-row-avatar shadow-1" :class="chat.avatarClass">
+                    <q-icon :name="chat.icon" size="22px" color="white" />
+                  </q-avatar>
+                  <div v-if="chat.unread_count > 0" class="unread-dot"></div>
+                </div>
+
+                <div class="col overflow-hidden" style="min-width: 0;">
+                  <div class="chat-row-title text-weight-bold text-no-wrap ellipsis">
+                    {{ chat.subject }}
+                  </div>
+                  <div class="chat-row-subtitle text-grey-7 text-caption text-no-wrap ellipsis">
+                    {{ chat.last_message?.content || chat.description }}
+                  </div>
+                </div>
+
+                <div class="column items-end">
+                  <q-badge
+                    v-if="chat.unread_count > 0"
+                    color="primary"
+                    :label="chat.unread_count"
+                    class="q-mb-xs"
+                  />
+                  <div v-if="chat.id" class="text-caption text-grey-5">
+                    {{ formatDate(chat.last_message_at || chat.updated_at) }}
+                  </div>
+                </div>
+              </div>
+            </template>
           </div>
       </div>
     </div>
@@ -204,7 +270,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { api } from 'src/boot/axios'
 import { authentication } from 'src/stores/module-authentication'
 import { useRouter } from 'vue-router'
@@ -289,7 +355,9 @@ const loadChats = async () => {
   loading.value = true
   try {
     const params = {
-      is_root: isRoot.value ? 1 : 0
+      is_root: isRoot.value ? 1 : 0,
+      status: statusFilter.value === 'all' ? null : statusFilter.value,
+      search: searchQuery.value
     }
     const { data } = await api.get('support-chats', { params })
     chats.value = data.data || data || []
@@ -299,6 +367,64 @@ const loadChats = async () => {
     loading.value = false
   }
 }
+
+const fetchUsers = async () => {
+  if (loadingUsers.value) return
+  loadingUsers.value = true
+  try {
+    const { data } = await api.get('chat-users')
+    sessionUsers.value = data.data || data || []
+  } catch (error) {
+    console.error('Error fetching users:', error)
+  } finally {
+    loadingUsers.value = false
+  }
+}
+
+const onUserClick = async (user) => {
+  loading.value = true
+  try {
+    const { data } = await api.post('support-chats', {
+      user_id: user.id,
+      subject: `Consulta de ${user.name}`,
+      type: 'support',
+      priority: 'medium',
+      message: 'Hola, me gustaría iniciar una conversación contigo.'
+    })
+    const newChat = data.raw_data || data.data || data
+    onChatClick(newChat)
+  } catch (e) {
+    console.error('Error opening chat with user:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+const getStatusColor = (status) => {
+  const colors = {
+    open: 'primary',
+    in_progress: 'warning',
+    closed: 'positive',
+    reopened: 'orange'
+  }
+  return colors[status] || 'grey'
+}
+
+const getStatusLabel = (status) => {
+  const labels = {
+    open: 'Abierto',
+    in_progress: 'Progreso',
+    closed: 'Cerrado',
+    reopened: 'Reabierto'
+  }
+  return labels[status] || status
+}
+
+watch([statusFilter, searchQuery], () => {
+  if (isRoot.value) {
+    loadChats()
+  }
+})
 
 const onChatClick = (chat) => {
   emit('chat-click', chat)

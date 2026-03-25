@@ -11,17 +11,6 @@
               <div class="header-subtitle">¿En qué podemos ayudarte?</div>
             </div>
           </div>
-          <q-btn
-            flat
-            round
-            dense
-            icon="add"
-            color="white"
-            @click="openNewTicketDialog"
-            class="new-chat-btn"
-          >
-            <q-tooltip>Nuevo ticket</q-tooltip>
-          </q-btn>
         </div>
 
         <div class="chat-list column no-wrap">
@@ -88,25 +77,17 @@
                     <q-spinner color="primary" size="40px" />
                   </div>
 
-                  <div v-else-if="chats.length === 0" class="empty-state">
+                  <div v-else-if="isRoot && chats.length === 0" class="empty-state">
                     <q-icon name="chat_bubble_outline" size="64px" color="grey-5" />
-                    <div class="empty-text">{{ isRoot ? 'No hay chats para estos filtros' : 'No tienes tickets de soporte' }}</div>
-                    <q-btn
-                      v-if="!isRoot"
-                      flat
-                      color="primary"
-                      label="Crear ticket"
-                      icon="add"
-                      @click="openNewTicketDialog"
-                    />
+                    <div class="empty-text">No hay chats para estos filtros</div>
                   </div>
 
                   <div v-else class="chats-list-wrapper">
                     <div
-                      v-for="chat in chats"
-                      :key="chat.id"
+                      v-for="chat in (isRoot ? chats : displayChannels)"
+                      :key="chat.id || chat.type"
                       class="chat-item-wrapper"
-                      :class="{ 'active': selectedChat?.id === chat.id }"
+                      :class="{ 'active': selectedChat?.id === chat.id || selectedChat?.type === chat.type }"
                       @click="selectChat(chat)"
                     >
                       <div class="chat-item-content">
@@ -124,21 +105,14 @@
                             </q-avatar>
                           </template>
                           <template v-else>
-                            <q-avatar size="49px" class="shadow-1 palma-support-avatar">
-                              <q-icon name="auto_awesome" size="24px" color="white" />
+                            <q-avatar size="49px" class="shadow-1" :class="chat.avatarClass || 'palma-avatar'">
+                              <q-icon :name="chat.icon || 'auto_awesome'" size="24px" color="white" />
                             </q-avatar>
                           </template>
                         </div>
                         <div class="chat-info">
                           <div class="chat-header-row">
-                            <div class="chat-title">{{ isRoot ? (getChatPartner(chat)?.name || 'Usuario') : 'Soporte' }}</div>
-                            <q-badge
-                              v-if="!isRoot"
-                              :color="chat.type === 'info' ? 'secondary' : (chat.type === 'sales' ? 'orange' : 'primary')"
-                              :label="chat.type === 'info' ? 'Información' : (chat.type === 'sales' ? 'Ventas' : 'Soporte')"
-                              class="q-ml-sm"
-                              outline
-                            />
+                            <div class="chat-title">{{ isRoot ? (getChatPartner(chat)?.name || 'Usuario') : chat.subject }}</div>
                             <q-badge
                               v-if="chat.unread_count > 0"
                               color="negative"
@@ -147,13 +121,13 @@
                             />
                           </div>
                           <div class="chat-preview">
-                            {{ truncateMessage(chat.last_message?.content) || (isRoot ? chat.subject : 'Sin mensajes') }}
+                            {{ truncateMessage(chat.last_message?.content) || (isRoot ? chat.subject : chat.description) }}
                           </div>
                         </div>
                         <div class="chat-meta">
-                          <div class="chat-time">{{ formatDate(chat.last_message_at) }}</div>
+                          <div v-if="chat.last_message_at || chat.updated_at" class="chat-time">{{ formatDate(chat.last_message_at || chat.updated_at) }}</div>
                           <q-chip
-                            v-if="!isRoot"
+                            v-if="!isRoot && chat.status"
                             :color="getStatusColor(chat.status)"
                             text-color="white"
                             size="sm"
@@ -279,11 +253,11 @@
                 {{ getInitials(selectedChat.client?.name) }}
               </div>
             </q-avatar>
-            <q-avatar v-else size="40px" class="shadow-1 palma-support-avatar">
-              <q-icon name="auto_awesome" size="20px" color="white" />
+            <q-avatar v-else size="40px" class="shadow-1" :class="selectedChat.avatarClass || 'palma-avatar'">
+              <q-icon :name="selectedChat.icon || 'auto_awesome'" size="20px" color="white" />
             </q-avatar>
             <div class="header-info">
-              <div class="chat-name">{{ isRoot ? selectedChat.client?.name : 'Soporte' }}</div>
+              <div class="chat-name">{{ isRoot ? selectedChat.client?.name : (selectedChat.subject || 'Soporte') }}</div>
               <div class="chat-status">
                 <q-chip
                   :color="getStatusColor(selectedChat.status)"
@@ -341,94 +315,119 @@
                   :key="message.id"
                   :class="['message-wrapper', isOwnMessage(message) ? 'user-message' : 'assistant-message', { 'is-audio': message.type === 'audio' }]"
                 >
-                  <div class="message-bubble" :class="{ 'audio-bubble': message.type === 'audio' }">
-                    <div class="message-sender" v-if="!isOwnMessage(message)">
-                      {{ message.sender?.name || (isRoot ? selectedChat.client?.name : 'Soporte') }}
-                    </div>
+                  <!-- Invoice message: render card directly, no bubble wrapper -->
+                  <template v-if="getInvoiceData(message.content)">
+                    <InvoiceReviewCard
+                      :data="getInvoiceData(message.content)"
+                      @confirm="(confirmedData) => {
+                        if (selectedChat?.id === 'mock-purchase') {
+                          const updated = updateMockMessage(message.id, { ...confirmedData, saveSuccess: true });
+                          if (updated) message.content = updated.content;
 
-                    <!-- Attachment: Audio -->
-                    <div v-if="message.type === 'audio' && message.attachment_url" class="message-attachment audio-attachment">
-                      <AudioPlayer
-                        :src="getFullUrl(message.attachment_url)"
-                        :filename="message.attachment_name || 'voice-message.webm'"
-                      />
-                    </div>
+                          const successMsg = {
+                            id: 'msg-success-' + Date.now(),
+                            type: 'text',
+                            role: 'assistant',
+                            content: '¡Factura integrada con éxito! ✅ Los productos y la compra han sido registrados en el sistema.',
+                            sender_id: 'ia-system',
+                            created_at: new Date().toISOString()
+                          };
 
-                    <!-- Attachment: Image -->
-                    <div v-if="message.type === 'image' && message.attachment_url" class="message-attachment image-attachment">
-                      <div class="image-container" @click="openImagePreview(message, getMessageImages(message))">
-                        <q-img
+                          messages.push(successMsg);
+                          saveMockPurchaseMessage(successMsg);
+                          scrollToBottom();
+                        } else {
+                          eventBus.emit('apply-invoice-data', confirmedData);
+                        }
+                      }"
+                      @discard="() => {
+                        deleteMockMessage(message.id);
+                        const idx = messages.indexOf(message);
+                        if (idx !== -1) messages.splice(idx, 1);
+                      }"
+                    />
+                  </template>
+
+                  <!-- Normal message bubble -->
+                  <template v-else>
+                    <div class="message-bubble" :class="{
+                      'audio-bubble': message.type === 'audio',
+                      'image-only-bubble': message.type === 'image' && (!message.content || message.content.trim() === '')
+                    }">
+                      <div class="message-sender" v-if="!isOwnMessage(message)">
+                        {{ message.sender?.name || (isRoot ? selectedChat.client?.name : 'Soporte') }}
+                      </div>
+
+                      <!-- Attachment: Audio -->
+                      <div v-if="message.type === 'audio' && message.attachment_url" class="message-attachment audio-attachment">
+                        <AudioPlayer
                           :src="getFullUrl(message.attachment_url)"
-                          :alt="message.attachment_name"
-                          class="attachment-image"
-                          fit="cover"
-                          :ratio="4/3"
-                        >
-                          <template v-slot:loading>
-                            <div class="image-loading">
-                              <q-spinner color="white" size="32px" />
-                            </div>
-                          </template>
-                        </q-img>
-                        <div class="image-overlay">
-                          <q-icon name="zoom_in" size="28px" color="white" />
+                          :filename="message.attachment_name || 'voice-message.webm'"
+                        />
+                      </div>
+
+                      <!-- Attachment: Image -->
+                      <div v-if="message.type === 'image' && message.attachment_url"
+                        class="message-attachment image-attachment"
+                        :class="{ 'image-only': !message.content || message.content.trim() === '' }"
+                      >
+                        <div class="image-container" @click="openImagePreview(message, getMessageImages(message))">
+                          <q-img
+                            :src="getFullUrl(message.attachment_url)"
+                            :alt="message.attachment_name"
+                            class="attachment-image"
+                            fit="cover"
+                          >
+                            <template v-slot:loading>
+                              <div class="image-loading">
+                                <q-spinner color="white" size="32px" />
+                              </div>
+                            </template>
+                          </q-img>
+                          <div class="image-overlay">
+                            <q-icon name="zoom_in" size="28px" color="white" />
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <!-- Attachment: Video -->
-                    <div v-if="message.type === 'video' && message.attachment_url" class="message-attachment video-attachment">
-                      <video
-                        :src="getFullUrl(message.attachment_url)"
-                        controls
-                        class="attachment-video"
-                        preload="metadata"
-                        playsinline
-                      ></video>
-                    </div>
+                      <!-- Attachment: Video -->
+                      <div v-if="message.type === 'video' && message.attachment_url" class="message-attachment video-attachment">
+                        <video
+                          :src="getFullUrl(message.attachment_url)"
+                          controls
+                          class="attachment-video"
+                          preload="metadata"
+                          playsinline
+                        ></video>
+                      </div>
 
-                    <!-- Attachment: File -->
-                    <div v-if="message.type === 'file' && message.attachment_url" class="message-attachment file-attachment">
-                      <a :href="getFullUrl(message.attachment_url)" target="_blank" class="file-link">
-                        <div class="file-icon-wrapper">
-                          <q-icon :name="getFileTypeIcon(message.attachment_mime)" size="28px" />
-                        </div>
-                        <div class="file-info">
-                          <div class="file-name">{{ message.attachment_name }}</div>
-                          <div class="file-size">{{ formatFileSize(message.attachment_size) }}</div>
-                        </div>
-                        <q-btn flat round dense icon="download" color="primary" />
-                      </a>
-                    </div>
+                      <!-- Attachment: File -->
+                      <div v-if="message.type === 'file' && message.attachment_url" class="message-attachment file-attachment">
+                        <a :href="getFullUrl(message.attachment_url)" target="_blank" class="file-link">
+                          <div class="file-icon-wrapper">
+                            <q-icon :name="getFileTypeIcon(message.attachment_mime)" size="28px" />
+                          </div>
+                          <div class="file-info">
+                            <div class="file-name">{{ message.attachment_name }}</div>
+                            <div class="file-size">{{ formatFileSize(message.attachment_size) }}</div>
+                          </div>
+                          <q-btn flat round dense icon="download" color="primary" />
+                        </a>
+                      </div>
 
-                    <!-- Invoice Review Card -->
-                    <div v-if="getInvoiceData(message.content)" class="message-attachment invoice-attachment q-mb-sm">
-                      <InvoiceReviewCard
-                        :data="getInvoiceData(message.content)"
-                        @confirm="(confirmedData) => {
-                          eventBus.emit('apply-invoice-data', confirmedData);
-                          $emit('open-invoice', confirmedData);
-                        }"
-                        @discard="() => {
-                          deleteMockMessage(message.id);
-                          const idx = messages.indexOf(message);
-                          if (idx !== -1) messages.splice(idx, 1);
-                        }"
-                      />
+                      <div v-if="message.content" class="message-content">{{ message.content }}</div>
+                      <div class="message-footer">
+                        <span class="message-time">{{ formatTime(message.created_at) }}</span>
+                        <q-icon
+                          v-if="isOwnMessage(message)"
+                          :name="message.is_read ? 'done_all' : 'done'"
+                          :color="message.is_read ? (message.type === 'audio' ? 'blue-2' : 'white') : 'grey-3'"
+                          size="16px"
+                          class="q-ml-xs"
+                        />
+                      </div>
                     </div>
-
-                    <div v-if="message.content" class="message-content">{{ message.content }}</div>
-                    <div class="message-footer">
-                      <span class="message-time">{{ formatTime(message.created_at) }}</span>
-                      <q-icon
-                        v-if="isOwnMessage(message)"
-                        :name="message.is_read ? 'done_all' : 'done'"
-                        :color="message.is_read ? (message.type === 'audio' ? 'blue-2' : 'white') : 'grey-3'"
-                        size="16px"
-                        class="q-ml-xs"
-                      />
-                    </div>
-                  </div>
+                  </template>
                 </div>
 
                 <!-- Typing indicator -->
@@ -460,110 +459,91 @@
           </div>
 
           <!-- Input de mensaje -->
-          <div class="q-pa-md" v-if="selectedChat.status !== 'closed'">
-            <!-- Preview del archivo seleccionado -->
-            <div v-if="selectedFile" class="attachment-preview q-mb-sm">
-              <div class="preview-content">
-                <q-img
-                  v-if="selectedFilePreview && isImageFile(selectedFile)"
-                  :src="selectedFilePreview"
-                  class="preview-image"
-                  fit="contain"
-                />
-                <div v-else class="preview-file">
-                  <q-icon :name="getFileIcon(selectedFile)" size="32px" color="primary" />
-                  <span>{{ selectedFile.name }}</span>
-                </div>
-              </div>
-              <q-btn flat round dense icon="close" @click="clearSelectedFile" color="negative" />
+          <div class="page-messenger-footer q-pa-md" v-if="selectedChat.status !== 'closed'">
+            <!-- File preview compact -->
+            <div v-if="selectedFile" class="row items-center no-wrap bg-grey-2 q-pa-xs rounded-borders q-mb-sm" style="gap: 8px;">
+              <q-img
+                v-if="selectedFilePreview && isImageFile(selectedFile)"
+                :src="selectedFilePreview"
+                style="width: 40px; height: 40px; border-radius: 6px;"
+              />
+              <q-icon v-else :name="getFileIcon(selectedFile)" size="24px" color="primary" />
+              <div class="col ellipsis text-caption">{{ selectedFile.name }}</div>
+              <q-btn flat round dense icon="close" size="xs" @click="clearSelectedFile" />
             </div>
 
-            <div class="input-field">
+            <div class="row items-center no-wrap" style="gap: 4px;">
+              <!-- Attachment button (square, outside input) -->
+              <q-btn
+                flat
+                dense
+                icon="attach_file"
+                color="grey-7"
+                class="page-attachment-btn"
+              >
+                <q-menu fit anchor="top left" self="bottom left">
+                  <q-list dense style="min-width: 160px;">
+                    <q-item clickable v-close-popup @click="openFilePicker">
+                      <q-item-section avatar><q-icon name="photo_library" color="primary" /></q-item-section>
+                      <q-item-section>Galería</q-item-section>
+                    </q-item>
+                    <q-item clickable v-close-popup @click="openCamera">
+                      <q-item-section avatar><q-icon name="photo_camera" color="secondary" /></q-item-section>
+                      <q-item-section>Tomar Foto</q-item-section>
+                    </q-item>
+                    <q-item v-if="selectedChat?.id !== 'mock-purchase'" clickable v-close-popup @click="openVideoPicker">
+                      <q-item-section avatar><q-icon name="videocam" color="negative" /></q-item-section>
+                      <q-item-section>Video</q-item-section>
+                    </q-item>
+                    <q-item v-if="selectedChat?.id !== 'mock-purchase'" clickable v-close-popup @click="openDocumentPicker">
+                      <q-item-section avatar><q-icon name="description" color="warning" /></q-item-section>
+                      <q-item-section>Documento</q-item-section>
+                    </q-item>
+                  </q-list>
+                </q-menu>
+              </q-btn>
+
+              <!-- Text input (rounded, outlined — like Messenger) -->
               <q-input
                 v-model="newMessage"
                 placeholder="Escribe tu mensaje..."
-                filled
+                dense
+                rounded
+                outlined
+                bg-color="white"
                 autogrow
+                :max-rows="4"
                 :disable="sending"
+                hide-bottom-space
                 @keyup.enter.exact="sendMessage"
+                class="page-messenger-input col"
               >
-                <template v-slot:prepend>
-                  <q-btn-dropdown flat round dense icon="attach_file" color="grey">
-                    <q-list>
-                      <q-item clickable v-close-popup @click="openFilePicker">
-                        <q-item-section avatar>
-                          <q-icon name="photo_library" color="primary" />
-                        </q-item-section>
-                        <q-item-section>Galería</q-item-section>
-                      </q-item>
-                      <q-item clickable v-close-popup @click="openCamera">
-                        <q-item-section avatar>
-                          <q-icon name="photo_camera" color="secondary" />
-                        </q-item-section>
-                        <q-item-section>Tomar Foto</q-item-section>
-                      </q-item>
-                      <q-item clickable v-close-popup @click="openVideoPicker">
-                        <q-item-section avatar>
-                          <q-icon name="videocam" color="negative" />
-                        </q-item-section>
-                        <q-item-section>Video</q-item-section>
-                      </q-item>
-                      <q-item clickable v-close-popup @click="openDocumentPicker">
-                        <q-item-section avatar>
-                          <q-icon name="description" color="warning" />
-                        </q-item-section>
-                        <q-item-section>Documento</q-item-section>
-                      </q-item>
-                    </q-list>
-                  </q-btn-dropdown>
-                </template>
                 <template v-slot:append>
                   <q-btn
                     v-if="newMessage.trim() || selectedFile"
-                    round
+                    flat round
                     icon="send"
-                    size="md"
-                    style="border-radius: 100px;"
-                    color="primary"
+                    :color="!isTyping ? 'primary' : 'grey-5'"
+                    size="sm"
                     @click="sendMessage"
-                    :disable="sending"
                     :loading="sending"
+                    class="send-btn"
                   />
-                  <AudioRecorder v-else @send="sendAudioMessage" />
                 </template>
               </q-input>
+
+              <!-- Audio recorder outside input -->
+              <AudioRecorder
+                v-if="!newMessage.trim() && !selectedFile && selectedChat?.id !== 'mock-purchase'"
+                @send="sendAudioMessage"
+              />
             </div>
 
             <!-- Hidden file inputs -->
-            <input
-              type="file"
-              ref="fileInput"
-              accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx"
-              @change="handleFileSelect"
-              style="display: none"
-            />
-            <input
-              type="file"
-              ref="cameraInput"
-              accept="image/*"
-              capture="environment"
-              @change="handleFileSelect"
-              style="display: none"
-            />
-            <input
-              type="file"
-              ref="videoInput"
-              accept="video/*"
-              @change="handleFileSelect"
-              style="display: none"
-            />
-            <input
-              type="file"
-              ref="documentInput"
-              accept="application/pdf,.doc,.docx,.xls,.xlsx"
-              @change="handleFileSelect"
-              style="display: none"
-            />
+            <input type="file" ref="fileInput" accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx" @change="handleFileSelect" style="display: none" />
+            <input type="file" ref="cameraInput" accept="image/*" capture="environment" @change="handleFileSelect" style="display: none" />
+            <input type="file" ref="videoInput" accept="video/*" @change="handleFileSelect" style="display: none" />
+            <input type="file" ref="documentInput" accept="application/pdf,.doc,.docx,.xls,.xlsx" @change="handleFileSelect" style="display: none" />
           </div>
 
           <!-- Chat cerrado -->
@@ -764,6 +744,7 @@ const {
   sendChatMessage,
   sendAudioChatMessage,
   saveMockPurchaseMessage,
+  updateMockMessage,
   deleteMockMessage,
   getInvoiceData,
   formatFileSize
@@ -915,10 +896,6 @@ const handleSearch = () => {
   }
 }
 
-const isRootOrSuperAdmin = computed(() => {
-  return authStore.userSession?.is_root || authStore.userSession?.is_super_admin
-})
-
 const statusOptions = [
   { label: 'Todos', value: null },
   { label: 'Abiertos', value: 'open' },
@@ -970,6 +947,13 @@ const offlineUsersFiltered = computed(() => {
  */
 const sendAudioMessage = async (audioBlob) => {
   if (sending.value || !selectedChat.value) return
+
+  // Guard for mock chats
+  if (selectedChat.value.id === 'mock-purchase') {
+    $q.notify({ type: 'info', message: 'El chat de prueba no soporta audios' })
+    return
+  }
+
   sending.value = true
 
   const tempId = Date.now()
@@ -991,7 +975,7 @@ const sendAudioMessage = async (audioBlob) => {
   try {
     const data = await sendAudioChatMessage(selectedChat.value.id, audioBlob)
     const index = messages.value.findIndex(m => m.id === tempId)
-    if (index !== -1) messages.value[index] = data.data
+    if (index !== -1) messages.value[index] = data.data || data
   } catch (error) {
     console.error('Error sending audio:', error)
     messages.value = messages.value.filter(m => m.id !== tempId)
@@ -1042,6 +1026,61 @@ const categoryOptions = [
 const currentUser = computed(() => authStore.userSession)
 
 /**
+ * Handle Purchase Mock Chat
+ */
+const getPurchaseMock = () => {
+  const stored = localStorage.getItem('mock_purchase_chat')
+  if (stored) return JSON.parse(stored)
+
+  // Default initial mock state
+  return {
+    id: 'mock-purchase',
+    type: 'purchase',
+    subject: 'Cargar Compra con IA',
+    icon: 'receipt_long',
+    avatarClass: 'bg-orange',
+    description: 'Sube tu factura y automatiza',
+    messages: [
+      {
+        id: 'welcome-msg',
+        content: '¡Hola! Soy tu asistente de compras. Sube una foto de tu factura para procesarla automáticamente.',
+        sender_id: 'ia-system',
+        created_at: new Date().toISOString()
+      }
+    ],
+    updated_at: new Date().toISOString()
+  }
+}
+
+/**
+ * Display channels logic
+ */
+const displayChannels = computed(() => {
+  const types = [
+    { type: 'ai', subject: 'Asistente IA', icon: 'auto_awesome', avatarClass: 'palma-avatar', description: 'Resuelve tus dudas con IA' },
+    { type: 'support', subject: 'Soporte Técnico', icon: 'headset_mic', avatarClass: 'bg-primary', description: 'Chatea con nuestro equipo' },
+    { type: 'purchase', subject: 'Cargar Compra con IA', icon: 'receipt_long', avatarClass: 'bg-orange', description: 'Sube tu factura y automatiza' }
+  ]
+
+  const mockPurchase = getPurchaseMock()
+
+  return types.map(config => {
+    let base = {}
+    if (config.type === 'purchase') {
+      base = chats.value.find(c => c.type === 'purchase') || mockPurchase
+    } else {
+      base = chats.value.find(c => c.type === config.type) || {}
+    }
+
+    return {
+      ...base,
+      ...config, // UI Config always stays
+      unread_count: base.unread_count || 0
+    }
+  })
+})
+
+/**
  * Carga la lista de chats de soporte
  * @returns {Promise<void>}
  */
@@ -1049,7 +1088,7 @@ const loadChats = async () => {
   loading.value = true
   try {
     let params = {}
-    if (isRootOrSuperAdmin.value) {
+    if (isRoot.value) {
       params = {
         status: filters.value.status,
         search: filters.value.search,
@@ -1057,7 +1096,7 @@ const loadChats = async () => {
       }
     }
     const { data } = await api.get('support-chats', { params })
-    if (isRootOrSuperAdmin.value) {
+    if (isRoot.value) {
       chats.value = data.data
       pagination.value.lastPage = data.last_page
       unreadCount.value = data.total_unread || 0
@@ -1079,7 +1118,7 @@ const loadChats = async () => {
  * Carga usuarios para el monitor de soporte
  */
 const fetchUsers = async () => {
-  if (!isRootOrSuperAdmin.value) return
+  if (!isRoot.value) return
   loading.value = true
   try {
     const { data } = await api.get('user-sessions', {
@@ -1118,7 +1157,7 @@ const openChatWithUser = async (user) => {
  * Cierra el chat seleccionado (Admin)
  */
 const closeChat = async () => {
-  if (!selectedChat.value || !isRootOrSuperAdmin.value) return
+  if (!selectedChat.value || !isRoot.value) return
   try {
     const { data } = await api.post(`support-chats/${selectedChat.value.id}/close`)
     selectedChat.value = data.chat
@@ -1133,7 +1172,7 @@ const closeChat = async () => {
  * Reabre el chat seleccionado (Admin)
  */
 const reopenChat = async () => {
-  if (!selectedChat.value || !isRootOrSuperAdmin.value) return
+  if (!selectedChat.value || !isRoot.value) return
   try {
     const { data } = await api.post(`support-chats/${selectedChat.value.id}/reopen`)
     selectedChat.value = data.chat
@@ -1172,33 +1211,69 @@ const handleAvatarError = (obj) => {
  * @returns {Promise<void>}
  */
 const selectChat = async (chat) => {
-  selectedChat.value = chat
-  loading.value = true
-  try {
-    const { data } = await api.get(`support-chats/${chat.id}`)
-    messages.value = data.messages || []
-    selectedChat.value = data
-
-    // Actualizar contador de no leídos en la lista
-    const chatIndex = chats.value.findIndex(c => c.id === chat.id)
-    if (chatIndex !== -1) {
-      chats.value[chatIndex].unread_count = 0
+  if (chat.id === 'mock-purchase') {
+    selectedChat.value = chat
+    const stored = localStorage.getItem('mock_purchase_chat')
+    if (stored) {
+      const mock = JSON.parse(stored)
+      messages.value = mock.messages || []
+    } else {
+      messages.value = chat.messages || []
     }
-
-    // Suscribirse al canal del chat
-    subscribeToChat(chat.id)
-
     await nextTick()
     scrollToBottom()
-    attachScrollListener()
-  } catch (error) {
-    console.error('Error loading chat:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Error al cargar el chat'
-    })
-  } finally {
-    loading.value = false
+    return
+  }
+
+  if (chat.id) {
+    selectedChat.value = chat
+    loading.value = true
+    try {
+      const { data } = await api.get(`support-chats/${chat.id}`)
+      messages.value = data.messages || []
+      selectedChat.value = data
+
+      // Actualizar contador de no leídos en la lista
+      const chatIndex = chats.value.findIndex(c => c.id === chat.id)
+      if (chatIndex !== -1) {
+        chats.value[chatIndex].unread_count = 0
+      }
+
+      // Suscribirse al canal del chat
+      subscribeToChat(chat.id)
+
+      await nextTick()
+      scrollToBottom()
+      attachScrollListener()
+    } catch (error) {
+      console.error('Error loading chat:', error)
+      $q.notify({
+        type: 'negative',
+        message: 'Error al cargar el chat'
+      })
+    } finally {
+      loading.value = false
+    }
+  } else {
+    // Es un canal predefinido nuevo, iniciarlo
+    loading.value = true
+    try {
+      const payload = {
+        subject: chat.subject,
+        type: chat.type,
+        priority: 'medium',
+        message: 'Hola, me gustaría iniciar una conversación.'
+      }
+      const { data } = await api.post('support-chats', payload)
+      const newChat = data.raw_data || data.data || data
+      chats.value.push(newChat)
+      selectChat(newChat)
+    } catch (error) {
+      console.error('Error creating chat channel:', error)
+      $q.notify({ type: 'negative', message: 'Error al iniciar la conversación' })
+    } finally {
+      loading.value = false
+    }
   }
 }
 
@@ -1300,13 +1375,11 @@ const sendMessage = async () => {
   scrollToBottom()
 
   try {
-    const data = await sendChatMessage(selectedChat.value.id, messageText, fileToSend, tempMessage.type)
-
-    // Handle mock-purchase AI response simulation (since it's not a real API)
+    isTyping.value = true
     if (selectedChat.value.id === 'mock-purchase') {
       const aiResponse = await saveMockPurchaseMessage(tempMessage)
       if (aiResponse) {
-        isTyping.value = true
+        // Mantenemos isTyping true durante la simulación de espera de respuesta
         setTimeout(async () => {
           messages.value.push({
             ...aiResponse,
@@ -1316,8 +1389,13 @@ const sendMessage = async () => {
           await nextTick()
           scrollToBottom()
         }, 1500)
+      } else {
+        isTyping.value = false
       }
+      return
     }
+
+    const data = await sendChatMessage(selectedChat.value.id, messageText, fileToSend, tempMessage.type)
 
     // Reemplazar mensaje temporal con el real
     const tempIndex = messages.value.findIndex(m => m.id === tempMessage.id)
@@ -1339,8 +1417,14 @@ const sendMessage = async () => {
     console.error('Error sending message:', error)
     $q.notify({ type: 'negative', message: 'Error al enviar el mensaje' })
     messages.value = messages.value.filter(m => m.id !== tempMessage.id)
+    isTyping.value = false
   } finally {
     sending.value = false
+    // Solo apagamos isTyping aquí si no es mock-purchase, ya que mock-purchase
+    // maneja su propio apagado dentro del setTimeout para simular realismo.
+    if (selectedChat.value?.id !== 'mock-purchase') {
+      isTyping.value = false
+    }
   }
 }
 
@@ -1433,7 +1517,8 @@ const downloadImage = () => {
  * @returns {boolean}
  */
 const isOwnMessage = (message) => {
-  return message.sender_id === currentUser.value?.id
+  if (!message) return false
+  return message.role === 'user' || message.sender_id === currentUser.value?.id
 }
 
 /**
@@ -1542,7 +1627,11 @@ const scrollToBottom = () => {
     isUserScrolledUp.value = false
 
     if (selectedChat.value && document.hasFocus()) {
-      api.post(`support-chats/${selectedChat.value.id}/read`)
+      if (selectedChat.value && selectedChat.value.id !== 'mock-purchase') {
+        try {
+          api.post(`support-chats/${selectedChat.value.id}/read`)
+        } catch (e) {}
+      }
     }
   }
 }
@@ -1563,7 +1652,11 @@ const handleScroll = (evt) => {
 
     // Si acabamos de bajar y estamos enfocados, marcar como leído
     if (wasScrolledUp && selectedChat.value && document.hasFocus()) {
-      api.post(`support-chats/${selectedChat.value.id}/read`)
+      if (selectedChat.value && selectedChat.value.id !== 'mock-purchase') {
+        try {
+          api.post(`support-chats/${selectedChat.value.id}/read`)
+        } catch (e) {}
+      }
     }
   } else {
     isUserScrolledUp.value = true
@@ -1592,7 +1685,7 @@ let currentChatChannel = null
 const subscribeToEvents = () => {
   if (!echo || !currentUser.value) return
 
-  if (isRootOrSuperAdmin.value) {
+  if (isRoot.value) {
     // Canal global de admins
     echo.private('support.admins')
       .listen('.message.sent', (data) => {
@@ -1648,7 +1741,9 @@ const subscribeToChat = (chatId) => {
 
           // Marcar como leído si estamos viendo y no estamos arriba
           if (document.hasFocus() && !isUserScrolledUp.value) {
-            api.post(`support-chats/${chatId}/read`)
+            if (chatId !== 'mock-purchase') {
+              api.post(`support-chats/${chatId}/read`)
+            }
           }
         }
       }
@@ -1700,7 +1795,7 @@ const handleGlobalMessage = (data) => {
  */
 const unsubscribeFromEvents = () => {
   if (echo) {
-    if (isRootOrSuperAdmin.value) {
+    if (isRoot.value) {
       echo.leave('support.admins')
     }
     if (currentUser.value) {
@@ -1941,8 +2036,8 @@ onUnmounted(() => {
   letter-spacing: 0.5px;
 }
 
-.palma-support-avatar {
-  background: linear-gradient(135deg, #0084ff, #00c6ff) !important;
+.palma-avatar {
+  background: linear-gradient(135deg, #0084ff, #00c6ff);
   box-shadow: 0 2px 8px rgba(0, 132, 255, 0.3);
 }
 
@@ -2378,10 +2473,10 @@ onUnmounted(() => {
 }
 
 .messages-list {
-  padding: 24px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
 }
 
 .message-wrapper {
@@ -2392,10 +2487,9 @@ onUnmounted(() => {
     align-self: flex-end;
 
     .message-bubble {
-      background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+      background-color: #0084ff;
       color: white;
-      border-radius: 20px 20px 4px 20px;
-      box-shadow: 0 4px 15px rgba(25, 118, 210, 0.2);
+      border-radius: 18px 18px 4px 18px;
     }
   }
 
@@ -2403,10 +2497,9 @@ onUnmounted(() => {
     align-self: flex-start;
 
     .message-bubble {
-      background: white;
-      color: #333;
-      border-radius: 20px 20px 20px 4px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      background: #f0f2f5;
+      color: #050505;
+      border-radius: 18px 18px 18px 4px;
     }
   }
 }
@@ -2417,9 +2510,17 @@ onUnmounted(() => {
 }
 
 .message-bubble {
-  padding: 12px 20px;
+  padding: 10px 16px;
   position: relative;
-  font-size: 15px;
+  font-size: 14.5px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+.message-sender {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  color: #65676b;
 }
 
 .message-content {
@@ -2443,8 +2544,43 @@ onUnmounted(() => {
 
 .body--dark .input-wrapper { background: #242526; }
 
-.input-field {
-  width: 100%;
+.page-messenger-footer {
+  background: #f8f9fa;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  position: relative;
+  z-index: 10;
+}
+
+.body--dark .page-messenger-footer {
+  background: #242526;
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.page-attachment-btn {
+  background: #f0f2f5;
+  border-radius: 8px !important;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 !important;
+  flex-shrink: 0;
+
+  &:hover {
+    background: #e4e6eb;
+  }
+}
+
+.body--dark .page-attachment-btn {
+  background: #3a3b3c;
+  &:hover { background: #4e4f50; }
+}
+
+.page-messenger-input {
+  font-size: 14px;
+}
+
+.send-btn {
+  margin-left: 4px;
 }
 
 .typing-indicator {
@@ -2492,43 +2628,88 @@ onUnmounted(() => {
 // Attachment Styles
 .message-attachment {
   margin-bottom: 8px;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
+
+  &.image-only {
+    margin-bottom: 0px;
+  }
+}
+
+.image-only-bubble {
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+
+  .message-footer {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    padding: 4px 8px;
+    background: rgba(0,0,0,0.3);
+    backdrop-filter: blur(4px);
+    border-radius: 10px;
+    margin-top: 0;
+
+    .message-time {
+      color: white;
+    }
+  }
+
+  .message-sender {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 2px 8px;
+    background: rgba(0,0,0,0.3);
+    backdrop-filter: blur(4px);
+    border-radius: 10px;
+    color: white;
+    z-index: 10;
+  }
 }
 
 .image-attachment {
   .image-container {
     position: relative;
     cursor: pointer;
-    border-radius: 12px;
+    border-radius: 14px;
     overflow: hidden;
-    max-width: 320px;
+    max-width: 380px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    background: #f0f2f5;
 
     &:hover {
       .image-overlay {
         opacity: 1;
+      }
+
+      .attachment-image {
+        transform: scale(1.02);
       }
     }
   }
 }
 
 .attachment-image {
-  max-width: 320px;
+  max-width: 380px;
   min-width: 200px;
-  border-radius: 12px;
-  transition: transform 0.3s ease;
+  border-radius: 14px;
+  transition: transform 0.4s ease;
+  display: block;
 }
 
 .image-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
   transition: opacity 0.3s ease;
-  border-radius: 12px;
+  border-radius: 14px;
+  z-index: 5;
 }
 
 .image-loading {
@@ -2537,7 +2718,7 @@ onUnmounted(() => {
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .video-attachment {
@@ -2767,9 +2948,8 @@ onUnmounted(() => {
 }
 
 .user-message .audio-bubble {
-  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%) !important;
+  background-color: #0084ff !important;
   color: white;
-  box-shadow: 0 4px 15px rgba(25, 118, 210, 0.3) !important;
 }
 
 // Animations

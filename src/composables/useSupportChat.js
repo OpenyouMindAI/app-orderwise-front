@@ -161,7 +161,8 @@ export function useSupportChat () {
           total: parsed.total || parsed.total_amount || parsed.subtotal || 0,
           tax: parsed.tax || parsed.tax_amount || 0,
           currency: parsed.currency || '$',
-          items: parsed.items || []
+          items: parsed.items || [],
+          saveSuccess: parsed.saveSuccess || false
         }
       }
       return null

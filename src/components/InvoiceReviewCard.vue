@@ -27,8 +27,10 @@
             option-label="name"
             option-value="id"
             use-input
+            hide-selected
+            fill-input
             @filter="filterProviders"
-            placeholder="Buscar proveedor..."
+            :placeholder="!localData.selectedProvider ? 'Buscar proveedor...' : ''"
             class="minimal-input"
             color="primary"
             :disable="saveSuccess"
@@ -114,9 +116,11 @@
                   option-label="name"
                   option-value="id"
                   use-input
+                  hide-selected
+                  fill-input
                   @filter="(val, update) => filterProducts(val, update, item)"
                   @update:model-value="val => onProductSelect(val, item)"
-                  placeholder="Vincular producto..."
+                  :placeholder="!item.selectedProduct ? 'Vincular producto...' : ''"
                   class="minimal-input"
                   color="primary"
                   :disable="saveSuccess"
@@ -124,50 +128,56 @@
                   <template v-slot:prepend><q-icon name="inventory_2" size="16px" color="grey-6" /></template>
                 </q-select>
 
-                <q-select
-                  outlined
-                  dense
-                  v-model="item.category"
-                  :options="categories"
-                  option-label="name"
-                  option-value="id"
-                  use-input
-                  @filter="filterCategories"
-                  placeholder="Categoría"
-                  class="minimal-input"
-                  color="primary"
-                  :disable="saveSuccess"
-                >
-                  <template v-slot:prepend><q-icon name="category" size="16px" color="grey-6" /></template>
-                </q-select>
-                <q-select
-                  outlined
-                  dense
-                  v-model="item.uom"
-                  :options="unitOfMeasures"
-                  option-label="name"
-                  option-value="id"
-                  use-input
-                  @filter="filterUoms"
-                  placeholder="Unidad"
-                  class="minimal-input"
-                  color="primary"
-                  :disable="saveSuccess"
-                >
-                  <template v-slot:prepend><q-icon name="straighten" size="16px" color="grey-6" /></template>
-                </q-select>
+                <template v-if="!item.selectedProduct">
+                  <q-select
+                    outlined
+                    dense
+                    v-model="item.category"
+                    :options="categories"
+                    option-label="name"
+                    option-value="id"
+                    use-input
+                    hide-selected
+                    fill-input
+                    @filter="filterCategories"
+                    :placeholder="!item.category ? 'Categoría' : ''"
+                    class="minimal-input"
+                    color="primary"
+                    :disable="saveSuccess"
+                  >
+                    <template v-slot:prepend><q-icon name="category" size="16px" color="grey-6" /></template>
+                  </q-select>
+                  <q-select
+                    outlined
+                    dense
+                    v-model="item.uom"
+                    :options="unitOfMeasures"
+                    option-label="name"
+                    option-value="id"
+                    use-input
+                    hide-selected
+                    fill-input
+                    @filter="filterUoms"
+                    :placeholder="!item.uom ? 'Unidad' : ''"
+                    class="minimal-input"
+                    color="primary"
+                    :disable="saveSuccess"
+                  >
+                    <template v-slot:prepend><q-icon name="straighten" size="16px" color="grey-6" /></template>
+                  </q-select>
 
-                <q-input
-                  outlined
-                  dense
-                  v-model="item.barcode"
-                  placeholder="Código de Barras"
-                  class="minimal-input"
-                  color="primary"
-                  :disable="saveSuccess"
-                >
-                  <template v-slot:prepend><q-icon name="qr_code" size="16px" color="grey-6" /></template>
-                </q-input>
+                  <q-input
+                    outlined
+                    dense
+                    v-model="item.barcode"
+                    placeholder="Código de Barras"
+                    class="minimal-input"
+                    color="primary"
+                    :disable="saveSuccess"
+                  >
+                    <template v-slot:prepend><q-icon name="qr_code" size="16px" color="grey-6" /></template>
+                  </q-input>
+                </template>
 
                 <!-- Detection text -->
                 <div v-if="!item.selectedProduct" class="ai-suggestion q-px-sm">
@@ -254,7 +264,7 @@ const authStore = authentication()
 
 const localData = reactive(JSON.parse(JSON.stringify(props.data)))
 const loading = ref(false)
-const saveSuccess = ref(false)
+const saveSuccess = ref(props.data.saveSuccess || false)
 
 // Sync IA data key 'provider' with validation key 'provider_name'
 if (!localData.provider_name && localData.provider) {
@@ -475,8 +485,42 @@ const submit = async () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   filterProviders('', (cb) => cb())
+
+  // Auto-link provider if AI detected one and it matches an existing one
+  if (localData.provider && !localData.selectedProvider) {
+    try {
+      const { data } = await api.get('providers', {
+        params: { dataSearch: { name: localData.provider }, perPage: 10 }
+      })
+      const list = data.data || data || []
+      const exactMatch = list.find(p => p.name.toLowerCase().trim() === localData.provider.toLowerCase().trim())
+      if (exactMatch) {
+        localData.selectedProvider = exactMatch
+      }
+    } catch (e) {}
+  }
+
+  // Auto-link items if they match inventory products
+  if (localData.items && localData.items.length > 0) {
+    localData.items.forEach(async (item) => {
+      if (!item.selectedProduct && item.description) {
+        try {
+          const { data } = await api.get('products', {
+            params: { dataSearch: { name: item.description }, perPage: 5, branch_office_id: authStore.branchOffice?.id }
+          })
+          const list = data.data || data || []
+          const exactMatch = list.find(p => p.name.toLowerCase().trim() === item.description.toLowerCase().trim())
+          if (exactMatch) {
+            item.selectedProduct = exactMatch
+            item.is_new = false
+            item.unit_price = exactMatch.cost || item.unit_price
+          }
+        } catch (e) {}
+      }
+    })
+  }
 })
 </script>
 
@@ -508,7 +552,6 @@ onMounted(() => {
   border-radius: 8px;
   border-color: #f1f5f9 !important;
   background: #f8fafc;
-  height: 36px;
   min-height: 36px;
 }
 
