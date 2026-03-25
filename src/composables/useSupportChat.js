@@ -305,6 +305,12 @@ export function useSupportChat () {
    * @returns {Promise<object>} Response data
    */
   const sendChatMessage = async (chatId, messageText, fileToSend, messageType) => {
+    // Safety guard to avoid hit the real API with mock chat IDs
+    if (chatId === 'mock-purchase') {
+      console.warn('Attempted to send chat message to mock-purchase via API. Intercepted.')
+      return { success: true, data: buildLocalMessage({ messageText, fileToSend, filePreview: null }) }
+    }
+
     const formData = new FormData()
     if (messageText) formData.append('message', messageText)
     if (fileToSend) {
@@ -326,6 +332,12 @@ export function useSupportChat () {
    * @returns {Promise<object>} Response data
    */
   const sendAudioChatMessage = async (chatId, audioBlob) => {
+    // Safety guard to avoid hit the real API with mock chat IDs
+    if (chatId === 'mock-purchase') {
+      console.warn('Attempted to send audio message to mock-purchase via API. Intercepted.')
+      return { success: true, data: { id: Date.now(), type: 'audio', content: '', sender_id: authStore.userSession?.id } }
+    }
+
     const formData = new FormData()
     formData.append('attachment', audioBlob, 'audio.webm')
     formData.append('type', 'audio')
