@@ -13,22 +13,36 @@ import path from 'path'
 import dotenv from 'dotenv'
 
 export default configure(function (/* ctx */) {
-  // Cargar variables de entorno siguiendo el estándar de Vite (.env, .env.local, .env.[mode], .env.[mode].local)
+  // Cargar variables de entorno en orden de prioridad ascendente.
+  // El mode-specific (.env.[mode]) siempre pisa a .env.local,
+  // permitiendo que NODE_ENV=development use .env.development, etc.
   const nodeEnv = process.env.NODE_ENV || 'development'
   const envFiles = [
-    '.env',
-    '.env.local',
-    `.env.${nodeEnv}`,
-    `.env.${nodeEnv}.local`
+    '.env',                       // base (menor prioridad)
+    `.env.${nodeEnv}`,            // mode-specific — pisa al base
+    `.env.${nodeEnv}.local`,      // mode-specific local
+    '.env.local',                 // local genérico — solo si no existe mode-specific
   ]
 
   let env = {}
+  const loadedFiles = []
   for (const file of envFiles) {
     const result = dotenv.config({ path: path.resolve(__dirname, file) })
     if (!result.error) {
-      env = { ...env, ...result.parsed }
+      // Mode-specific tiene mayor prioridad que .env.local
+      // Si ya cargamos un archivo mode-specific, .env.local no pisa esas vars
+      if (file === '.env.local' && loadedFiles.some(f => f.startsWith(`.env.${nodeEnv}`))) {
+        // Mergear solo las keys que no estén ya definidas por mode-specific
+        for (const [key, val] of Object.entries(result.parsed || {})) {
+          if (!(key in env)) env[key] = val
+        }
+      } else {
+        env = { ...env, ...result.parsed }
+      }
+      loadedFiles.push(file)
     }
   }
+  console.log(`[env] NODE_ENV=${nodeEnv} | archivos cargados: ${loadedFiles.join(', ')}`)
 
   return {
     eslint: {
