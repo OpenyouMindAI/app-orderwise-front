@@ -202,6 +202,191 @@
       </div>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════════════════
+         SECCIÓN: Retención & Engagement
+         Muestra métricas de actividad de empresas con plan pago:
+         - KPIs de retención
+         - Desglose por plan
+         - Empresas sin actividad
+         - Empresas activas hoy
+    ════════════════════════════════════════════════════════════════ -->
+    <div class="q-px-md q-pb-md q-mt-lg">
+      <!-- Header de sección -->
+      <div class="row items-center q-mb-md">
+        <q-icon name="insights" size="22px" color="deep-purple" class="q-mr-sm" />
+        <span class="text-subtitle1 text-weight-bold">Retención & Engagement</span>
+        <q-space />
+        <q-badge color="deep-purple" outline label="Empresas con plan pago" />
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="bento-grid q-mb-lg">
+        <!-- Empresas con plan pago -->
+        <div class="bento-item stat-hero">
+          <div class="stat-icon-wrap" style="background: #f3e8ff;">
+            <q-icon name="card_membership" size="28px" color="deep-purple" />
+          </div>
+          <div class="stat-data text-left">
+            <q-skeleton v-if="loadingEngagement" type="text" width="50px" />
+            <div v-else class="stat-val" style="color: #7c3aed;">{{ engagementData.kpis.paid_total || 0 }}</div>
+            <div class="stat-lab">Planes Pagos</div>
+          </div>
+        </div>
+
+        <!-- Activas últimos 7 días -->
+        <div class="bento-item stat-hero">
+          <div class="stat-icon-wrap bg-soft-positive">
+            <q-icon name="trending_up" size="28px" color="positive" />
+          </div>
+          <div class="stat-data text-left">
+            <q-skeleton v-if="loadingEngagement" type="text" width="50px" />
+            <div v-else class="stat-val text-positive">{{ engagementData.kpis.active_7d || 0 }}</div>
+            <div class="stat-lab">Activas (7 días)</div>
+            <div class="stat-trend grow" v-if="!loadingEngagement && engagementData.kpis.paid_total">
+              {{ Math.round((engagementData.kpis.active_7d / engagementData.kpis.paid_total) * 100) }}% retención
+            </div>
+          </div>
+        </div>
+
+        <!-- Activas hoy -->
+        <div class="bento-item stat-hero">
+          <div class="stat-icon-wrap bg-soft-primary">
+            <q-icon name="bolt" size="28px" color="primary" />
+          </div>
+          <div class="stat-data text-left">
+            <q-skeleton v-if="loadingEngagement" type="text" width="50px" />
+            <div v-else class="stat-val text-primary">{{ engagementData.kpis.active_24h || 0 }}</div>
+            <div class="stat-lab">Activas Hoy</div>
+          </div>
+        </div>
+
+        <!-- Sin actividad -->
+        <div class="bento-item stat-hero">
+          <div class="stat-icon-wrap bg-soft-negative">
+            <q-icon name="warning_amber" size="28px" color="negative" />
+          </div>
+          <div class="stat-data text-left">
+            <q-skeleton v-if="loadingEngagement" type="text" width="50px" />
+            <div v-else class="stat-val text-negative">{{ (engagementData.kpis.never_invoiced || 0) + (engagementData.kpis.inactive_30d || 0) }}</div>
+            <div class="stat-lab">En Riesgo</div>
+            <div class="stat-trend" style="background: rgba(239,68,68,0.1); color: #ef4444;" v-if="!loadingEngagement">
+              {{ engagementData.kpis.never_invoiced || 0 }} nunca facturaron
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desglose por plan + tablas en dos columnas -->
+      <div class="row q-col-gutter-lg">
+        <!-- Desglose por plan -->
+        <div class="col-12 col-md-4">
+          <div class="bento-item" style="height: 100%;">
+            <div class="bento-header q-mb-md">
+              <q-icon name="pie_chart" size="16px" class="q-mr-xs" color="deep-purple" />
+              <span>Por Plan</span>
+            </div>
+            <q-skeleton v-if="loadingEngagement" type="rect" height="120px" />
+            <div v-else>
+              <div v-for="plan in engagementData.by_plan" :key="plan.slug" class="q-mb-md">
+                <div class="row items-center justify-between q-mb-xs">
+                  <span class="text-caption text-weight-bold">{{ plan.plan_name }}</span>
+                  <q-badge color="grey-5" text-color="dark" :label="`${plan.total} empresas`" />
+                </div>
+                <div class="row items-center q-gutter-xs">
+                  <q-badge color="positive" :label="`${plan.active_7d} activas`" />
+                  <q-badge color="negative" :label="`${plan.never_invoiced} sin uso`" />
+                </div>
+                <q-linear-progress
+                  :value="plan.total > 0 ? plan.active_7d / plan.total : 0"
+                  color="positive"
+                  track-color="grey-3"
+                  size="6px"
+                  class="q-mt-xs"
+                  rounded
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabla empresas inactivas -->
+        <div class="col-12 col-md-8">
+          <div class="bento-item">
+            <div class="bento-header q-mb-md">
+              <q-icon name="warning_amber" size="16px" class="q-mr-xs" color="negative" />
+              <span>Empresas sin Actividad</span>
+              <q-space />
+              <q-badge color="negative" :label="`${engagementData.inactive?.length || 0}`" />
+            </div>
+            <q-table
+              :rows="engagementData.inactive || []"
+              :columns="engagementInactiveColumns"
+              row-key="company_id"
+              :loading="loadingEngagement"
+              flat
+              dense
+              :rows-per-page-options="[10, 20, 50]"
+              :pagination="{ rowsPerPage: 10 }"
+              class="premium-table"
+            >
+              <template #body-cell-status="props">
+                <q-td :props="props">
+                  <q-badge
+                    :color="props.value === 'never' ? 'negative' : props.value === 'cold' ? 'warning' : 'orange'"
+                    :label="props.value === 'never' ? 'Nunca usó' : props.value === 'cold' ? 'Inactiva' : 'Tibia'"
+                  />
+                </q-td>
+              </template>
+              <template #body-cell-last_invoice_at="props">
+                <q-td :props="props">
+                  <span v-if="props.value" class="text-caption">{{ formatFullDate(props.value) }}</span>
+                  <span v-else class="text-caption text-negative">Nunca</span>
+                </q-td>
+              </template>
+              <template #body-cell-days_inactive="props">
+                <q-td :props="props">
+                  <span v-if="props.value !== null" class="text-caption">{{ props.value }}d</span>
+                  <span v-else class="text-caption text-grey">—</span>
+                </q-td>
+              </template>
+            </q-table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla empresas activas hoy -->
+      <div class="bento-item q-mt-lg">
+        <div class="bento-header q-mb-md">
+          <q-icon name="bolt" size="16px" class="q-mr-xs" color="primary" />
+          <span>Empresas Activas Hoy</span>
+          <q-space />
+          <q-badge color="primary" :label="`${engagementData.active_today?.length || 0}`" />
+        </div>
+        <q-table
+          :rows="engagementData.active_today || []"
+          :columns="engagementActiveTodayColumns"
+          row-key="company_id"
+          :loading="loadingEngagement"
+          flat
+          dense
+          :rows-per-page-options="[10, 20, 50]"
+          :pagination="{ rowsPerPage: 10 }"
+          class="premium-table"
+        >
+          <template #body-cell-last_invoice_at="props">
+            <q-td :props="props">
+              <span class="text-caption">{{ formatFullDate(props.value) }}</span>
+            </q-td>
+          </template>
+          <template #body-cell-invoice_count_today="props">
+            <q-td :props="props">
+              <q-badge color="primary" :label="props.value" />
+            </q-td>
+          </template>
+        </q-table>
+      </div>
+    </div>
+
     <!-- Dialogs for Full Lists -->
     <!-- Users List Dialog -->
     <q-dialog v-model="showUsersDialog" transition-show="fade" transition-hide="fade" no-refocus no-focus>
@@ -701,6 +886,37 @@ const { userSession } = storeToRefs(authStore)
  * Refs & State
  */
 const loading = ref(false)
+
+// ── Engagement & Retención ──────────────────────────────────────────────────
+/** Estado de carga de la sección de engagement */
+const loadingEngagement = ref(true)
+
+/**
+ * Datos del reporte de retención.
+ * @type {import('vue').Ref<{kpis: Object, by_plan: Array, inactive: Array, active_today: Array}>}
+ */
+const engagementData = ref({ kpis: {}, by_plan: [], inactive: [], active_today: [] })
+
+/** Columnas tabla empresas inactivas */
+const engagementInactiveColumns = [
+  { name: 'company_name', label: 'Empresa', field: 'company_name', align: 'left', sortable: true },
+  { name: 'email', label: 'Email', field: 'email', align: 'left', sortable: true },
+  { name: 'plan_name', label: 'Plan', field: 'plan_name', align: 'left', sortable: true },
+  { name: 'last_invoice_at', label: 'Última Factura', field: 'last_invoice_at', align: 'left', sortable: true },
+  { name: 'days_inactive', label: 'Días inactiva', field: 'days_inactive', align: 'center', sortable: true },
+  { name: 'status', label: 'Estado', field: 'status', align: 'center', sortable: true }
+]
+
+/** Columnas tabla empresas activas hoy */
+const engagementActiveTodayColumns = [
+  { name: 'company_name', label: 'Empresa', field: 'company_name', align: 'left', sortable: true },
+  { name: 'email', label: 'Email', field: 'email', align: 'left', sortable: true },
+  { name: 'plan_name', label: 'Plan', field: 'plan_name', align: 'left', sortable: true },
+  { name: 'invoice_count_today', label: 'Facturas hoy', field: 'invoice_count_today', align: 'center', sortable: true },
+  { name: 'last_invoice_at', label: 'Última actividad', field: 'last_invoice_at', align: 'left', sortable: true }
+]
+// ────────────────────────────────────────────────────────────────────────────
+
 const stats = ref({
   users: { total: 0, today: 0, this_week: 0, this_month: 0, growth: [] },
   companies: { total: 0, with_billing: 0, today: 0, this_month: 0, growth: [] },
@@ -909,6 +1125,22 @@ const loadRecentSubscriptions = async () => {
     recentSubscriptions.value = data
   } catch (error) {
     console.error('Error loading recent subscriptions:', error)
+  }
+}
+
+/**
+ * Carga el reporte de retención y engagement.
+ * Consulta el endpoint admin-dashboard/engagement y popula engagementData.
+ */
+const loadEngagement = async () => {
+  loadingEngagement.value = true
+  try {
+    const { data } = await api.get('admin-dashboard/engagement')
+    engagementData.value = data
+  } catch (error) {
+    console.error('Error loading engagement report:', error)
+  } finally {
+    loadingEngagement.value = false
   }
 }
 
@@ -1130,7 +1362,8 @@ const loadAllData = async () => {
       loadStats(),
       loadRecentUsers(),
       loadRecentCompanies(),
-      loadRecentSubscriptions()
+      loadRecentSubscriptions(),
+      loadEngagement()
     ])
     await nextTick()
     createUsersChart()
