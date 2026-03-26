@@ -758,7 +758,7 @@ const loadTodayStats = async () => {
   const params = {
     day: today,
     branch_office_id: [branchOffice.value.id],
-    onlyClients: false
+    onlyClients: true
   }
 
   // Group 1: Immediate - Financial critical stats

@@ -1697,7 +1697,7 @@ export default {
 
     formatFilter () {
       const baseParams = {
-        onlyClients: false,
+        onlyClients: true,
         seller_id: this.seller?.id
       }
 
@@ -1896,7 +1896,7 @@ export default {
         const finalParams = {
           ...paymentsParams,
           ...filtersPayments,
-          onlyClients: false
+          onlyClients: true
         }
 
         const { data } = await this.$api.get('invoice-payments', { params: finalParams })
@@ -1975,7 +1975,7 @@ export default {
       const finalParams = {
         ...paymentsParams,
         ...filtersPayments,
-        onlyClients: false
+        onlyClients: true
       }
 
       this.paymentDetailsPagination = data.pagination
@@ -2110,7 +2110,7 @@ export default {
       const requestParams = {
         ...finalParams,
         ...filtersPayments,
-        onlyClients: false
+        onlyClients: true
       }
 
       try {
