@@ -1,12 +1,12 @@
-FROM node:18-alpine
-USER root
-RUN npm install -g @quasar/cli && \
-    npm install -g @vue/cli && \
-    npm install -g @vue/cli-init
+FROM node:20-alpine AS build
 
-RUN mkdir /app
-
-# VOLUME [ "/app" ]
 WORKDIR /app
+COPY package*.json ./
+RUN npm install --legacy-peer-deps
+COPY . .
+RUN npm install -g @quasar/cli && NODE_ENV=local quasar build
 
-CMD /bin/sh
+FROM nginx:alpine
+COPY --from=build /app/dist/spa /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
