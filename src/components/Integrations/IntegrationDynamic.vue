@@ -1,4 +1,5 @@
 <template>
+  <div>
   <q-dialog v-model="showDialog" @hide="onHide">
     <q-card class="pedidosya-dialog">
       <!-- Header con logo -->
@@ -323,12 +324,64 @@
       </q-card-actions>
     </q-card>
   </q-dialog>
+
+  <!-- App Linked Success Modal -->
+  <q-dialog v-model="showLinkedModal" persistent>
+    <q-card style="width: 420px; max-width: 90vw; border-radius: 16px; overflow: hidden;">
+      <!-- Animated Header -->
+      <div class="linked-modal-header">
+        <div class="linked-modal-circles">
+          <div class="circle circle--lg"></div>
+          <div class="circle circle--sm"></div>
+        </div>
+        <q-icon name="link" size="56px" color="white" class="linked-icon" />
+      </div>
+
+      <q-card-section class="q-pa-xl text-center">
+        <div class="text-h6 text-weight-bolder q-mb-sm">¡Webhook Configurado!</div>
+        <p class="text-body2 text-grey-7 q-mb-md">
+          Tu cuenta de <strong>Mercado Pago</strong> fue vinculada exitosamente.
+          A partir de ahora, recibirás notificaciones de transferencias en tiempo real.
+        </p>
+
+        <q-banner v-if="linkedPaymentMethod" class="bg-green-1 text-green-9 rounded-borders q-mb-md" rounded>
+          <template v-slot:avatar>
+            <q-icon name="check_circle" color="green" />
+          </template>
+          <div class="text-body2">
+            Método de pago <strong>{{ linkedPaymentMethod.name }}</strong>
+            ({{ linkedPaymentMethod.acronym }}) creado automáticamente.
+          </div>
+        </q-banner>
+
+        <div class="text-caption text-grey-6">
+          <q-icon name="info" size="14px" class="q-mr-xs" />
+          Este modal se cierra automáticamente o presioná Aceptar.
+        </div>
+      </q-card-section>
+
+      <q-card-actions align="center" class="q-pa-md q-pt-none">
+        <q-btn
+          unelevated
+          label="Aceptar"
+          color="primary"
+          icon-right="check"
+          class="full-width"
+          style="height:48px; border-radius: 10px;"
+          no-caps
+          @click="confirmLinked"
+        />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+</div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onBeforeUnmount, getCurrentInstance } from 'vue'
 import { api } from 'boot/axios'
 import { Notify } from 'quasar'
+import { authentication } from 'src/stores/module-authentication'
 
 const props = defineProps({
   modelValue: {
@@ -345,7 +398,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'connect'])
+const emit = defineEmits(['update:modelValue', 'connect', 'linked', 'payment-method-created'])
 
 const showDialog = ref(props.modelValue)
 const integration = ref(null)
@@ -360,6 +413,11 @@ const connectionHistory = ref([])
 const isAlreadyConnected = ref(false)
 const companyIntegration = ref(null)
 const webhookUrl = ref(null)
+const store = authentication()
+
+const company = computed(() => store.userSession?.company_session)
+
+const branch = computed(() => store.branchOffice)
 
 const isFormValid = computed(() => {
   if (!integration.value?.fields) return false
@@ -418,12 +476,11 @@ const loadCompanyIntegration = async () => {
 
     if (found) {
       companyIntegration.value = found
-      console.log(integration.value)
       isAlreadyConnected.value = true
       // Generate webhook URL if integration supports it
       if (integration.value.has_webhook) {
-        const apiBaseUrl = process.env.VUE_APP_API_URL || 'http://localhost:8000'
-        webhookUrl.value = `${apiBaseUrl}/api/webhook/${props.integrationSlug}`
+        const apiBaseUrl = process.env.VITE_APP_API_URL || 'http://localhost:8000'
+        webhookUrl.value = `${apiBaseUrl}webhook/${props.integrationSlug}?company_id=${company.value.id}&branch_id=${branch.value.id}`
       }
     }
   } catch (error) {
@@ -493,6 +550,9 @@ watch(() => props.modelValue, (newVal) => {
   // Always reload integration when dialog opens
   if (newVal) {
     loadIntegration()
+    startLinkListener()
+  } else {
+    stopLinkListener()
   }
 })
 
@@ -563,7 +623,84 @@ const onHide = () => {
   isAlreadyConnected.value = false
   companyIntegration.value = null
   webhookUrl.value = null
+  stopLinkListener()
 }
+
+// ─────────────────────────────────────────────────────────
+// App-Linking Echo listener
+// ─────────────────────────────────────────────────────────
+
+/**
+ * Whether the linking success modal is visible
+ * @type {boolean}
+ */
+const showLinkedModal = ref(false)
+
+/**
+ * The payment method auto-created on linking
+ * @type {object|null}
+ */
+const linkedPaymentMethod = ref(null)
+
+/**
+ * Reference to the active Echo channel subscription
+ * @type {any}
+ */
+let linkChannel = null
+
+/**
+ * Start listening for the app-linked event on the Echo channel.
+ * @return {void}
+ */
+const startLinkListener = () => {
+  if (!company.value?.id || !branch.value?.id) return
+
+  const { proxy } = getCurrentInstance() ?? {}
+  const echoPay = proxy?.$echoPay
+  if (!echoPay) return
+
+  const channelName = 'mercado-pago-link'
+  const eventName = `.mercado-pago-linked.${company.value.id}.${branch.value.id}`
+
+  console.log('Listening for event:', eventName)
+
+  linkChannel = echoPay.channel(channelName)
+  linkChannel.listen(eventName, (data) => {
+    linkedPaymentMethod.value = data.payment_method || null
+    showLinkedModal.value = true
+    emit('linked', data)
+  })
+}
+
+/**
+ * Stop listening and leave the Echo channel.
+ * @return {void}
+ */
+const stopLinkListener = () => {
+  if (linkChannel) {
+    try {
+      const { proxy } = getCurrentInstance() ?? {}
+      proxy?.$echoPay?.leaveChannel('mercado-pago-link')
+    } catch (_) {}
+    linkChannel = null
+  }
+}
+
+/**
+ * Confirm the app-linked modal and refresh integration data.
+ * @return {void}
+ */
+const confirmLinked = async () => {
+  showLinkedModal.value = false
+  linkedPaymentMethod.value = null
+  emit('payment-method-created')
+  // Reload integration data so the dialog reflects the latest state
+  await loadIntegration()
+}
+
+onBeforeUnmount(() => {
+  stopLinkListener()
+})
 </script>
 
 <style scoped lang="scss">
@@ -894,5 +1031,56 @@ body.body--dark :deep(.q-skeleton) {
   100% {
     background-position: -200% 0;
   }
+}
+</style>
+
+<style scoped lang="scss">
+.linked-modal-header {
+  background: linear-gradient(135deg, #00b1ea 0%, #009fd4 100%);
+  padding: 40px 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.linked-modal-circles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.circle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+
+  &--lg {
+    width: 240px;
+    height: 240px;
+    top: -80px;
+    right: -60px;
+  }
+
+  &--sm {
+    width: 140px;
+    height: 140px;
+    bottom: -50px;
+    left: -40px;
+  }
+}
+
+.linked-icon {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 4px 16px rgba(0,0,0,0.2));
+  animation: bounceIn 0.6s ease-out;
+}
+
+@keyframes bounceIn {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
 }
 </style>

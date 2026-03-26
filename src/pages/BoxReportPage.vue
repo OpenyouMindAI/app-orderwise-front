@@ -1696,18 +1696,23 @@ export default {
     },
 
     formatFilter () {
+      const baseParams = {
+        onlyClients: true,
+        seller_id: this.seller?.id
+      }
+
       let params = {}
 
       if (this.panel === 'day') {
         params = {
-          seller_id: this.seller?.id,
+          ...baseParams,
           day: this.day,
           fromHours: this.fromHours,
           toHours: this.toHours
         }
       } else {
         params = {
-          seller_id: this.seller?.id,
+          ...baseParams,
           to: this.to,
           from: this.from
         }
@@ -1890,7 +1895,8 @@ export default {
         // Combine parameters and filters
         const finalParams = {
           ...paymentsParams,
-          ...filtersPayments
+          ...filtersPayments,
+          onlyClients: true
         }
 
         const { data } = await this.$api.get('invoice-payments', { params: finalParams })
@@ -1968,7 +1974,8 @@ export default {
       // Combinar parámetros y filtros
       const finalParams = {
         ...paymentsParams,
-        ...filtersPayments
+        ...filtersPayments,
+        onlyClients: true
       }
 
       this.paymentDetailsPagination = data.pagination
@@ -2102,7 +2109,8 @@ export default {
       // Merge filters into final params
       const requestParams = {
         ...finalParams,
-        ...filtersPayments
+        ...filtersPayments,
+        onlyClients: true
       }
 
       try {
