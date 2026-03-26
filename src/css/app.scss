@@ -85,6 +85,15 @@ body {
   padding: var(--spacing-md);
 }
 
+/* FIX - Marco blanco al abrir modales:
+ * Quasar activa q-body--force-scrollbar-x/y para evitar saltos de layout,
+ * creando "gutters" (franjas reservadas para scrollbars) que muestran el
+ * background del body. Como el body ya está position:fixed en ese momento,
+ * forzar overflow:hidden elimina esos gutters sin afectar el scroll normal. */
+body.q-body--prevent-scroll {
+  overflow: hidden !important;
+}
+
 /* Tipografía elegante */
 .modern-title {
   font-family: var(--font-primary);
@@ -482,8 +491,14 @@ p {
   box-shadow: var(--shadow-focus) !important;
 }
 
-.q-drawer, .q-dialog__inner {
+.q-drawer {
   border-radius: var(--border-radius-lg) !important;
+}
+
+/* El q-dialog__inner es un contenedor de pantalla completa.
+ * Aplicarle bordes redondeados provoca "huecos" blancos en las esquinas. */
+.q-dialog__inner {
+  border-radius: 0 !important;
 }
 
 .q-tab-panels {
