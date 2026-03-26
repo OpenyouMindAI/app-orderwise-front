@@ -1,1290 +1,1450 @@
 <template>
-  <q-page padding :class="$q.screen.lt.sm ? 'q-pb-xl q-mb-lg' : 'items-center column'">
-    <div class="column q-gutter-md" style="max-width: 600px;">
-      <div class="flex full-width justify-center items-center">
-        <q-img
-          :src="company?.company_config.other?.menu?.banner_url || company?.url"
-          style="max-height: 250px; max-width: 500px; min-width: 45vw;"
-        />
-      </div>
-      <div class="text-subtitle1 text-center q-mt-md" v-html="company?.company_config.other?.menu?.description"/>
-    </div>
-    <div style="max-width: 600px;" class="full-width text-subtitle1 flex justify-between items-center" v-if="tab === 'orders'">
-      <span class="text-h6">Ordenes</span>
-      <div>
-        <q-btn
-          color="primary"
-          icon="refresh"
-          round
-          size="sm"
-          @click="setPagination({ pagination: invoicePagination })"
-        />
-      </div>
-    </div>
-    <div style="max-width: 600px;" class="row q-col-gutter-y-xs q-mt-sm" v-if="tab === 'menu'">
-      <div class="col-12">
-        <q-input
-          outlined
-          rounded
-          label="Buscar"
-          dense
-          type="search"
-          debounce="500"
-          class="full-width"
-          v-model="filter"
-        >
-          <template v-slot:append>
-            <q-icon name="search" />
-          </template>
-        </q-input>
-      </div>
-      <div class="col-12">
-        <q-tabs
-          v-model="category"
-          class="text-teal overflow-hidden"
-          dense
-          v-if="categories.length"
-        >
-          <q-tab
-            name="all"
-            label="Todos"
-          />
-          <q-tab
-            :name="cat.id"
-            :label="cat.name"
-            :key="cat.id"
-            v-for="cat in categories"
-            class="q-pa-md"
-          />
-        </q-tabs>
-        <q-skeleton type="text" height="60px" v-else/>
-      </div>
-      <div class="col-12">
-        <div v-if="loadingPage" class="row q-col-gutter-sm">
+  <q-layout view="lHh lpr lFf">
+    <q-page-container>
+      <q-page class="catalog-page">
+
+        <!-- Navbar con perfil de usuario y Empresa -->
+        <div class="catalog-navbar text-white">
+          <q-toolbar class="items-center no-wrap">
+            <q-space />
+            <div v-if="userSession" class="row items-center no-wrap q-ml-md">
+              <q-btn
+                flat
+                round
+                dense
+                class="q-mr-sm navbar-icon-btn"
+                aria-label="Ver mis pedidos"
+                @click="openOrders"
+              >
+                <q-icon name="shopping_basket" size="24px" />
+                <q-badge
+                  v-if="orderCount > 0"
+                  color="red"
+                  floating
+                  rounded
+                  class="order-badge"
+                >
+                  {{ orderCount }}
+                </q-badge>
+              </q-btn>
+
+              <q-btn flat round dense aria-label="Opciones de cuenta">
+                <q-avatar size="40px" color="primary" text-color="white" class="user-avatar">
+                  <template v-if="profilePhoto || userSession.avatar || userSession.picture || userSession.photo">
+                    <q-img
+                      :src="profilePhoto || userSession.avatar || userSession.picture || userSession.photo"
+                      :alt="`Foto de ${userInitials}`"
+                      spinner-color="white"
+                      style="width:40px;height:40px;border-radius:50%"
+                    >
+                      <template v-slot:error>
+                        <span class="absolute-full flex flex-center text-white text-weight-bold">{{ userInitials }}</span>
+                      </template>
+                    </q-img>
+                  </template>
+                  <span v-else>{{ userInitials }}</span>
+                </q-avatar>
+                <q-menu class="user-menu" transition-show="jump-down" transition-hide="jump-up">
+                  <q-list style="min-width: 200px">
+                    <q-item clickable v-close-popup @click="logout" class="user-menu-item">
+                      <q-item-section avatar>
+                        <q-icon name="logout" color="negative" />
+                      </q-item-section>
+                      <q-item-section>Cerrar sesión</q-item-section>
+                    </q-item>
+                  </q-list>
+                </q-menu>
+              </q-btn>
+            </div>
+
+            <q-btn
+              v-else
+              flat
+              rounded
+              dense
+              no-caps
+              color="white"
+              class="login-button q-px-md"
+              aria-label="Iniciar sesión"
+              @click="showAuthDialog = true"
+            >
+              <q-icon name="person_outline" size="20px" class="q-mr-xs" />
+              <span class="text-weight-bold">Iniciar Sesión</span>
+            </q-btn>
+          </q-toolbar>
+        </div>
+
+        <!-- Header del Negocio -->
+        <div class="header-container full-width">
           <div
-            class="col-xs-6 col-sm-4 col-md-3"
-            v-for="i in 20" :key="i"
+            class="header-banner relative-position"
+            :style="{ backgroundImage: `url(${bannerUrl})` }"
+            role="img"
+            :aria-label="`Banner de ${company?.name}`"
           >
-            <SkeletonCard class="full-width"/>
+            <div class="banner-overlay"></div>
+            <div class="header-content column items-center full-width q-pa-md">
+              <q-avatar v-if="company?.url" size="110px" class="profile-avatar">
+                <q-img :src="company.url" :alt="`Logo de ${company?.name}`" />
+              </q-avatar>
+              <div class="company-name text-center text-white text-bold text-uppercase q-mt-sm">
+                {{ company?.name }}
+              </div>
+
+              <!-- Info de Contacto Always Visible -->
+              <div class="row justify-center items-center q-mt-sm q-gutter-md text-white" style="max-width: 95%;">
+                <div v-if="company?.address" class="contact-pill row items-center no-wrap cursor-pointer">
+                  <q-icon name="location_on" size="14px" class="q-mr-xs opacity-80" />
+                  <span class="text-caption ellipsis" style="max-width: 160px; font-weight: 500;">
+                    {{ formatCompanyAddress(company?.address) }}
+                    <q-tooltip class="bg-dark text-white text-body2" anchor="top middle" self="bottom middle" :offset="[10, 10]">
+                      {{ formatCompanyAddress(company?.address) }}
+                    </q-tooltip>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Schedule Status Button -->
+              <q-btn
+                v-if="scheduleData"
+                flat
+                no-caps
+                class="schedule-status-badge q-mt-md text-white"
+                :class="isCurrentlyOpen ? 'status-open' : 'status-closed'"
+                aria-label="Ver horarios de atención"
+                @click="showScheduleDialog = true"
+              >
+                <div class="row items-center no-wrap">
+                  <span class="status-dot" :class="isCurrentlyOpen ? 'dot-open' : 'dot-closed'"></span>
+                  <div class="text-caption text-weight-medium status-text q-ml-sm" style="font-weight: 500;">
+                    {{ isCurrentlyOpen ? 'Abierto' : 'Cerrado' }}
+                  </div>
+                  <div v-if="isCurrentlyOpen && todaySchedule" class="text-caption schedule-times q-ml-xs opacity-80">
+                    ({{ todaySchedule.from }} – {{ todaySchedule.to }})
+                  </div>
+                  <q-icon name="expand_more" size="14px" class="q-ml-xs arrow-icon opacity-80" />
+                </div>
+              </q-btn>
+            </div>
           </div>
         </div>
-        <q-table
-          row-key="name"
-          dense
-          grid
-          :rows="allProducts"
-          :loading="loadingPage"
-          :filter="filter"
-          :pagination="pagination"
-          v-else
-        >
-          <template v-slot:item="props">
-            <div class="col-xs-6 col-sm-4 col-md-4 col-lg-4" style="padding: 5px;">
-              <q-card
-                :class="findProduct(command.products, props.row) && 'shadow-20'"
-                :style="`${findProduct(command.products, props.row) && 'border: solid 2px green;'}  height: 100%; border-radius: 20px;`"
-                @click="openProductDetails(props.row)"
-              >
-                <q-img
-                  fit="fill"
-                  no-native-menu
-                  :src="props.row.images[0] ? props.row.images[0].url : 'https://cdn.quasar.dev/img/image-src.png'"
-                  spinner-color="primary"
-                  style="height: 180px;"
-                >
-                <div class="absolute-full column items-center justify-center text-center">
-                  <div class="text-bold text-body1">
-                      {{ props.row.name.slice(0, 20) }}
+
+        <!-- Main Content Area -->
+        <div class="catalog-content-wrapper">
+          <div class="catalog-content-card">
+            <div class="catalog-content-inner">
+              <div class="row q-col-gutter-lg">
+                <!-- Left Column: Dynamic Tab Content -->
+                <div class="col-12 col-md-7">
+                  <!-- Hidden tabs navigation -->
+                  <q-tabs v-model="currentTab" style="display: none">
+                    <q-tab name="menu" />
+                    <q-tab name="cart" />
+                    <q-tab name="checkout" />
+                    <q-tab name="orders" />
+                  </q-tabs>
+
+                  <q-tab-panels
+                    v-model="currentTab"
+                    keep-alive
+                    class="catalog-panels"
+                  >
+                    <q-tab-panel name="menu" class="q-pa-none">
+                      <CatalogView
+                        ref="catalogViewRef"
+                        :categories="categories"
+                        :company-id="route.params.company_id"
+                        :branch-office-id="route.params.branch_office_id"
+                        @open-product="openProductDetail"
+                        @view-cart="currentTab = 'cart'"
+                        @checkout="goToCheckout"
+                      />
+                    </q-tab-panel>
+
+                    <!-- Cart tab panel omitted on desktop: cart is always visible in the right sidebar -->
+
+                    <q-tab-panel v-if="!isMobileOrTablet" name="checkout" class="q-pa-none">
+                      <CheckoutView
+                        @success="handleCheckoutSuccess"
+                        @cancel="currentTab = 'menu'"
+                      />
+                    </q-tab-panel>
+
+                    <!-- Orders tab panel omitted on desktop: shown as full-screen dialog instead -->
+                  </q-tab-panels>
+                </div>
+
+                <!-- Right Column: Always-visible Cart (desktop ≥1024px) -->
+                <div class="col-md-5 gt-sm">
+                  <div class="right-content">
+                    <div class="cart-header">
+                      <div class="cart-header-title">
+                        <q-icon name="shopping_cart_checkout" size="22px" class="q-mr-sm cart-header-icon" />
+                        Tu Pedido
+                      </div>
+                      <q-badge v-if="cartItems.length > 0" :label="cartItemCount" color="primary" rounded />
                     </div>
-                    <span class="text-caption">
-                      {{ formatNumber(props.row.price) }} $
-                    </span>
-                    <q-badge v-if="!validStockProduct(props.row, 1)" color="negative" floating style="top: 7px; right: 7px;">
-                      Sin stock
-                    </q-badge>
-                  </div>
-                </q-img>
-              </q-card>
-            </div>
-          </template>
-          <template v-slot:loading>
-            <q-inner-loading showing color="secondary"/>
-          </template>
-        </q-table>
-      </div>
-    </div>
-    <div style="max-width: 600px;" v-else-if="tab === 'command'" class="q-mt-sm">
-      <q-table
-        row-key="name"
-        dense
-        grid
-        :rows="command.products"
-        hide-pagination
-        v-model:pagination="pagination"
-      >
-        <template v-slot:item="props">
-          <div class="column items-center q-pa-xs col-xs-12 col-sm-12 col-md-12">
-            <q-card
-              class="my-card q-mt-sm"
-              style="max-width: 90vw; width: 500px; border-radius: 20px;"
-            >
-              <q-card-section horizontal class="full-height">
-                  <q-img
-                    class="col-4"
-                    style="max-height: 132px;"
-                    :src="props.row?.images[0] ? props.row?.images[0]?.url : 'images/404-image.jpg'"
-                  />
-                  <q-card-section class="q-pa-sm column col-8">
-                    <q-card-section class="q-pa-sm col">
-                      <span class="text-body2 text-uppercase text-bold">
-                        {{ props.row.name.slice(0, 20) }}
-                        <q-badge
-                          floating
-                          rounded
-                          color="secondary"
+
+                    <!-- Empty Cart State (Matching CartView.vue) -->
+                    <div v-if="cartItems.length === 0" class="empty-cart-sidebar text-center q-pa-lg">
+                      <q-img src="images/car_empty.png" style="width: 200px; max-width: 100%; opacity: 0.8;" />
+                      <div class="empty-cart-text q-mt-md">Tu carrito está vacío</div>
+                      <div class="empty-cart-sub q-mt-xs">Agrega productos para comenzar</div>
+                    </div>
+
+                    <!-- Cart Items (Enhanced Layout from CartView.vue) -->
+                    <div v-else class="cart-items-container">
+                      <div class="cart-items-list">
+                        <div
+                          v-for="item in cartItems"
+                          :key="item.id"
+                          class="cart-item-row"
                         >
-                          <q-icon
-                            :name="props.row.observation ? 'edit' : 'add'"
-                            size="sm"
-                          />
-                          <q-popup-proxy>
-                            <q-card class="bg-white" style="width: 400px; max-width: 80vw;">
-                              <q-card-section class="q-py-sm text-h6 bg-primary text-white">
-                                Observación
-                              </q-card-section>
-                              <q-card-section class="text-body2">
-                                <q-input
-                                  filled
-                                  autofocus
-                                  type="textarea"
-                                  v-model="props.row.observation"
-                                />
-                              </q-card-section>
-                              <q-card-actions align="right">
+                          <div class="item-header-sidebar">
+                            <div class="item-info-sidebar">
+                              <div class="item-name-sidebar">{{ item.name }}</div>
+                              <div class="item-price-sidebar">$ {{ formatNumber(item.price) }}</div>
+                            </div>
+                            <div class="item-actions-sidebar">
+                              <div class="quantity-controls-sidebar">
                                 <q-btn
-                                  color="primary"
-                                  icon="check_circle"
-                                  v-close-popup
+                                  icon="remove"
+                                  flat
+                                  round
+                                  size="xs"
+                                  class="quantity-btn-sidebar"
+                                  @click="decrementQuantity(item)"
+                                  :disable="item.amount <= 1"
                                 />
-                              </q-card-actions>
-                            </q-card>
-                          </q-popup-proxy>
-                        </q-badge>
-                      </span>
-                      <p class="text-subtitle2 text-grey">
-                        $ {{ formatNumber(props.row.price) }}
-                      </p>
-                    </q-card-section>
-                    <q-card-actions class="q-pa-none">
-                      <div class="flex justify-between items-center full-width">
-                        <div style="width: 10%;">
-                          <q-btn icon="delete" round size="sm" color="negative" @click="deleteProduct(props)"/>
-                        </div>
-                        <div class="flex items-center q-gutter-xs justify-end" style="width: 90%;">
-                          <div>
-                            <q-btn icon="remove" round size="sm" color="primary" @click="() => {
-                                props.row.amount -= 1
-                                calculate(props.row)
-                              }"
-                            />
+                                <span class="quantity-display-sidebar">{{ item.amount }}</span>
+                                <q-btn
+                                  icon="add"
+                                  flat
+                                  round
+                                  size="xs"
+                                  class="quantity-btn-sidebar"
+                                  @click="incrementQuantity(item)"
+                                />
+                              </div>
+                              <q-btn
+                                icon="delete_outline"
+                                flat
+                                round
+                                dense
+                                size="sm"
+                                color="negative"
+                                class="remove-item-btn-sidebar"
+                                @click="removeItem(item)"
+                              />
+                            </div>
                           </div>
-                          <q-input
-                            rounded
-                            outlined
-                            dense
-                            label="Cantidad"
-                            type="number"
-                            style="width: 50%;"
-                            v-model.number="props.row.amount"
-                            @update:model-value="calculate(props.row)"
-                          />
-                          <div>
-                              <q-btn icon="add" round size="sm" color="primary" @click="() => {
-                                  props.row.amount += 1
-                                  calculate(props.row)
-                              }"/>
+                          <!-- Observation Badge (Optional) -->
+                          <div v-if="item.observation" class="item-observation-sidebar">
+                            <q-icon name="chat_bubble_outline" size="12px" class="q-mr-xs" />
+                            {{ item.observation }}
                           </div>
                         </div>
                       </div>
-                    </q-card-actions>
-                  </q-card-section>
-              </q-card-section>
-            </q-card>
-          </div>
-        </template>
-        <template v-slot:no-data>
-          <div class="full-width column flex-center justify-center">
-            <q-img src="images/car_empty.png" style="width: 300px; max-width: 80vw;" />
-            <span class="text-subtitle2 text-center">
-              No hay productos en la orden
-            </span>
-          </div>
-        </template>
-      </q-table>
-    </div>
-    <div v-else style="max-width: 600px;">
-      <q-table
-        row-key="id"
-        dense
-        grid
-        :rows="invoices"
-        binary-state-sort
-        no-data-label="Registro no encontrado"
-        v-model:pagination="invoicePagination"
-        @request="setPagination"
-      >
-        <template v-slot:item="props">
-          <div class="q-pa-xs col-xs-12 col-sm-12 col-md-12 column items-center">
-            <q-card
-              class="my-card q-mt-sm"
-              style="width: 100%; border-radius: 20px;"
-              @click="openDetails(props.row)"
-            >
-              <q-card-section horizontal class="full-height">
-                <q-icon
-                  name="receipt"
-                  class="col-2"
-                  size="md"
-                  style="max-height: 200px;"
-                />
-                <q-card-section class="q-py-sm col-10">
-                  <div class="flex justify-between full-width">
-                    <div class="flex justify-between items-center full-width">
-                      <span class="text-subtitle2 text-bold">
-                        Nro {{ props.row.code }}
-                      </span>
-                      <span class="text-subtitle2 text-semibold">
-                        $ {{ formatNumber(props.row.total) }}
-                      </span>
-                    </div>
-                    <div class="flex justify-between items-center full-width">
-                      <span>
-                        {{ props.row?.client?.name }}
-                      </span>
-                      <q-badge
-                        :color="status[props.row.status].color"
-                        :label="status[props.row.status].label"
-                        rounded
-                      />
-                    </div>
-                    <div class="flex justify-between items-center full-width">
-                      <span>
-                        {{ formatDate(props.row.created_at, 'DD-MM-YYYY') }}
-                      </span>
-                      <span>
-                        {{ formatDate(props.row.created_at, 'HH:mm:ss') }}
-                      </span>
+
+                      <div class="sidebar-separator"></div>
+
+                      <!-- Summary Section (Matching CartView.vue) -->
+                      <div class="sidebar-summary">
+                        <div class="summary-row-sidebar">
+                          <span class="summary-label-sidebar">Subtotal</span>
+                          <span class="summary-value-sidebar">$ {{ formatNumber(cartTotal) }}</span>
+                        </div>
+
+                        <div class="summary-total-sidebar">
+                          <span class="total-label-sidebar">Total</span>
+                          <span class="total-value-sidebar">$ {{ formatNumber(cartTotal) }}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </q-card-section>
-              </q-card-section>
-            </q-card>
+                </div>
+              </div>
+            </div>
           </div>
-        </template>
-      </q-table>
-    </div>
-    <q-page-sticky position="bottom-right" :offset="[15, 10]">
-      <div class="flex q-gutter-sm">
-        <q-btn
-          v-if="isCurrentlyOpen && totalBill > 0"
-          rounded
-          stack
-          color="primary"
-          class="button-baseline"
-          :icon="tab === 'menu' ? 'shopping_cart' : 'receipt'"
-          :label="formatNumber(totalBill)"
-          :loading="billLoading"
-          @click="saveBill"
-        />
-        <schedule-status
-          :schedule="company?.company_config.other?.menu?.schedule"
-          @update:isCurrentlyOpen="(data) => isCurrentlyOpen = data"
-        />
-      </div>
-    </q-page-sticky>
-    <q-dialog v-model="detailProduct">
-      <q-card
-        :class="$q.screen.lt.sm ? 'full-height column': ''"
-        :style="`${$q.screen.lt.sm ? 'width: 100%;' : 'width: 400px; max-width: 80vw;'}`"
-      >
-        <SlideComponent :slides="product.images" styles="height: 200px;"/>
-        <q-card-section class="scroll q-pa-none col" style="max-height: calc(100vh - 300px);">
-          <q-card-section class="column q-pb-none">
-            <div class="flex justify-between full-width">
-              <span class="text-body2 text-uppercase text-bold">
-                {{ product?.name }}
-              </span>
-              <span class="text-body2 q-mt-sm">
-                $ {{ formatNumber(product?.price) }}
-              </span>
-            </div>
-            <div v-if="product.description">
-              <q-input
-                type="textarea"
-                v-model="product.description"
-                readonly
-                autogrow
-              />
-            </div>
-            <div class="flex justify-between items-center q-mt-sm">
-              <q-btn
-                icon="remove"
-                color="primary"
-                round
-                flat
-                size="lg"
-                @click="addTemporalProducts(product, product.amount -= 1)"
-              />
-              <q-input
-                borderless
-                dense
-                type="number"
-                style="width: 40px;"
-                input-class="text-center"
-                v-model.number="product.amount"
-                @update:model-value="(value) => addTemporalProducts(product, value)"
-              />
-              <q-btn
-                icon="add"
-                color="primary"
-                round
-                flat
-                size="lg"
-                @click="addTemporalProducts(product, product.amount += 1)"
-              />
-            </div>
-          </q-card-section>
-          <q-card-section class="q-px-none col" v-if="product.product_addons?.length > 0">
-            <div class="col-12 bg-grey-2 q-pa-sm text-dark">
-              <span class="text-subtitle2">+ Adicionales</span>
-            </div>
-          </q-card-section>
-          <q-card-section class="q-pt-none">
-            <div
-              class="flex justify-between full-width items-center"
-              v-for="addon in product.product_addons" :key="addon.id"
-            >
-              <div class="column">
-                <span class="text-body2 text-uppercase text-bold">
-                  {{ addon.name }}
-                </span>
-                <span class="text-subtitle2 text-grey">
-                  {{ formatNumber(addon.price) }}$
-                </span>
-              </div>
-              <div class="flex justify-between items-center q-gutter-xs">
-                <q-btn
-                  icon="remove"
-                  color="primary"
-                  round
-                  flat
-                  size="sm"
-                  @click="addTemporalProducts(addon, addon.amount -= 1)"
-                />
-                <q-input
-                  borderless
-                  dense
-                  type="number"
-                  style="width: 30px;"
-                  input-class="text-center"
-                  v-model.number="addon.amount"
-                  @update:model-value="(value) => addTemporalProducts(product, value)"
-                />
-                <q-btn
-                  icon="add"
-                  color="primary"
-                  round
-                  flat
-                  size="sm"
-                  @click="addTemporalProducts(addon, addon.amount += 1)"
-                />
-              </div>
-            </div>
-            <q-separator class="q-mt-md"/>
-          </q-card-section>
-          <q-card-section class="q-pt-none">
-            <q-input
-              type="textarea"
-              label="Observación"
-              filled
-              v-model="observation"
-            />
-          </q-card-section>
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn
-            color="negative"
-            label="Cerrar"
-            icon="close"
-            @click="() => {
-              detailProduct = false
-              product = null
-            }"
-          />
-          <q-btn
-            color="primary"
-            label="Agregar"
-            icon="add_shopping_cart"
-            @click="addCar"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-    <q-dialog v-model="openAddClient" persistent :maximized="$q.screen.lt.sm">
-      <q-card :style="$q.screen.lt.sm ? '' : 'width: 700px; max-width: 80vw;'">
-        <q-form @submit="saveClient" class="column full-height">
-          <q-card-section class="flex q-gutter-x-sm text-white bg-primary">
-            <q-btn icon="arrow_back_ios" flat round dense @click="openAddClient = false"/>
-            <span class="text-h6">Registrarse</span>
-          </q-card-section>
-          <q-card-section class="col">
-            <div class="row q-gutter-y-sm">
-              <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                <q-input
-                  :rules="[val => !!val || 'El campo es requerido.']"
-                  filled
-                  v-model="client.name"
-                  label="Nombre"
-                />
-              </div>
-              <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                <q-input
-                  filled
-                  v-model="client.phone_number"
-                  label="Número de teléfono"
-                  :rules="[val => !!val || 'El campo es requerido.']"
-                />
-              </div>
-              <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                <q-input
-                  :rules="[val => !!val || 'El campo es requerido.']"
-                  filled
-                  v-model="client.username"
-                  label="Nombre de usuario"
-                />
-              </div>
-              <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                <q-input
-                  :rules="[val => !!val || 'El campo es requerido.']"
-                  filled
-                  v-model="client.password"
-                  label="Contraseña"
-                  type="password"
-                />
-              </div>
-              <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                <q-input
-                  filled
-                  v-model="client.address"
-                  label="Dirección"
-                  type="textarea"
-                />
-              </div>
-            </div>
-          </q-card-section>
-          <q-card-actions align="right" class="text-primary">
-            <q-btn icon="save" color="primary" label="Guardar" type="submit"/>
-          </q-card-actions>
-        </q-form>
-      </q-card>
-    </q-dialog>
-    <q-dialog v-model="openLoginDialog" persistent>
-      <q-card :style="$q.screen.lt.sm ? 'width: 100%;' : 'width: 400px; max-width: 80vw;'">
-        <q-form @submit="loginAt" class="column full-height">
-          <q-card-section class="flex justify-between q-gutter-x-sm text-white bg-primary">
-            <span class="text-h6">Iniciar sesión</span>
-            <q-btn icon="close" flat round dense @click="openLoginDialog = false"/>
-          </q-card-section>
-          <q-card-section class="col">
-            <div class="row q-gutter-y-sm">
-              <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                <q-input
-                  :rules="[val => !!val || 'El campo es requerido.']"
-                  filled
-                  v-model="user.username"
-                  label="Nombre de usuario"
-                />
-              </div>
-              <div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-xs-12">
-                <q-input
-                  :rules="[val => !!val || 'El campo es requerido.']"
-                  filled
-                  v-model="user.password"
-                  label="Contraseña"
-                  type="password"
-                />
-              </div>
-              <div class="col-12 text-right">
-                <q-btn flat color="secondary" label="No tengo una cuenta" @click="openAddClient = true" />
-              </div>
-            </div>
-          </q-card-section>
-          <q-card-actions align="right" class="text-primary">
-            <q-btn color="primary" label="Iniciar sesión" type="submit" />
-          </q-card-actions>
-        </q-form>
-      </q-card>
-    </q-dialog>
-    <q-dialog v-model="dialogPayment" position="bottom">
-      <q-card :style="$q.screen.lt.sm ? '' : 'width: 400px; max-width: 80vw;'" v-if="tabPayment === 'paymentMethod'">
-        <q-card-section class="q-pb-xs flex justify-start items-center q-gutter-x-sm">
-          <q-btn icon="arrow_back_ios" size="sm" flat round dense @click="dialogPayment = false"/>
-          <span class="text-subtitle1 text-uppercase text-bold">
-            Método de pago
-          </span>
-        </q-card-section>
-        <q-card-section class="q-pt-sm q-pb-none">
-          <p>
-            Seleccione el método de pago que desea utilizar para pagar la factura.
-            <br />
-            Cuando seleccione el método de pago y confirme el pago,
-            debe ingresar el comprobante de pago.
-          </p>
-        </q-card-section>
-        <q-card-section class="q-gutter-sm q-pt-none scroll" style="max-height: calc(100vh - 320px);">
-          <q-card v-for="payment in paymentMethods" :key="payment.id">
-            <q-card-section class="q-py-sm">
-              <q-radio v-model="paymentMethod" :val="payment.id" :label="payment.name" />
+        </div>
+
+        <!-- Orders Modal Dialog (Desktop only) -->
+        <q-dialog
+          v-model="isDesktopOrdersDialogOpen"
+          transition-show="jump-up"
+          transition-hide="jump-down"
+        >
+          <div style="width: 600px; max-width: 90vw; height: 80vh; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; background: #f8f8f8;">
+            <OrdersView @back-to-catalog="isDesktopOrdersDialogOpen = false" />
+          </div>
+        </q-dialog>
+
+        <!-- Schedule Dialog -->
+        <q-dialog
+          v-model="showScheduleDialog"
+          position="bottom"
+          transition-show="slide-up"
+          transition-hide="slide-down"
+        >
+          <q-card class="schedule-dialog-card">
+            <q-card-section class="row items-center q-pb-none">
+              <div class="schedule-dialog-title">Horarios de atención</div>
+              <q-space />
+              <q-btn icon="close" flat round dense v-close-popup aria-label="Cerrar horarios" />
             </q-card-section>
-            <q-card-section class="q-py-sm" v-if="payment.attributes && payment.attributes.length > 0">
-              <div class="column q-gutter-sm">
-                <span class="text-subtitle1">Datos del pago</span>
-                <span class="text-subtitle2" v-for="attribute in payment.attributes" :key="attribute.id">
-                  {{ attribute.attribute_name }}
-                </span>
-              </div>
+
+            <q-card-section class="q-pt-sm">
+              <q-list>
+                <q-item
+                  v-for="day in weekSchedule"
+                  :key="day.dayKey"
+                  class="schedule-item"
+                  :class="{ 'schedule-item--today': day.isToday }"
+                >
+                  <q-item-section avatar>
+                    <q-avatar
+                      :color="getDayColor(day)"
+                      text-color="white"
+                      size="36px"
+                      class="schedule-avatar"
+                    >
+                      {{ day.dayName.charAt(0) }}
+                    </q-avatar>
+                  </q-item-section>
+
+                  <q-item-section>
+                    <q-item-label class="schedule-day-name" :class="{ 'text-primary': day.isToday }">
+                      {{ day.dayName }}
+                      <q-badge v-if="day.isToday" color="primary" class="q-ml-sm" label="Hoy" />
+                    </q-item-label>
+
+                    <q-item-label caption class="schedule-hours">
+                      <template v-if="day.isOpen && !day.error">
+                        <q-icon name="schedule" size="12px" class="q-mr-xs" />
+                        <span>{{ day.openTime }} – {{ day.closeTime }}</span>
+                        <q-badge
+                          v-if="day.isToday && isCurrentlyOpen"
+                          color="positive"
+                          class="q-ml-sm"
+                          label="Abierto ahora"
+                        />
+                        <q-badge
+                          v-else-if="day.isToday && !isCurrentlyOpen"
+                          color="negative"
+                          class="q-ml-sm"
+                          label="Cerrado ahora"
+                        />
+                      </template>
+                      <template v-else-if="!day.isOpen && !day.error">
+                        <q-icon name="block" size="12px" class="q-mr-xs text-negative" />
+                        <span class="text-negative">Cerrado</span>
+                      </template>
+                      <template v-if="day.error">
+                        <q-icon name="warning" color="warning" size="12px" class="q-mr-xs" />
+                        <span class="text-warning">{{ day.errorMessage }}</span>
+                      </template>
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
             </q-card-section>
           </q-card>
-        </q-card-section>
-        <q-card-actions align="center" v-if="paymentMethod">
-          <q-btn class="full-width" color="primary" label="Confirmar" @click="tabPayment = 'voucher'" />
-        </q-card-actions>
-      </q-card>
-      <q-card :style="$q.screen.lt.sm ? '' : 'width: 400px; max-width: 80vw;'" v-if="tabPayment === 'voucher'">
-        <q-card-section class="q-pb-xs flex justify-start items-center q-gutter-x-sm">
-          <q-btn icon="arrow_back_ios" size="sm" flat round dense @click="tabPayment = 'paymentMethod'"/>
-          <span class="text-subtitle1 text-uppercase text-bold">
-           Comprobante de pago
-          </span>
-        </q-card-section>
-        <q-card-section class="q-pt-sm q-pb-none">
-          <p>
-            Si no sube el comprobante de pago,
-            se contactaran con usted via whatsapp o teléfono.
-            para la confirmación del pago.
-          </p>
-        </q-card-section>
-        <q-card-section class="q-pb-xs q-pt-sm flex justify-start items-center q-gutter-x-sm scroll" style="max-height: calc(100vh - 320px);">
-          <FileButtonComponent ref="fileButton" @upload="setFile" v-if="!file">
-            <template v-slot:button>
-              <div
-                @click="$refs.fileButton.onClick()"
-                class="flex flex-center column"
-                style="height: 100px; min-width: 100%; border: 1px dashed #e0e0e0; border-radius: 5px; padding: 10px;">
-                <q-icon name="image" color="primary" size="50px" />
-                <span>
-                  Seleccionar comprobante
-                </span>
-              </div>
-            </template>
-          </FileButtonComponent>
-          <q-img v-else :src="file.url" style="border-radius: 10px;">
-            <q-btn
-              class="absolute all-pointer-events"
-              size="sm"
-              icon="close"
-              color="negative"
-              style="top: 1px; right: 1px"
-              push
-              dense
-              round
-              @click="file = null"
-            >
-              <q-tooltip>
-                Eliminar Imagen
-              </q-tooltip>
-            </q-btn>
-          </q-img>
-        </q-card-section>
-        <q-card-actions align="center" v-if="paymentMethod">
-          <q-btn class="full-width" color="primary" label="Confirmar" @click="tabPayment = 'address'" />
-        </q-card-actions>
-      </q-card>
-      <q-card :style="$q.screen.lt.sm ? '' : 'width: 400px; max-width: 80vw;'" v-if="tabPayment === 'address'">
-        <q-card-section class="q-pb-xs flex justify-start items-center q-gutter-x-sm">
-          <q-btn icon="arrow_back_ios" size="sm" flat round dense @click="tabPayment = 'voucher'"/>
-          <span class="text-subtitle1 text-uppercase text-bold">
-           Confirmar dirección
-          </span>
-        </q-card-section>
-        <q-card-section class="q-pt-sm q-pb-none">
-          <p>
-            Confirme su dirección para recibir el pedido.
-          </p>
-        </q-card-section>
-        <q-card-section class="q-pt-sm">
-          <q-input type="textarea" v-model="address" filled label="Dirección" class="full-width" />
-        </q-card-section>
-        <q-card-actions align="center" v-if="address">
-          <q-btn class="full-width" color="primary" label="Confirmar" @click="saveOrder" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-    <q-dialog v-model="detailsDialog" persistent maximized>
-      <q-card>
-        <q-card-section class="flex justify-between items-center bg-primary text-white">
-          <span class="text-h6">Detalles de la orden</span>
-          <q-btn icon="close" flat round dense @click="detailsDialog = false" />
-        </q-card-section>
-        <q-card-section class="scroll" style="height: 82vh">
-          <div class="row q-col-gutter-sm">
-            <div class="col-12">
-              <q-input label="Código" filled v-model="invoice.code" readonly dense />
-            </div>
-            <div class="col-6">
-              <q-input label="Cliente" filled :model-value="invoice?.client?.name" readonly dense />
-            </div>
-            <div class="col-6">
-              <q-input label="Fecha" filled v-model="invoice.date" readonly dense />
-            </div>
-            <div class="col-12">
-              <q-input
-                type="textarea"
-                autogrow label="Dirección"
-                filled
-                v-model="invoice.address"
-                readonly
-                dense
-              />
-            </div>
-            <div class="col-12">
-              <q-input
-                type="textarea"
-                filled
-                v-model="invoice.description"
-                readonly
-                label="Descripción"
-              />
-            </div>
-            <div class="col-12">
-              <span class="text-h6">Pagos</span>
-            </div>
-            <div class="col-12 q-mt-md column" v-for="payment in invoice.invoice_payments" :key="payment.id">
-              <span class="text-subtitle1 text-uppercase">
-                {{ payment.payment_method.name }}
-              </span>
-              <img v-for="file in payment.files" alt="pago" :key="file.id" :src="file.url" style="max-height: 300px; max-width: 400px;" />
-            </div>
+        </q-dialog>
+
+        <!-- Auth Dialog -->
+        <AuthDialog v-model="showAuthDialog" />
+
+        <!-- Product Detail Dialog -->
+        <ProductDetailDialog
+          v-model="showProductDetail"
+          :product="selectedProduct"
+          @add-to-cart="handleAddToCart"
+        />
+
+        <!-- Sub-page Dialog for Mobile/Tablet (Full Screen) -->
+        <q-dialog
+          v-model="isSubPageDialogOpen"
+          persistent
+          maximized
+          transition-show="slide-up"
+          transition-hide="slide-down"
+        >
+          <div class="bg-white full-height column no-wrap">
+            <CartView
+              v-if="currentTab === 'cart'"
+              @checkout="goToCheckout"
+              @back-to-catalog="currentTab = 'menu'"
+            />
+            <CheckoutView
+              v-else-if="currentTab === 'checkout'"
+              @success="handleCheckoutSuccess"
+              @cancel="currentTab = 'cart'"
+            />
+            <OrdersView
+              v-else-if="currentTab === 'orders'"
+              @back-to-catalog="currentTab = 'menu'"
+            />
           </div>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
-  </q-page>
+        </q-dialog>
+        <!-- WhatsApp Floating Button -->
+        <a
+          v-if="company?.phone_number && currentTab === 'menu' && !isDesktopOrdersDialogOpen"
+          :href="`https://wa.me/${company.phone_number.replace(/\D/g, '')}`"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="whatsapp-fab"
+          aria-label="Contactar por WhatsApp"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="28" height="28" fill="white">
+            <path d="M16 0C7.164 0 0 7.163 0 16c0 2.822.736 5.472 2.025 7.775L0 32l8.424-2.007A15.934 15.934 0 0 0 16 32c8.836 0 16-7.163 16-16S24.836 0 16 0zm0 29.333a13.27 13.27 0 0 1-6.77-1.853l-.484-.287-5.003 1.193 1.218-4.876-.316-.5A13.26 13.26 0 0 1 2.667 16C2.667 8.636 8.636 2.667 16 2.667S29.333 8.636 29.333 16 23.364 29.333 16 29.333zm7.293-9.907c-.4-.2-2.364-1.166-2.731-1.3-.366-.133-.633-.2-.9.2-.266.4-1.033 1.3-1.266 1.566-.233.267-.466.3-.866.1-.4-.2-1.687-.622-3.214-1.982-1.188-1.059-1.99-2.367-2.223-2.767-.233-.4-.025-.616.175-.815.18-.179.4-.467.6-.7.2-.233.267-.4.4-.666.133-.267.067-.5-.033-.7-.1-.2-.9-2.167-1.233-2.967-.325-.78-.655-.674-.9-.686l-.766-.013c-.267 0-.7.1-1.067.5-.366.4-1.4 1.367-1.4 3.333s1.433 3.867 1.633 4.133c.2.267 2.82 4.307 6.833 6.034.955.412 1.7.658 2.281.843.958.305 1.831.262 2.52.159.769-.114 2.364-.967 2.698-1.9.333-.934.333-1.734.233-1.9-.1-.167-.366-.267-.766-.467z"/>
+          </svg>
+        </a>
+
+      </q-page>
+    </q-page-container>
+  </q-layout>
 </template>
-<script>
-import { Notify } from 'quasar'
-import { formatDate, formatNumber, loading, notify, setFiles } from '../const/mixins'
-import { useCommandStore } from '../stores/command'
-import SkeletonCard from '../components/SkeletonCard.vue'
-import SlideComponent from '../components/SlideComponent.vue'
-import { mapActions, mapState } from 'pinia'
+
+<script setup>
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
+import { useCatalogStore } from 'src/stores/catalog'
 import { authentication } from 'src/stores/module-authentication'
-import FileButtonComponent from 'src/components/FileButtonComponent.vue'
-import { status } from 'src/const/invoice'
-import ScheduleStatus from 'src/components/Command/ScheduleStatus.vue'
-export default {
-  name: 'CatalogPage',
-  components: {
-    SkeletonCard,
-    SlideComponent,
-    ScheduleStatus,
-    FileButtonComponent
-  },
-  data () {
-    return {
-      observation: null,
-      status,
-      company: null,
-      formatDate,
-      tabPayment: 'paymentMethod',
-      client: {},
-      user: {},
-      address: '',
-      invoices: [],
-      paymentMethod: null,
-      openAddClient: false,
-      dialogPayment: false,
-      isCurrentlyOpen: false,
-      openLoginDialog: false,
-      paymentMethods: [],
-      temporalProducts: [],
-      file: null,
-      /**
-       * Slide
-       * @type {Number}
-       */
-      slide: 1,
-      /**
-       * Dialog table
-       * @type {Boolean}
-       */
-      dialogTable: false,
-      /**
-       * Details product
-       * @type {Boolean}
-       */
-      detailProduct: false,
-      /**
-       * Loading table
-       * @type {Boolean}
-       */
-      loadingTable: false,
-      /**
-       * Product
-       * @type {Object}
-       */
-      product: null,
-      /**
-       * Bill loading
-       * @type {Boolean}
-       */
-      billLoading: false,
-      /**
-       * Format number
-       * @type {Function}
-       */
-      formatNumber,
-      /**
-       * Table
-       * @type {Object}
-       */
-      table: null,
-      /**
-       * Loading page
-       * @type {Boolean}
-       */
-      loadingPage: false,
-      /**
-       * Category selected
-       * @type {Object}
-       */
-      category: null,
-      /**
-       * Categories
-       * @type {Array}
-       */
-      categories: [],
-      /**
-       * Total bill
-       * @type {Number}
-       */
-      totalBill: 0,
-      /**
-       * Products
-       * @type {Array}
-       */
-      products: [],
-      /**
-       * Pagination option
-       * @type {Object}
-       */
-      pagination: { rowsPerPage: 30 },
-      /**
-       * All products
-       * @type {Array}
-       */
-      allProducts: [],
-      /**
-       * Table selected
-       * @type {Array}
-       */
-      tableSelected: [],
-      invoice: null,
-      detailsDialog: false,
-      filter: '',
-      /**
-       * Pagination option
-       * @type {Object}
-       */
-      invoicePagination: {
-        rowsPerPage: 10,
-        rowsNumber: 10,
-        paginate: true,
-        sortBy: 'id',
-        sortOrder: 'desc'
-      }
-    }
-  },
-  mounted () {
-    if (this.userSession) {
-      this.setPagination({ pagination: this.invoicePagination })
-    }
-  },
-  created () {
-    this.getCompany()
-    this.getCategories()
-    this.getPaymentMethods()
-    this.category = this.$route.query.category || 'all'
-    this.products = this.command.products || []
-    this.calculateTotal()
-    this.address = this.userSession?.address
-  },
-  watch: {
-    category (data) {
-      this.$router.push({
-        path: this.$route.path,
-        query: {
-          tab: this.tab,
-          category: data || 'all'
-        }
-      })
-      this.getAllProducts()
-    },
-    observation (data) {
-      if (typeof data === 'string') {
-        this.product.observation = data
-        this.addTemporalProducts(this.product, this.product.amount)
-      }
-    },
-    table (table) {
-      const store = useCommandStore()
-      store.setCommands({ table })
-    },
-    products (products) {
-      const store = useCommandStore()
-      store.setCommands({ products })
-    },
-    userSession (data) {
-      this.address = data?.address
-    },
-    tab (data) {
-      if (data === 'orders') this.setPagination({ pagination: this.invoicePagination })
-    }
-  },
-  computed: {
-    tab () {
-      return this.$route.query.tab ?? 'menu'
-    },
-    command () {
-      const store = useCommandStore()
-      return store?.command
-    },
-    ...mapState(authentication, ['userSession', 'branchOffice'])
-  },
-  methods: {
-    /**
-     * Open product details
-     * @param {Object} product
-     */
-    openProductDetails (product) {
-      this.detailProduct = true
-      this.product = product
-      this.product.amount = 1
-      this.addTemporalProducts(product, product.amount)
-      if (product.product_addons && product.product_addons.length > 0) {
-        this.product.product_addons = product.product_addons.map(addon => {
-          addon.amount = 0
-          return addon
-        })
-      }
-    },
-    addCar () {
-      this.temporalProducts.forEach(product => this.validateProduct(product))
-      this.notifyProductCar(this.products)
-      this.detailProduct = false
-      this.temporalProducts = []
-      this.observation = null
-    },
-    /**
-     * Add temporal products
-     */
-    addTemporalProducts (data, amount) {
-      const findProduct = this.findProduct(this.temporalProducts, data)
-      if (findProduct) {
-        findProduct.amount = amount
-        findProduct.observation = data.observation
-      } else {
-        this.temporalProducts.push({
-          ...data,
-          amount
-        })
-      }
-    },
-    /**
-     * Open details
-     * @param {Object} data invoice
-     */
-    openDetails (data) {
-      this.invoice = data
-      this.detailsDialog = true
-    },
-    /**
-     * Set data pagination emit event
-     * @param  {Object} data value pagination
-     */
-    setPagination (data) {
-      const params = {
-        sortOrder: data.pagination.descending ? 'asc' : 'desc',
-        page: data.pagination.page,
-        sortBy: data.pagination.sortBy,
-        perPage: data.pagination.rowsPerPage,
-        paginate: true
-      }
-      this.invoicePagination = data.pagination
-      this.getInvoices(params)
-    },
-    /**
-     * Get company
-     */
-    async getCompany () {
-      try {
-        const { data } = await this.$api.get(`public/company/${this.$route?.params?.company_id}`)
-        this.company = data
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      }
-    },
-    /**
-     * Set file
-     * @param {Array} files files
-     */
-    async setFile (files) {
-      const file = await setFiles(files)
-      this.file = file[0]
-    },
-    /**
-     * After save bill
-     */
-    afterSaveBill () {
-      this.products = []
-      this.setQueryParams({ tab: 'orders' })
-      this.totalBill = 0
-      this.file = null
-      this.paymentMethod = null
-      this.tabPayment = 'paymentMethod'
-      notify('Pedido creado exitosamente', 'positive', 'check_circle')
-    },
-    /**
-     * Set table selected
-     * @param {Object} data table selected
-     */
-    async setTableSelected (data) {
-      this.table = data[0]
-      this.tableSelected = [this.table]
-      await this.getTable(data)
-      this.dialogTable = false
-    },
-    /**
-     * Save clients
-     */
-    async saveClient () {
-      try {
-        loading(true)
-        const { data } = await this.$api.post(`public/clients/${this.$route.params.company_id}`, this.client)
-        this.openAddClient = false
-        this.openLoginDialog = false
-        this.client = {}
-        this.setSessionData(data)
-        this.saveBill()
-      } catch (error) {
-        console.error(error)
-        notify(error.message, 'negative', 'warning')
-      } finally {
-        loading(false)
-      }
-    },
+import { useCart } from 'src/composables/useCart'
+import { useOrderStore } from 'src/stores/order'
+import { formatNumber, notify } from 'src/const/mixins'
+import { Notify, useQuasar } from 'quasar'
 
-    async saveFilePayment (data) {
-      try {
-        const formData = new FormData()
-        const { invoice_payments: invoicePayments } = data
-        if (invoicePayments.length > 0) {
-          formData.append('file', this.file?.file)
-          formData.append('fileable_type', 'App\\Models\\InvoicePayment')
-          formData.append('fileable_id', invoicePayments[0].id)
-          await this.$api.post('files', formData)
-        }
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      }
-    },
-    /**
-     * Save order
-     */
-    async saveOrder () {
-      try {
-        loading(true)
-        const { data } = await this.$api.post('command-orders', {
-          seller_id: this.userSession?.id,
-          products: this.command.products,
-          address: this.address,
-          company_id: this.$route?.params?.company_id,
-          client_id: this.userSession.id,
-          code: 1,
-          payments: [
-            {
-              payment_method_id: this.paymentMethod,
-              amount: this.totalBill,
-              reference: null,
-              exchange: 1,
-              coin_id: this.company?.company_config?.coin_id
-            }
-          ]
-        })
-        if (this.file) await this.saveFilePayment(data)
-        this.afterSaveBill()
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      } finally {
-        loading(false)
-      }
-    },
-    /**
-     * Save bill and payments
-     */
-    async saveBill () {
-      if (this.tab !== 'command') {
-        this.setQueryParams({ tab: 'command' })
-        return
-      }
-      if (!this.userSession) {
-        this.openLoginDialog = true
-        return
-      }
-      this.dialogPayment = true
-    },
-    /**
-     * Delete product in table
-     * @param {Object} product props table products
-     */
-    deleteProduct (product) {
-      const index = this.products.map(productOne => productOne.id).indexOf(product.row.id)
-      this.products.splice(index, 1)
-      this.calculateTotal()
-    },
-    /**
-     * Calculate the total
-     */
-    calculateTotal () {
-      let total = 0
-      this.products.forEach(product => {
-        total += product.subtotal
-      })
-      this.totalBill = total
-    },
-    /**
-     * Calculate the total and subtotal
-     * @param {Object} data props products
-     */
-    calculate (data) {
-      if (this.validStockProduct(data, data.amount)) {
-        data.subtotal = data.price * data.amount
-        this.calculateTotal()
-      } else {
-        notify(
-          `No hay stock suficiente para ${data.name}`,
-          'negative',
-          'warning'
-        )
-        data.amount = 1
-      }
-    },
-    /**
-     * Find product
-     * @param {Array} products products
-     * @param {Object} product product
-     */
-    findProduct (products, product) {
-      if (products) {
-        return products.find(productOne => productOne.id === product.id)
-      }
-      return false
-    },
-    /**
-     * Login app
-     */
-    async loginAt () {
-      try {
-        loading(true)
-        await this.login(this.user)
-        this.openLoginDialog = false
-        this.dialogPayment = true
-        this.user = {}
-      } catch (error) {
-        notify(error?.message || error.message, 'negative', 'warning')
-      } finally {
-        loading(false)
-      }
-    },
-    /**
-     * Valid stock product
-     * @param {Object} data data
-     * @param {Number} amount amount
-     */
-    validStockProduct (data, amount) {
-      const stock = data.is_bundle ? data.bundle_stock : data.normal_stock
-      console.log(data)
-      if (!data.skip_stock) {
-        return stock >= amount
-      }
-      return true
-    },
-    /**
-     * Validate products
-     * @param {*} data product selected
-     */
-    validateProduct (data) {
-      const findProduct = this.findProduct(this.products, data)
+import CatalogView from 'src/components/Catalog/CatalogView.vue'
+import CartView from 'src/components/Catalog/CartView.vue'
+import CheckoutView from 'src/components/Catalog/CheckoutView.vue'
+import OrdersView from 'src/components/Catalog/OrdersView.vue'
+import ProductDetailDialog from 'src/components/Product/ProductDetailDialog.vue'
+import AuthDialog from 'src/components/Auth/AuthDialog.vue'
 
-      if (!this.validStockProduct(data, 1)) {
-        notify(
-          `No hay stock suficiente para ${data.name}`,
-          'negative',
-          'warning'
-        )
-        return
-      }
+// Day translations for schedule
+const dayTranslations = {
+  monday: 'Lunes',
+  tuesday: 'Martes',
+  wednesday: 'Miércoles',
+  thursday: 'Jueves',
+  friday: 'Viernes',
+  saturday: 'Sábado',
+  sunday: 'Domingo'
+}
 
-      if (findProduct) {
-        findProduct.amount += 1
-        findProduct.product_id = findProduct.id
-        findProduct.observation = data.observation
-        this.calculate(findProduct)
-      } else {
-        data.amount = 1
-        data.subtotal = 0
-        data.product_id = data.id
-        this.products = [
-          ...this.products,
-          data
-        ]
-        this.calculate(data)
-      }
-    },
-    /**
-     * Set query params
-     * @param {Object} query query params
-     */
-    setQueryParams (query) {
-      this.$router.push({
-        path: this.$route.path,
-        query: {
-          ...this.$route.query,
-          ...query
-        }
-      })
-    },
-    /**
-     * Notify product car
-     */
-    notifyProductCar () {
-      Notify.create({
-        position: 'top',
-        message: '¡Producto añadido con éxito! ¡Listo para confirmar su orden!',
-        actions: [
-          {
-            label: 'Ver orden',
-            color: 'white',
-            handler: () => this.setQueryParams({ tab: 'command' })
-          }
-        ],
-        icon: 'info',
-        color: 'positive'
-      })
-    },
-    /**
-     * Get all products
-     */
-    async getAllProducts () {
-      try {
-        this.loadingPage = true
-        const { data } = await this.$api.get(`public/products/${this.$route.params.company_id}`, {
-          params: {
-            stock: true,
-            withStock: true,
-            sortOrder: 'desc',
-            sortBy: 'sold',
-            branch_office_id: this.$route.params.branch_office_id,
-            dataEqualFilter: {
-              category_id: this.category === 'all' ? null : this.category,
-              show_catalog: 1,
-              'category.show_catalog': 1
-            }
-          }
-        })
-        this.allProducts = data
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      } finally {
-        this.loadingPage = false
-      }
-    },
-    /**
-     * Get categories
-     */
-    async getCategories () {
-      try {
-        const { data } = await this.$api.get(`public/categories/${this.$route.params.company_id}`, {
-          params: {
-            dataFilter: {
-              show_catalog: 1
-            }
-          }
-        })
-        this.categories = data
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      }
-    },
-    /**
-     * Get categories
-     */
-    async getPaymentMethods () {
-      try {
-        const { data } = await this.$api.get(`public/payment-methods/${this.$route.params.company_id}`)
-        this.paymentMethods = data
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      }
-    },
-    /**
-     * Get categories
-     */
-    async getInvoices (params) {
-      try {
-        loading(true)
-        const { data } = await this.$api.get('public/invoices', { params })
-        this.invoices = data.data
-      } catch (error) {
-        notify(error.message, 'negative', 'warning')
-      } finally {
-        loading(false)
-      }
-    },
-    ...mapActions(authentication, ['setSessionData', 'login'])
+const daysOfWeek = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+
+// Router
+const route = useRoute()
+const router = useRouter()
+const $q = useQuasar()
+
+// Stores
+const catalogStore = useCatalogStore()
+const authStore = authentication()
+const orderStore = useOrderStore()
+const cart = useCart()
+
+const { company, categories } = storeToRefs(catalogStore)
+const catalogViewRef = ref(null)
+const { userSession, profilePhoto } = storeToRefs(authStore)
+const { orderCount } = storeToRefs(orderStore)
+
+// State
+const currentTab = ref(route.query.tab || 'menu')
+const showProductDetail = ref(false)
+const selectedProduct = ref(null)
+const loadingPage = ref(false)
+const showScheduleDialog = ref(false)
+const showAuthDialog = ref(false)
+const currentTime = ref(new Date())
+let savedScrollPosition = 0
+let scrollContainerEl = null
+let timeUpdateInterval = null
+
+// Computed — User
+const isMobileOrTablet = computed(() => $q.screen.lt.md)
+
+const isSubPageDialogOpen = computed({
+  get: () => ['cart', 'checkout', 'orders'].includes(currentTab.value) && isMobileOrTablet.value,
+  set: (val) => {
+    if (!val) {
+      currentTab.value = 'menu'
+    }
+  }
+})
+
+// Desktop-only modal dialog for Orders view natively decoupled from currentTab
+const isDesktopOrdersDialogOpen = ref(false)
+
+const openOrders = () => {
+  if (isMobileOrTablet.value) {
+    currentTab.value = 'orders'
+  } else {
+    isDesktopOrdersDialogOpen.value = true
   }
 }
-</script>
-<style>
 
-.button-baseline {
-  background-color: rgb(253, 126, 20); /* Verde */
+const userInitials = computed(() => {
+  if (!userSession.value) return 'U'
+  const name = userSession.value.name || userSession.value.first_name || 'Usuario'
+  return name.charAt(0).toUpperCase()
+})
+
+const isAuthenticated = computed(() => !!userSession.value)
+
+// Computed — Banner & Schedule
+const bannerUrl = computed(() =>
+  company.value?.company_config?.other?.menu?.banner_url || ''
+)
+
+const scheduleData = computed(() =>
+  company.value?.company_config?.other?.menu?.schedule
+)
+
+const getCurrentDayKey = () => {
+  const currentDayIndex = currentTime.value.getDay()
+  const currentDayName = daysOfWeek[currentDayIndex]
+  return Object.keys(dayTranslations).find(
+    key => dayTranslations[key] === currentDayName
+  )
+}
+
+const isCurrentlyOpen = computed(() => {
+  try {
+    const currentDayKey = getCurrentDayKey()
+    if (!currentDayKey || !scheduleData.value || !scheduleData.value[currentDayKey]) {
+      return false
+    }
+
+    const today = scheduleData.value[currentDayKey]
+    if (!today || !today.isOpen || today.hasError || !today.from || !today.to) {
+      return false
+    }
+
+    const currentHours = currentTime.value.getHours()
+    const currentMinutes = currentTime.value.getMinutes()
+    const currentTimeInMinutes = currentHours * 60 + currentMinutes
+
+    // Support for multiple intervals separated by '|'
+    const fromIntervals = today.from.toString().split('|')
+    const toIntervals = today.to.toString().split('|')
+
+    for (let i = 0; i < fromIntervals.length; i++) {
+      const fromStr = fromIntervals[i].trim()
+      const toStr = toIntervals[i]?.trim()
+
+      if (!fromStr || !toStr) continue
+
+      const [openH, openM] = fromStr.split(':').map(Number)
+      const [closeH, closeM] = toStr.split(':').map(Number)
+
+      const openMins = (openH || 0) * 60 + (openM || 0)
+      const closeMins = (closeH || 0) * 60 + (closeM || 0)
+
+      if (currentTimeInMinutes >= openMins && currentTimeInMinutes < closeMins) {
+        return true
+      }
+    }
+
+    return false
+  } catch (error) {
+    console.error('Error in isCurrentlyOpen:', error)
+    return false
+  }
+})
+
+const todaySchedule = computed(() => {
+  const currentDayKey = getCurrentDayKey()
+  if (!currentDayKey || !scheduleData.value || !scheduleData.value[currentDayKey]) {
+    return null
+  }
+  const dayData = scheduleData.value[currentDayKey]
+  return {
+    ...dayData,
+    openTime: dayData?.from || '',
+    closeTime: dayData?.to || '',
+    isOpen: dayData?.isOpen || false
+  }
+})
+
+const weekSchedule = computed(() => {
+  if (!scheduleData.value) return []
+
+  return dayOrder.map(day => {
+    const dayData = scheduleData.value[day]
+    const currentDayKey = getCurrentDayKey()
+
+    return {
+      dayName: dayTranslations[day],
+      dayKey: day,
+      isOpen: dayData?.isOpen || false,
+      openTime: dayData?.from || '',
+      closeTime: dayData?.to || '',
+      error: dayData?.hasError || false,
+      errorMessage: dayData?.errorMessage || '',
+      isToday: day === currentDayKey
+    }
+  })
+})
+
+// Computed — Cart (for right panel)
+const cartItems = computed(() => cart.items.value || [])
+const cartTotal = computed(() => cart.total.value || 0)
+const cartItemCount = computed(() => cart.itemCount.value || 0)
+
+// Scroll container helpers
+const findScrollContainer = () => {
+  const panel = document.querySelector('.q-tab-panels .q-panel.scroll')
+  if (panel && panel.scrollHeight > panel.clientHeight) return panel
+  return document.scrollingElement || document.documentElement
+}
+
+// Watch tab changes and sync with URL
+watch(currentTab, (newTab) => {
+  // On desktop the cart is always visible in the sidebar — redirect to menu
+  if (newTab === 'cart' && !isMobileOrTablet.value) {
+    currentTab.value = 'menu'
+    return
+  }
+  router.push({
+    path: route.path,
+    query: {
+      ...route.query,
+      tab: newTab
+    }
+  })
+})
+
+// Watch route changes (for back button)
+watch(() => route.query.tab, (newTab) => {
+  if (newTab && newTab !== currentTab.value) {
+    currentTab.value = newTab
+  }
+})
+
+// Watch product detail dialog to restore scroll position
+watch(showProductDetail, (isOpen) => {
+  if (!isOpen && scrollContainerEl) {
+    requestAnimationFrame(() => {
+      if (scrollContainerEl === document.scrollingElement || scrollContainerEl === document.documentElement) {
+        window.scrollTo({ top: savedScrollPosition, behavior: 'instant' })
+      } else {
+        scrollContainerEl.scrollTop = savedScrollPosition
+      }
+    })
+  }
+})
+
+// Methods
+const openProductDetail = (product) => {
+  if (document.activeElement) {
+    document.activeElement.blur()
+  }
+  scrollContainerEl = findScrollContainer()
+  if (scrollContainerEl === document.scrollingElement || scrollContainerEl === document.documentElement) {
+    savedScrollPosition = window.scrollY || window.pageYOffset
+  } else {
+    savedScrollPosition = scrollContainerEl.scrollTop
+  }
+  selectedProduct.value = { ...product }
+  showProductDetail.value = true
+}
+
+const handleAddToCart = (cartProduct) => {
+  const success = cart.addToCart(
+    cartProduct,
+    cartProduct.amount,
+    cartProduct.observation
+  )
+
+  if (success) {
+    Notify.create({
+      position: 'top',
+      message: '¡Producto añadido con éxito! ¡Listo para confirmar su orden!',
+      actions: [
+        {
+          label: 'Ver Carrito',
+          color: 'white',
+          handler: () => {
+            currentTab.value = 'cart'
+          }
+        }
+      ],
+      icon: 'info',
+      color: 'positive',
+      timeout: 3000
+    })
+  }
+}
+
+const goToCheckout = () => {
+  if (!isAuthenticated.value) {
+    currentTab.value = 'checkout'
+    return
+  }
+  currentTab.value = 'checkout'
+}
+
+const handleCheckoutSuccess = () => {
+  openOrders()
+}
+
+const getDayColor = (day) => {
+  if (day.isToday) return 'primary'
+  if (!day.isOpen) return 'grey-4'
+  if (day.error) return 'warning'
+  return 'grey-5'
+}
+
+const logout = async () => {
+  try {
+    await authStore.logout()
+    cart.resetCart()
+    orderStore.resetOrderStore()
+    notify('Has cerrado sesión correctamente', 'positive', 'check_circle')
+  } catch (error) {
+    console.error('Error logging out:', error)
+    authStore.forceLogout()
+    cart.resetCart()
+    orderStore.resetOrderStore()
+  }
+}
+
+const formatCompanyAddress = (address) => {
+  if (!address) return ''
+  if (typeof address === 'string') return address
+  return address.formattedAddress || address.address || ''
+}
+
+// Init - Load catalog data
+onMounted(async () => {
+  try {
+    loadingPage.value = true
+
+    // Cargamos company, categorías y métodos de pago en paralelo.
+    // Los productos SE CARGAN PROGRESIVAMENTE por categoría desde CatalogView.
+    await Promise.all([
+      catalogStore.fetchCompany(route.params.company_id),
+      catalogStore.fetchCategories(route.params.company_id),
+      catalogStore.fetchPaymentMethods(route.params.company_id)
+    ])
+
+    if (isAuthenticated.value) {
+      orderStore.fetchOrders()
+    }
+
+    // Inicializar la carga progresiva en CatalogView una vez que las categorías llegaron
+    if (catalogViewRef.value) {
+      catalogViewRef.value.initLoader(
+        categories.value,
+        route.params.company_id,
+        route.params.branch_office_id
+      )
+    }
+  } catch (error) {
+    console.error('Error loading catalog:', error)
+    notify(error.message || 'Error al cargar el catálogo', 'negative', 'warning')
+  } finally {
+    loadingPage.value = false
+  }
+
+  // Update time every minute for schedule status
+  timeUpdateInterval = setInterval(() => {
+    currentTime.value = new Date()
+  }, 60000)
+})
+
+// Sidebar Cart Methods
+const incrementQuantity = (item) => {
+  cart.updateQuantity(item.id, item.amount + 1)
+}
+
+const decrementQuantity = (item) => {
+  if (item.amount > 1) {
+    cart.updateQuantity(item.id, item.amount - 1)
+  }
+}
+
+const removeItem = (item) => {
+  cart.removeFromCart(item.id)
+}
+
+onBeforeUnmount(() => {
+  if (timeUpdateInterval) {
+    clearInterval(timeUpdateInterval)
+  }
+})
+</script>
+
+<style scoped>
+.catalog-page {
+  background: #fff;
+  min-height: 100vh;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ===== WhatsApp FAB ===== */
+.whatsapp-fab {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 9999;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(37, 211, 102, 0.45);
+  text-decoration: none;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  animation: whatsapp-pulse 2.5s infinite;
+}
+
+.whatsapp-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 24px rgba(37, 211, 102, 0.65);
+  animation: none;
+}
+
+@keyframes whatsapp-pulse {
+  0%   { box-shadow: 0 4px 16px rgba(37, 211, 102, 0.45); }
+  50%  { box-shadow: 0 4px 28px rgba(37, 211, 102, 0.75); }
+  100% { box-shadow: 0 4px 16px rgba(37, 211, 102, 0.45); }
+}
+
+.whatsapp-pill {
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.whatsapp-pill:hover {
+  opacity: 0.75;
+}
+
+@media (max-width: 1024px) {
+  .whatsapp-fab {
+    bottom: 5.25rem;
+  }
+}
+
+/* ===== Navbar ===== */
+.catalog-navbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: transparent;
+}
+
+.navbar-icon-btn {
+  transition: opacity 0.2s ease;
+}
+.navbar-icon-btn:hover {
+  opacity: 0.85;
+}
+
+.user-avatar {
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.5);
+  transition: box-shadow 0.2s ease;
+}
+
+/* Contact Bar Styles */
+.contact-info-container {
+  margin-right: 1rem;
   display: flex;
   justify-content: center;
-  align-items: center;
-  position: relative;
-  animation: titilar 2s infinite ease-in-out;
 }
 
-@keyframes titilar {
-  0% {
-    box-shadow: 0 0 0px rgba(253, 126, 20, 0.5);
+.contact-info-bar {
+  background: transparent;
+  padding: 12px 0;
+  border-radius: 4px;
+  max-width: 950px;
+}
+
+.contact-section {
+  min-width: 200px;
+}
+
+.vertical-divider {
+  width: 1px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.contact-section-title {
+  max-width: 180px;
+  text-align: left;
+}
+
+.line-height-tight {
+  line-height: 1.2;
+}
+
+.opacity-80 {
+  opacity: 0.8;
+}
+.user-avatar:hover {
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.8);
+}
+
+.user-menu {
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.user-menu-item {
+  border-radius: 8px;
+  margin: 4px;
+  transition: background 0.15s ease;
+}
+
+.login-button {
+  border: 1.5px solid rgba(255,255,255,0.6);
+  backdrop-filter: blur(4px);
+  transition: background 0.2s ease, border-color 0.2s ease;
+  font-size: 0.875rem;
+}
+.login-button:hover {
+  background: rgba(255,255,255,0.15) !important;
+  border-color: rgba(255,255,255,0.9);
+}
+
+.order-badge {
+  padding: 3px 5px;
+  font-size: 10px;
+  border: 1.5px solid rgba(255,255,255,0.8);
+  min-height: 14px;
+  min-width: 14px;
+}
+
+/* ===== Header Banner ===== */
+.header-container {
+  overflow: hidden;
+}
+
+.header-banner {
+  min-height: 350px;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 0;
+}
+
+.header-content {
+  position: relative;
+  z-index: 1;
+  padding-top: 56px;
+}
+
+.profile-avatar {
+  box-shadow: 0 0 0 0 !important;
+  border-radius: 50%;
+}
+
+.company-name {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.6);
+  line-height: 1.2;
+}
+
+/* ===== Mobile Contact Pills ===== */
+.contact-pill {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+
+.opacity-80 {
+  opacity: 0.8;
+}
+
+/* ===== Schedule Status Badge ===== */
+.schedule-status-badge {
+  min-height: 32px;
+  padding: 4px 14px;
+  border-radius: 20px !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.status-open {
+  background: rgba(76, 175, 80, 0.25) !important;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+}
+.status-open:hover {
+  background: rgba(76, 175, 80, 0.35) !important;
+}
+
+.status-closed {
+  background: rgba(244, 67, 54, 0.25) !important;
+  border: 1px solid rgba(244, 67, 54, 0.4);
+}
+.status-closed:hover {
+  background: rgba(244, 67, 54, 0.35) !important;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-open {
+  background: #4caf50;
+  box-shadow: 0 0 0 3px rgba(76,175,80,0.25);
+  animation: pulse-open 2s infinite;
+}
+
+.dot-closed {
+  background: #f44336;
+  box-shadow: 0 0 0 3px rgba(244,67,54,0.25);
+}
+
+@keyframes pulse-open {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(76,175,80,0.25); }
+  50%       { box-shadow: 0 0 0 5px rgba(76,175,80,0.12); }
+}
+
+.schedule-times {
+  font-weight: 500;
+}
+
+.arrow-icon {
+  transition: transform 0.2s ease;
+}
+
+.schedule-status-badge:hover .arrow-icon {
+  transform: translateY(2px);
+}
+
+.schedule-status-badge:active {
+  transform: scale(0.97);
+}
+
+/* ===== Content Wrapper (responsive desktop card) ===== */
+.catalog-content-wrapper {
+  padding: 0;
+}
+
+.catalog-content-card {
+  overflow: visible !important;
+  background: transparent;
+}
+
+.catalog-content-inner {
+  padding: 0;
+}
+
+@media (min-width: 1024px) {
+  .catalog-content-wrapper {
+    padding: 24px 70px 48px;
   }
-  50% {
-    box-shadow: 0 0 20px rgba(253, 126, 20, 0.7);
+
+  .catalog-content-card {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+    overflow: hidden;
   }
-  100% {
-    box-shadow: 0 0 0px rgba(253, 126, 20, 0.5);
+
+  .catalog-content-inner {
+    padding: 28px 40px;
   }
+}
+
+/* ===== Tab Panels ===== */
+.catalog-panels {
+  background: transparent;
+  overflow: visible !important;
+}
+
+.catalog-panels :deep(.q-panel) {
+  overflow-y: auto;
+  overflow-anchor: none;
+  overflow: visible !important;
+}
+
+/* ===== Right Panel — Cart (Light Theme) ===== */
+.right-content {
+  position: sticky;
+  top: 20px;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e8ecf0;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+  padding: 20px;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.cart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1.5px solid #f0f2f5;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.cart-header-title {
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.cart-header-icon {
+  color: var(--q-primary);
+}
+
+/* Empty State Sidebar */
+.empty-cart-sidebar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+.empty-cart-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.empty-cart-sub {
+  font-size: 0.85rem;
+  color: #a0aec0;
+}
+
+/* Cart Items Container */
+.cart-items-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.cart-items-list {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+  margin-bottom: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: #e2e8f0 transparent;
+}
+
+.cart-items-list::-webkit-scrollbar {
+  width: 4px;
+}
+.cart-items-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cart-items-list::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 4px;
+}
+
+.cart-item-row {
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.cart-item-row:last-child {
+  border-bottom: none;
+}
+
+/* Item Header Sidebar */
+.item-header-sidebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.item-info-sidebar {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-name-sidebar {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2d3748;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.item-price-sidebar {
+  font-size: 0.8rem;
+  color: #718096;
+  margin-top: 2px;
+}
+
+/* Actions Sidebar */
+.item-actions-sidebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quantity-controls-sidebar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #f7f8fa;
+  border-radius: 8px;
+  padding: 2px;
+  border: 1px solid #edf2f7;
+}
+
+.quantity-btn-sidebar {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  color: #2d3748;
+}
+
+.quantity-display-sidebar {
+  min-width: 20px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.remove-item-btn-sidebar {
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.remove-item-btn-sidebar:hover {
+  opacity: 1;
+}
+
+/* Observation Sidebar */
+.item-observation-sidebar {
+  font-size: 0.75rem;
+  color: #718096;
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: #f8fafc;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  font-style: italic;
+}
+
+/* Sidebar Separator */
+.sidebar-separator {
+  height: 2px;
+  margin: 16px 0;
+  background-image: repeating-linear-gradient(
+    90deg,
+    #e2e8f0,
+    #e2e8f0 8px,
+    transparent 8px,
+    transparent 16px
+  );
+}
+
+/* Sidebar Summary */
+.sidebar-summary {
+  margin-bottom: 8px;
+}
+
+.summary-row-sidebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.summary-label-sidebar {
+  font-size: 0.85rem;
+  color: #718096;
+}
+
+.summary-value-sidebar {
+  font-size: 0.85rem;
+  color: #2d3748;
+  font-weight: 600;
+}
+
+.summary-total-sidebar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+}
+
+.total-label-sidebar {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.total-value-sidebar {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--q-primary);
+}
+
+/* ===== Sidebar Checkout Button ===== */
+.checkout-btn-sidebar {
+  background: linear-gradient(135deg, var(--q-primary) 0%, color-mix(in srgb, var(--q-primary) 75%, #000) 100%);
+  color: #fff;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  padding: 10px 16px;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+.checkout-btn-sidebar:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+/* ===== Floating Cart Button (mobile) ===== */
+.floating-cart-container {
+  width: 100%;
+  z-index: 2000;
+}
+
+.floating-cart-footer {
+  width: 100vw;
+  padding: 16px 20px;
+  background: transparent;
+}
+
+.continuar-btn {
+  height: 56px;
+  font-size: 17px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border-radius: 12px;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+}
+
+.continuar-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
+}
+
+.continuar-btn:active {
+  transform: translateY(0);
+}
+
+/* ===== Schedule Dialog ===== */
+.schedule-dialog-card {
+  width: 100%;
+  max-width: 480px;
+  border-radius: 20px 20px 0 0;
+  max-height: 72vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.schedule-dialog-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.schedule-item {
+  border-radius: 10px;
+  margin: 2px 0;
+  transition: background 0.15s;
+}
+
+.schedule-item--today {
+  background: rgba(var(--q-primary-rgb, 255,77,0), 0.05);
+}
+
+.schedule-avatar {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.schedule-day-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.schedule-hours {
+  margin-top: 2px;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 599px) {
+  .schedule-dialog-card {
+    max-width: 100%;
+    border-radius: 16px 16px 0 0;
+  }
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 480px) {
+  .company-name {
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+  }
+
+  .header-banner {
+    min-height: 230px;
+  }
+
+  .continuar-btn {
+    font-size: 16px;
+  }
+}
+/* ===== Desktop Orders Modal ===== */
+.orders-desktop-modal {
+  background: #f8f8f8;
+  width: 600px;
+  max-width: 90vw;
+  height: 80vh;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 </style>

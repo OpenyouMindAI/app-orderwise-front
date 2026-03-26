@@ -414,6 +414,12 @@ const routes = [
         component: () => import('src/pages/AiChatPage.vue')
       },
       {
+        path: 'deposit-management',
+        name: 'DepositManagement',
+        meta: { requiresAuth: true },
+        component: () => import('src/pages/DepositManagementPage.vue')
+      },
+      {
         path: 'integrations',
         name: 'Integrations',
         meta: { requiresAuth: true },
@@ -441,7 +447,7 @@ const routes = [
         path: 'admin/support',
         name: 'AdminSupport',
         meta: { requiresAuth: true, hideBottomNav: true },
-        component: () => import('pages/AdminSupportPage.vue')
+        component: () => import('pages/SupportChatPage.vue')
       }
     ]
   },
@@ -450,16 +456,16 @@ const routes = [
     component: () => import('layouts/MobileLayout.vue'),
     children: [
       {
-        path: 'catalog/:company_id/:branch_office_id',
-        name: 'Catalog',
-        component: () => import('pages/CatalogPage.vue')
-      },
-      {
         path: 'menu',
         name: 'Menu',
         component: () => import('pages/MenuPage.vue')
       }
     ]
+  },
+  {
+    path: '/catalog/:company_id/:branch_office_id',
+    name: 'Catalog',
+    component: () => import('pages/CatalogPage.vue')
   },
   {
     path: '/command',
@@ -506,6 +512,12 @@ const routes = [
     path: '/register',
     name: 'Register',
     component: () => import('pages/RegisterPage.vue')
+  },
+  {
+    path: '/reset-password/:token',
+    name: 'ResetPassword',
+    meta: { requiresAuth: false },
+    component: () => import('pages/ResetPasswordPage.vue')
   },
   {
     path: '/verifying/:access_token/:expires_in/:token_type/:redirect',

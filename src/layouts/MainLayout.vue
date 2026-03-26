@@ -59,44 +59,13 @@
               enter-active-class="animated fadeIn"
               leave-active-class="animated fadeOut"
             >
-              <div v-if="store.isDemo" class="demo-badge-floating">
+              <div v-if="store.isDemo || isClientDemo" class="demo-badge-floating">
                 <span>Demo</span>
                 <div class="demo-badge-dot"></div>
               </div>
             </transition>
           </div>
         </div>
-        <q-space />
-
-        <!-- Branch Office Indicator -->
-        <!-- Support Button (Replaces Branch Office Indicator) -->
-        <div class="support-indicator">
-          <q-btn
-            v-if="userSession?.is_root"
-            flat
-            dense
-            no-caps
-            class="support-btn-header"
-            label="Suporte Admin"
-            @click="changeRoute('AdminSupport', 'Suporte Admin')"
-          >
-            <q-icon name="support_agent" size="20px" />
-            <q-tooltip>Centro de Soporte para Administradores</q-tooltip>
-          </q-btn>
-          <q-btn
-            v-else
-            flat
-            dense
-            no-caps
-            label="Contactanos"
-            class="support-btn-header"
-            @click="changeRoute('Support', 'Suporte')"
-          >
-            <q-icon name="support_agent" size="20px" />
-            <q-tooltip>Centro de Soporte y Ayuda</q-tooltip>
-          </q-btn>
-        </div>
-
         <q-space />
 
         <!-- Right: Actions -->
@@ -107,12 +76,12 @@
             enter-active-class="animated fadeIn"
             leave-active-class="animated fadeOut"
           >
-            <div v-if="store.isDemo && !$q.screen.xs">
+            <div v-if="(store.isDemo || isClientDemo) && !$q.screen.xs">
               <q-btn
                 outline
                 dense
                 class="create-btn-v0"
-                @click="showCreateCompanyDialog = true"
+                @click="handleCreateCompanyClick"
               >
                 <q-icon
                   name="rocket_launch"
@@ -180,19 +149,27 @@
           >
             <q-tooltip>Escanear QR</q-tooltip>
           </q-btn>
-          <!-- Chat IA (Visible en Desktop y Tablet) -->
+
+          <!-- Soporte Chat -->
           <q-btn
+            v-if="userSession"
             flat
             dense
-            icon="smart_toy"
             round
-            color="primary"
-            @click="changeRoute('AiChat', 'Chat con IA')"
-            v-if="userSession?.is_root && !$q.screen.xs"
-            class="ai-chat-btn"
+            icon="chat"
+            @click="handleChatButtonClick"
+            class="support-chat-toggle-btn"
           >
-            <q-tooltip>Chat con IA - Asistente Virtual</q-tooltip>
+            <q-badge
+              v-if="totalSupportUnread > 0"
+              color="red"
+              floating
+            >
+              {{ totalSupportUnread }}
+            </q-badge>
+            <q-tooltip>Chat de Soporte</q-tooltip>
           </q-btn>
+
           <!-- Herramientas -->
           <q-btn flat dense icon="apps" round @click="loadIntegrations">
             <q-tooltip class="text-body2">
@@ -216,17 +193,6 @@
                   >
                     <q-icon name="sync_alt" size="24px" />
                     <span class="tool-label">Empresa</span>
-                  </div>
-
-                  <!-- Chat IA (Solo Mobile XS) -->
-                  <div
-                    v-if="userSession?.is_root && $q.screen.xs"
-                    class="tool-item"
-                    :class="{ 'tool-active': $route.name === 'AiChat' }"
-                    @click="changeRoute('AiChat', 'Chat con IA')"
-                  >
-                    <q-icon name="smart_toy" size="24px" color="primary" />
-                    <span class="tool-label">Chat IA</span>
                   </div>
 
                   <!-- Tour de Página (Solo Mobile XS) -->
@@ -415,11 +381,11 @@
                 <!-- Plan Info / Demo Action -->
                 <div>
                   <q-item
-                    v-if="store.isDemo"
+                    v-if="store.isDemo || isClientDemo"
                     clickable
                     v-ripple
                     class="demo-action-item"
-                    @click="showCreateCompanyDialog = true"
+                    @click="handleCreateCompanyClick"
                     v-close-popup
                   >
                     <q-item-section avatar class="min-width-auto">
@@ -483,9 +449,9 @@
                       </q-item-section>
                     </q-item>
 
-                    <!-- Subscription Plans (Solo para super_admin) -->
+                    <!-- Subscription Plans (Solo para root o super_admin) -->
                     <q-item
-                      v-if="userSession.is_super_admin"
+                      v-if="isRootOrSuperAdmin()"
                       v-ripple
                       clickable
                       dense
@@ -584,11 +550,11 @@
 
         <q-scroll-area class="col">
           <q-expansion-item
-            v-for="(category_module, index) in filteredDataMenu"
+            v-for="category_module in filteredDataMenu"
             expand-separator
             :key="category_module.id"
             :icon="category_module.icon"
-            :default-opened="index === 0"
+            v-model="expansionStates[category_module.id]"
             :label="category_module.name"
           >
             <div v-for="list in category_module.modules" :key="list.id">
@@ -673,7 +639,7 @@
     />
 
     <subscription-expiration-banner
-      :is-demo="isDemo"
+      :is-demo="isDemo || isClientDemo"
       @open-subscription-dialog="showSubscriptionDialog = true"
       @banner-dismissed="handleBannerDismissed"
     />
@@ -683,11 +649,15 @@
       v-model="showSubscriptionDialog"
       :show-contact-option="false"
       @subscription-updated="onSubscriptionUpdated"
-      @open-register="showCreateCompanyDialog = true"
+      @open-register="handleCreateCompanyClick"
     />
 
-    <!-- Global Support Chat Bubble -->
-    <SupportChatBubble />
+    <subscription-expiration-modal
+      :is-expired="isExpired"
+      :plan-name="store.subscriptionPlan"
+      :is-demo="store.isDemo || isClientDemo"
+      @open-subscription="showSubscriptionDialog = true"
+    />
 
     <!-- Register Dialog -->
     <register-dialog
@@ -723,6 +693,21 @@
       @back="showOtpVerification = false; showCreateCompanyDialog = true"
     />
 
+    <!-- Global Support Chat Bubble -->
+    <SupportChatBubble
+      v-if="$route.name !== 'Support' && $route.name !== 'AdminSupport'"
+      ref="supportChat"
+    />
+
+    <SupportNotificationToast
+      ref="supportToast"
+      :avatar="toastData.avatar"
+      :name="toastData.name"
+      :message="toastData.message"
+      :duration="10000"
+      @click="handleChatButtonClick"
+    />
+
     <bottom-nav v-if="!$route.meta.hideBottomNav" :data-menu="dataMenu" />
 
     <q-inner-loading :showing="visibleLoading">
@@ -736,7 +721,7 @@
       leave-active-class="animated fadeOut"
     >
       <div
-        v-if="store.isDemo && $q.screen.xs"
+        v-if="(store.isDemo || isClientDemo) && $q.screen.xs"
         class="float-create-btn-mobile"
       >
         <div v-if="showDemoMessage" class="demo-info-message">
@@ -746,7 +731,7 @@
           outline
           dense
           class="create-btn-v0"
-          @click="showCreateCompanyDialog = true"
+          @click="handleCreateCompanyClick"
         >
           <q-icon
             name="rocket_launch"
@@ -756,6 +741,7 @@
         </q-btn>
       </div>
     </transition>
+
   </q-layout>
 </template>
 
@@ -765,6 +751,7 @@ import NotificationComponent from 'src/components/NotificationComponent.vue'
 import FloatingThemeSelector from 'src/components/ThemeSelector/FloatingThemeSelector.vue'
 import SubscriptionPlansDialog from 'src/components/SubscriptionPlansDialog.vue'
 import SubscriptionExpirationBanner from 'src/components/SubscriptionExpirationBanner.vue'
+import SubscriptionExpirationModal from 'src/components/SubscriptionExpirationModal.vue'
 import RegisterDialog from 'src/components/Auth/RegisterDialog.vue'
 import OtpVerificationDialog from 'src/components/Auth/OtpVerificationDialog.vue'
 import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
@@ -790,7 +777,10 @@ import {
   CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner'
 import { useDemoPersuasion } from 'src/composables/useDemoPersuasion'
+import { useCompanySetup } from 'src/composables/useCompanySetup'
 import ProPlanPromoBanner from 'src/components/ProPlanPromoBanner.vue'
+import SupportChatBubble from 'src/components/SupportChatBubble.vue'
+import SupportNotificationToast from 'src/components/SupportNotificationToast.vue'
 
 export default {
   name: 'MainLayout',
@@ -799,6 +789,7 @@ export default {
     FloatingThemeSelector,
     SubscriptionPlansDialog,
     SubscriptionExpirationBanner,
+    SubscriptionExpirationModal,
     RegisterDialog,
     OtpVerificationDialog,
     CompanySetupModal,
@@ -807,7 +798,8 @@ export default {
     IntegrationDynamic,
     BottomNav,
     ProPlanPromoBanner,
-    SupportChatBubble: () => import('src/components/SupportChatBubble.vue')
+    SupportChatBubble,
+    SupportNotificationToast
   },
   data () {
     return {
@@ -958,7 +950,30 @@ export default {
        * Subscription renewal button state
        * @type {Boolean}
        */
-      showRenewButton: false
+      showRenewButton: false,
+      /**
+       * Total unread support messages
+       * @type {Number}
+       */
+      totalSupportUnread: 5,
+      /**
+       * Toast notification data
+       */
+      toastData: {
+        avatar: '',
+        name: '',
+        message: ''
+      },
+      /**
+       * Menu expansion states
+       * @type {Object}
+       */
+      expansionStates: {},
+      /**
+       * Previous menu expansion states (before search)
+       * @type {Object}
+       */
+      previousExpansionStates: {}
     }
   },
   computed: {
@@ -966,12 +981,14 @@ export default {
       'userSession',
       'branchOffice',
       'isDemo',
+      'isClientDemo',
       'setBranchOffice',
       'access_token',
       'refresh_token',
       'expires_In',
       'token_type',
-      'mustSelectPlan'
+      'mustSelectPlan',
+      'isExpired'
     ]),
     ...mapState(useTourStore, {
       tourActive: 'isActive'
@@ -1111,6 +1128,29 @@ export default {
             }).length > 0
           )
         })
+
+        // Initialize expansion states
+        this.dataMenu.forEach((item, index) => {
+          if (this.expansionStates[item.id] === undefined) {
+            this.expansionStates[item.id] = index === 0
+          }
+        })
+      }
+    },
+    menuSearch (newVal, oldVal) {
+      if (newVal && !oldVal) {
+        // Search started: save current states
+        this.previousExpansionStates = JSON.parse(JSON.stringify(this.expansionStates))
+        // Expand all
+        Object.keys(this.expansionStates).forEach(key => {
+          this.expansionStates[key] = true
+        })
+      } else if (!newVal && oldVal) {
+        // Search cleared or closed: restore states
+        Object.keys(this.previousExpansionStates).forEach(key => {
+          this.expansionStates[key] = this.previousExpansionStates[key]
+        })
+        this.previousExpansionStates = {}
       }
     },
     $route (to, from) {
@@ -1118,7 +1158,7 @@ export default {
     },
     mustSelectPlan: {
       handler (val) {
-        if (val) {
+        if (val && import.meta.env.VITE_ENABLE_DEMO_PERSUASION !== 'false') {
           this.showSubscriptionDialog = true
         } else {
           this.showSubscriptionDialog = false
@@ -1139,7 +1179,7 @@ export default {
       if (oldVal === true && newVal === false) {
         // Si el usuario cierra el modal de planes y no tiene empresa configurada,
         // lo llevamos al siguiente paso del flujo (Setup de empresa)
-        if (this.userSession && !this.userSession.company_session?.id && !this.store.isDemo) {
+        if (this.userSession && !this.userSession.company_session?.id && !this.store.isDemo && !this.isClientDemo) {
           this.showBusinessTypeSetup = true
         }
       }
@@ -1154,13 +1194,15 @@ export default {
   setup () {
     const router = useRouter()
     const { showDemoModal, trackDemoAction, initDemoPersuasion, stopDemoPersuasion } = useDemoPersuasion()
+    const { autoSetupCompany } = useCompanySetup()
 
     return {
       router,
       showDemoModal,
       trackDemoAction,
       initDemoPersuasion,
-      stopDemoPersuasion
+      stopDemoPersuasion,
+      autoSetupCompany
     }
   },
 
@@ -1171,10 +1213,12 @@ export default {
         this.setNotification(notification)
       })
 
-    this.$echo.private(`support.user.${this.userSession.id}`)
-      .listen('.message.sent', (data) => {
-        this.handleGlobalSupportMessage(data)
-      })
+    if (this.userSession?.id) {
+      this.$echo.private(`support.user.${this.userSession.id}`)
+        .listen('.message.sent', (data) => {
+          this.handleGlobalSupportMessage(data)
+        })
+    }
 
     // Listen for subscription updates
     window.addEventListener('subscription-updated', () => {
@@ -1185,7 +1229,7 @@ export default {
     window.addEventListener('keydown', this.handleGlobalKeyDown)
 
     eventBus.on('open-create-company', () => {
-      this.showCreateCompanyDialog = true
+      this.handleCreateCompanyClick()
     })
 
     eventBus.on('open-subscription-dialog', () => {
@@ -1196,7 +1240,7 @@ export default {
       this.leftDrawerOpen = !this.leftDrawerOpen
     })
 
-    if (this.store.isDemo) {
+    if (this.store.isDemo || this.isClientDemo) {
       this.showDemoMessage = true
       setTimeout(() => {
         this.showDemoMessage = false
@@ -1224,6 +1268,11 @@ export default {
 
     // Init demo persuasion logic (immediate trigger + timer)
     this.initDemoPersuasion()
+
+    // Mock Notification for Demonstration
+    setTimeout(() => {
+      this.testToast()
+    }, 1000)
   },
 
   beforeUnmount () {
@@ -1243,6 +1292,16 @@ export default {
     this.loadSubscriptionInfo()
   },
   methods: {
+    /**
+     * Handle "Mi Empresa" button click
+     */
+    handleCreateCompanyClick () {
+      if (this.isClientDemo) {
+        this.showBusinessTypeSetup = true
+      } else {
+        this.showCreateCompanyDialog = true
+      }
+    },
     /**
      * Verifica si el usuario vuelve de un pago exitoso y necesita configurar su empresa
      */
@@ -1426,6 +1485,14 @@ export default {
      */
     async handleGoogleRegisterSuccess (data) {
       try {
+        // Si no necesita setup de empresa, significa que ya tiene una cuenta activa y configurada
+        if (!data.needsCompanySetup) {
+          this.showCreateCompanyDialog = false
+          notify('Ya existe una cuenta vinculada a este Gmail. Por favor, inicia sesión para continuar.', 'warning', 'info')
+          this.$router.push('/login')
+          return
+        }
+
         this.showCreateCompanyDialog = false
 
         await this.$nextTick()
@@ -1460,23 +1527,26 @@ export default {
         await this.proceedToPaymentFirst()
 
         notify('Correo verificado.', 'positive', 'check_circle')
+
+        // Continuar al flujo de selección de rubro/configuración
+        this.showBusinessTypeSetup = true
       } catch (error) {
         console.error('Error al procesar verificación OTP:', error)
         notify('Error al procesar la verificación', 'negative', 'warning')
       }
     },
     /**
-     * New method to handle payment flow before company setup
+     * Handle payment flow before company setup
+     * @return {Promise<void>}
      */
     async proceedToPaymentFirst () {
       const hasPendingPlan = localStorage.getItem('pending_plan_subscription')
 
       if (hasPendingPlan) {
-        const redirected = await this.processPendingSubscription()
-        if (redirected) return
+        await this.processPendingSubscription()
       }
 
-      this.showSubscriptionDialog = true
+      // this.showSubscriptionDialog = true
     },
 
     /**
@@ -1485,7 +1555,16 @@ export default {
     handleBusinessTypeNext (businessData) {
       this.tempCompanyData = businessData
       this.showBusinessTypeSetup = false
-      this.showCompanySetup = true
+
+      // Usar el composable para la configuración automática
+      this.autoSetupCompany({
+        registrationData: this.registrationFormData || {},
+        businessData,
+        onSuccess: (data) => this.handleCompanySetupSuccess(data),
+        onError: () => {
+          this.showCompanySetup = true
+        }
+      })
     },
 
     /**
@@ -1499,6 +1578,7 @@ export default {
         if (data?.user) {
           Object.assign(this.store.userSession, data.user)
           this.store.isDemo = false
+          this.store.isClientDemo = false
 
           // Actualizar branch office si viene
           if (data.branch_office) {
@@ -1556,7 +1636,7 @@ export default {
       }
     },
     /**
-     * Create company
+     * Create company (from manual dialog flow)
      */
     async createCompany () {
       // Validar formulario
@@ -1614,6 +1694,7 @@ export default {
     },
     /**
      * Process pending subscription from localStorage
+     * @return {Promise<boolean>}
      */
     async processPendingSubscription () {
       const pendingPlan = localStorage.getItem('pending_plan_subscription')
@@ -1884,6 +1965,7 @@ export default {
         }
       })
     },
+
     /**
      * Maneja un mensaje de soporte entrante globalmente
      * @param {Object} data data del evento
@@ -1894,6 +1976,7 @@ export default {
 
       // Actualizar la campanita
       this.getDataNotification()
+      this.getSupportUnreadCount()
 
       this.setNotification({
         data: {
@@ -1903,7 +1986,18 @@ export default {
         },
         id: data.chat_id
       })
+
+      // NEW: Trigger the custom popup toast
+      this.toastData = {
+        avatar: data.message.sender_avatar || data.message.sender?.avatar || '',
+        name: data.message.sender_name || data.message.sender?.name || 'Soporte',
+        message: data.message.content || ''
+      }
+      this.$nextTick(() => {
+        this.$refs.supportToast?.show()
+      })
     },
+
     async getDataNotification () {
       try {
         const { data } = await api.get('notifications', {
@@ -1912,6 +2006,23 @@ export default {
         this.numberOfNotifications = data.data
       } catch (error) {
         console.log(error.message)
+      }
+    },
+
+    /**
+     * Get total unread support chat messages
+     */
+    async getSupportUnreadCount () {
+      this.totalSupportUnread = 5 // MOCK FOR DEMONSTRATION - KEEP IT FIXED
+      if (!this.userSession) return
+      try {
+        const params = {
+          is_root: this.isRootOrSuperAdmin() ? 1 : 0
+        }
+        await api.get('support-chats', { params })
+        // Real logic commented for mock focus
+      } catch (error) {
+        console.error('Error loading support unread count:', error)
       }
     },
 
@@ -2115,12 +2226,20 @@ export default {
      * @returns {Object}
      */
     validateRole (roles = []) {
-      const rol = this.userSession?.roles[0]
       if (this.userSession?.is_root) return true
-      if (roles && roles.length > 0 && rol) {
-        return roles.some((element) => element.id === rol.id)
-      }
-      return false
+      if (!roles || roles.length === 0) return true
+
+      const userRoles = this.userSession?.roles || []
+      return userRoles.some(userRole =>
+        roles.some(allowedRole => allowedRole.id === userRole.id)
+      )
+    },
+    /**
+     * Check if user is root or super admin
+     * @returns {Boolean}
+     */
+    isRootOrSuperAdmin () {
+      return this.userSession?.is_root || this.userSession?.is_super_admin
     },
     /**
      * Validate business type
@@ -2169,7 +2288,7 @@ export default {
       ]
 
       // Check if company is demo or plan is free
-      const isDemo = this.store.isDemo
+      const isDemo = this.store.isDemo || this.isClientDemo
       const isFree = this.currentSubscription?.plan && this.currentSubscription?.plan?.slug === 'free'
 
       // If demo or free plan, hide premium modules
@@ -2211,6 +2330,8 @@ export default {
       this.getAllModules()
       this.getDataNotification()
       this.getBrachOffice()
+      this.loadSubscriptionInfo()
+      this.getSupportUnreadCount()
       this.cuit = this.userSession?.company_session?.document_number
       this.loadingTasks()
     },
@@ -2301,8 +2422,8 @@ export default {
      * Shows create company dialog every 5 minutes for demo accounts
      */
     startDemoReminder () {
-      // Solo iniciar si es cuenta demo
-      if (!this.isDemo || this.userSession?.is_root) {
+      // Solo iniciar si es cuenta demo y está habilitada la persuasión
+      if ((!this.isDemo && !this.isClientDemo) || this.userSession?.is_root || import.meta.env.VITE_ENABLE_DEMO_PERSUASION === 'false') {
         return
       }
 
@@ -2312,8 +2433,8 @@ export default {
       // Configurar intervalo de 5 minutos (300000 ms)
       this.demoReminderInterval = setInterval(() => {
         // Verificar nuevamente si sigue siendo demo (por si cambió)
-        if (this.isDemo) {
-          this.showCreateCompanyDialog = true
+        if (this.isDemo || this.isClientDemo) {
+          this.handleCreateCompanyClick()
         } else {
           // Si ya no es demo, detener el intervalo
           this.stopDemoReminder()
@@ -2331,6 +2452,38 @@ export default {
       }
     },
 
+    /**
+     * Test notification toast with mock data
+     */
+    testToast () {
+      this.toastData = {
+        avatar: 'https://cdn.quasar.dev/img/avatar2.jpg',
+        name: 'Palma (Soporte)',
+        message: '¡Hola! ¿En qué puedo ayudarte hoy con tu pedido?'
+      }
+      this.$nextTick(() => {
+        this.$refs.supportToast?.show()
+      })
+    },
+    /**
+     * Handle chat button click based on screen size
+     */
+    handleChatButtonClick () {
+      if (this.$q.screen.xs) {
+        this.$router.push('/support')
+      } else {
+        this.$refs.supportChat?.toggleMiniChat()
+      }
+    },
+    /**
+     * Handle support click from the Facebook card in the drawer
+     */
+    handleSupportClick () {
+      console.log('Support card clicked', this.$refs.supportChat)
+      if (this.$refs.supportChat) {
+        this.$refs.supportChat.toggleMiniChat()
+      }
+    },
     /**
      * Logout map actions
      */
@@ -2503,6 +2656,20 @@ export default {
 }
 
 .tour-btn-navbar:active {
+  transform: scale(0.95);
+}
+
+/* Chat Toggle Button in Navbar */
+.support-chat-toggle-btn {
+  transition: all 0.3s ease;
+}
+
+.support-chat-toggle-btn:hover {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.support-chat-toggle-btn:active {
   transform: scale(0.95);
 }
 
@@ -3833,6 +4000,16 @@ body.body--dark .renew-subscription-btn {
 @supports (padding: max(0px)) {
   .with-bottom-nav {
     padding-bottom: max(64px, env(safe-area-inset-bottom)) !important;
+  }
+}
+
+.support-card-floating-wrapper {
+  z-index: 9998;
+  width: 350px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+  &:hover {
+    transform: translateY(-5px);
   }
 }
 

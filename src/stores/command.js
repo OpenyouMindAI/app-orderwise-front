@@ -23,6 +23,10 @@ export const useCommandStore = defineStore('commands', {
         ...this.invoice,
         ...invoice
       }
+    },
+    resetCommand () {
+      this.command = {}
+      this.invoice = {}
     }
   },
   persist: {

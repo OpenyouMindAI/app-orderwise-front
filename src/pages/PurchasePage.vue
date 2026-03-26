@@ -1,10 +1,28 @@
 <template>
   <q-page padding>
     <div class="q-gutter-sm">
-      <div class="row justify-between items-center">
+      <div class="row justify-between items-center q-gutter-x-sm">
         <span class="text-h6">
           Lista de compras
         </span>
+        <div class="text-right q-gutter-x-sm">
+          <q-btn
+            icon="download"
+            color="teal"
+            round
+            @click="downloadPurchaseExcel"
+          >
+            <q-tooltip>Exportar Excel</q-tooltip>
+          </q-btn>
+          <q-btn
+            round
+            icon="filter_alt"
+            color="primary"
+            @click="dialogFilter = true"
+          >
+            <q-tooltip>Filtros Avanzados</q-tooltip>
+          </q-btn>
+        </div>
       </div>
       <q-table
         title="Lista de compras"
@@ -58,11 +76,21 @@
               <span class="q-focus-helper"></span>
 
               <q-card-section class="compact-card-section">
-                <!-- Fila 1: Código y Fecha -->
+                <!-- Fila 1: Código, Estado y Fecha -->
                 <div class="row justify-between items-start q-mb-sm">
                   <div class="col">
-                    <div class="text-body2 text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px;">{{ props.row.invoice_type?.name || 'Sin tipo' }}</div>
-                    <div class="text-h6 text-indigo-10 text-weight-bold" style="letter-spacing: -0.5px">
+                    <div class="row items-center q-gutter-x-xs q-mb-xs">
+                      <div class="text-body2 text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px;">{{ props.row.invoice_type?.name || 'Sin tipo' }}</div>
+                      <q-badge
+                        v-if="props.row.status === 'cancelled'"
+                        color="negative"
+                        label="Anulada"
+                        rounded
+                        class="text-weight-bold"
+                        style="font-size: 0.6rem"
+                      />
+                    </div>
+                    <div class="text-h6 text-weight-bold" :class="props.row.status === 'cancelled' ? 'text-grey-5' : 'text-indigo-10'" style="letter-spacing: -0.5px">
                       {{ props.row.purchase_code || '—' }}
                     </div>
                   </div>
@@ -74,16 +102,22 @@
 
                 <q-separator color="grey-3" class="q-my-sm" />
 
-                <!-- Fila 3: Proveedor y Total -->
-                <div class="row justify-between ">
+                <!-- Fila 2: Proveedor y Total -->
+                <div class="row justify-between">
                   <div class="col">
                     <div class="text-body2 text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px; margin-bottom: 0.7rem">Proveedor</div>
                     <div class="text-body2 text-grey-9 text-weight-bold ellipsis">{{ props.row.provider?.name || '—' }}</div>
                   </div>
                   <div class="col-auto text-right">
                     <div class="text-body2 text-grey-5 text-uppercase text-weight-bold" style="font-size: 0.7rem; letter-spacing: 0.5px; margin-bottom: 4px">Total</div>
-                    <div class="text-h6 text-primary text-weight-bolder" style="letter-spacing: -0.5px">{{ formatNumber(props.row.total) }}</div>
+                    <div class="text-h6 text-weight-bolder" :class="props.row.status === 'cancelled' ? 'text-grey-5' : 'text-primary'" style="letter-spacing: -0.5px">{{ formatNumber(props.row.total) }}</div>
                   </div>
+                </div>
+
+                <!-- Fila 3: Imágenes adjuntas indicator -->
+                <div v-if="props.row.files && props.row.files.length > 0" class="row items-center q-mt-sm">
+                  <q-icon name="attach_file" size="14px" color="grey-6" class="q-mr-xs" />
+                  <span class="text-caption text-grey-6">{{ props.row.files.length }} archivo(s)</span>
                 </div>
               </q-card-section>
             </q-card>
@@ -279,41 +313,49 @@
             </div>
             <div class="col-xl-5 col-lg-5 col-md-5 col-sm-5 col-xs-12 q-gutter-y-sm">
             <div class="col-12" v-if="purchase.images && purchase.images.length > 0">
-                <q-card class="q-mb-sm">
-                  <q-card-section class="q-pa-xs">
-                    <div class="text-subtitle2 text-weight-bold q-mb-xs">Archivos Adjuntos</div>
-                    <div class="row q-col-gutter-sm scroll q-pa-sm" style="max-height: 200px;">
+                <q-card class="q-mb-sm" flat bordered style="border-radius: 12px; overflow: hidden;">
+                  <q-card-section class="q-pa-sm">
+                    <div class="row items-center justify-between q-mb-sm">
+                      <div class="text-subtitle2 text-weight-bold flex items-center">
+                        <q-icon name="photo_library" class="q-mr-xs" color="primary" />
+                        Archivos Adjuntos
+                      </div>
+                      <q-badge color="primary" rounded>{{ purchase.images.length }}</q-badge>
+                    </div>
+
+                    <!-- Image Thumbnails Grid -->
+                    <div class="row q-col-gutter-xs">
                       <div
                         v-for="(file, index) in purchase.images"
                         :key="index"
-                        class="col-6 col-sm-4 col-md-4"
+                        class="col-4 col-sm-3"
                       >
                         <!-- PDF View -->
                         <q-card
                           v-if="file.url && file.url.toLowerCase().endsWith('.pdf')"
                           flat
                           bordered
-                          class="cursor-pointer text-center q-pa-sm fit flex flex-center column"
-                          style="aspect-ratio: 1;"
+                          class="cursor-pointer text-center q-pa-xs fit flex flex-center column"
+                          style="aspect-ratio: 1; border-radius: 10px;"
                           @click="openFile(file.url)"
                         >
-                          <q-icon name="picture_as_pdf" size="3rem" color="red" />
-                          <div class="text-caption ellipsis full-width q-mt-xs">{{ file.path ? file.path.split('/').pop() : 'Documento PDF' }}</div>
-                          <q-tooltip>Ver PDF</q-tooltip>
+                          <q-icon name="picture_as_pdf" size="2.5rem" color="red" />
+                          <div class="text-caption ellipsis full-width q-mt-xs" style="font-size: 9px">PDF</div>
                         </q-card>
-                        <!-- Image View -->
+                        <!-- Image View — opens carousel -->
                         <q-card
                           v-else
                           flat
                           class="image-preview-card cursor-pointer"
-                          @click="openFile(file.url)"
+                          style="border-radius: 10px; overflow: hidden;"
+                          @click="openCarousel(index)"
                         >
                           <q-img
                             :src="file.url"
                             :ratio="1"
                             class="rounded-borders"
+                            spinner-color="primary"
                           />
-                          <q-tooltip>Ver Imagen</q-tooltip>
                         </q-card>
                       </div>
                     </div>
@@ -359,24 +401,183 @@
               <div class="q-gutter-y-xs">
                 <q-btn
                   class="full-width"
+                  icon="edit"
+                  color="primary"
+                  label="Editar"
+                  outline
+                  :disable="purchase.status === 'cancelled'"
+                  @click="goToEditPurchase"
+                  style="border-radius: 10px"
+                />
+                <q-btn
+                  class="full-width"
                   icon="block"
                   color="negative"
                   label="Anular"
                   :loading="cancelLoading"
-                  @click="cancelPurchase"
+                  :disable="purchase.status === 'cancelled'"
+                  @click="confirmAnnulDialog = true"
+                  style="border-radius: 10px"
                 />
                 <q-btn
                   class="full-width"
                   icon="check_circle"
-                  color="primary"
+                  color="positive"
                   label="Pagar"
-                  v-if="purchase.balance > 0"
+                  v-if="purchase.balance > 0 && purchase.status !== 'cancelled'"
                   @click="addPaymentDialog = true"
+                  style="border-radius: 10px"
                 />
               </div>
             </div>
           </div>
         </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- Annul Confirmation Dialog -->
+    <q-dialog v-model="confirmAnnulDialog">
+      <q-card style="width: 400px; max-width: 85vw; border-radius: 16px;">
+        <q-card-section class="row items-center q-py-md">
+          <q-avatar icon="warning" color="negative" text-color="white" size="42px" />
+          <div class="q-ml-md col">
+            <div class="text-h6 text-weight-bold">¿Anular esta compra?</div>
+            <div class="text-body2 text-grey-7 q-mt-xs">Esta acción cambiará el estado a "Anulada" y no se puede deshacer.</div>
+          </div>
+        </q-card-section>
+        <q-card-actions align="right" class="q-px-md q-pb-md">
+          <q-btn flat label="Cancelar" color="grey" v-close-popup style="border-radius: 10px" />
+          <q-btn
+            unelevated
+            label="Sí, anular"
+            color="negative"
+            :loading="cancelLoading"
+            @click="cancelPurchase"
+            style="border-radius: 10px"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Image Carousel Dialog -->
+    <new-image-carousel-dialog
+      v-model="showCarousel"
+      :images="carouselImages"
+      title="Archivos de compra"
+    />
+    <q-dialog
+      v-model="dialogFilter"
+      :position="$q.screen.lt.sm ? 'standard' : 'right'"
+      :seamless="!$q.screen.lt.sm"
+      :maximized="$q.screen.lt.sm"
+    >
+      <q-card
+        :class="$q.screen.lt.sm ? 'full-height column' : ''"
+        :style="$q.screen.lt.sm ? 'width: 100%;' : 'width: 500px; max-width: 80vw;'"
+      >
+        <q-card-section class="bg-primary text-white row items-center justify-between">
+          <div class="text-h6">Filtros Avanzados</div>
+          <q-btn icon="close" flat round dense @click="dialogFilter = false" />
+        </q-card-section>
+
+        <q-card-section
+          :class="$q.screen.lt.sm ? 'col scroll q-pt-sm' : 'q-pt-sm scroll'"
+          :style="$q.screen.lt.sm ? '' : 'max-height: calc(100vh - 200px);'"
+        >
+          <div class="column q-gutter-y-md">
+            <div class="text-subtitle2 text-grey-7">Rango de Fecha</div>
+            <q-option-group
+              v-model="datePanel"
+              inline
+              dense
+              :options="[
+                { label: 'Día', value: 'day' },
+                { label: 'Entre fechas', value: 'between' }
+              ]"
+            />
+            <q-tab-panels v-model="datePanel" animated class="q-pa-none bg-transparent">
+              <q-tab-panel name="between" class="q-gutter-y-sm q-pa-none">
+                <q-input filled dense v-model="advanceFilters.from" hint="Desde" type="date"/>
+                <q-input filled dense v-model="advanceFilters.to" hint="Hasta" type="date"/>
+              </q-tab-panel>
+              <q-tab-panel name="day" class="q-gutter-y-sm q-pa-none">
+                <q-input filled dense v-model="advanceFilters.day" hint="Fecha del día" type="date"/>
+              </q-tab-panel>
+            </q-tab-panels>
+
+            <q-separator />
+
+            <div class="text-subtitle2 text-grey-7">Información del Documento</div>
+            <q-input
+              filled
+              dense
+              v-model="advanceFilters.purchase_code"
+              label="Código de factura"
+              clearable
+            />
+            <q-input
+              filled
+              dense
+              v-model="advanceFilters.purchase_number"
+              label="Número de comprobante"
+              clearable
+            />
+
+            <q-separator />
+
+            <div class="text-subtitle2 text-grey-7">Entidades</div>
+            <q-select
+              filled
+              dense
+              use-input
+              label="Proveedor"
+              v-model="advanceFilters.provider"
+              :options="providersOptions"
+              @filter="filterProviders"
+              option-label="name"
+              option-value="id"
+              clearable
+              input-debounce="500"
+            >
+              <template v-slot:no-option>
+                <q-item>
+                  <q-item-section class="text-grey">No se encontraron resultados</q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+
+            <q-select
+              filled
+              dense
+              v-model="advanceFilters.coin"
+              label="Moneda"
+              :options="coins"
+              option-label="name"
+              option-value="id"
+              clearable
+              @filter="filterCoins"
+            />
+          </div>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn
+            flat
+            label="Limpiar"
+            color="negative"
+            icon="filter_alt_off"
+            @click="clearFilters"
+          />
+          <q-btn
+            unelevated
+            label="Aplicar Filtros"
+            color="primary"
+            icon="filter_alt"
+            @click="applyFilters"
+          />
+        </q-card-actions>
       </q-card>
     </q-dialog>
     <q-inner-loading :showing="visibleLoading">
@@ -400,16 +601,68 @@ import { mapState } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { formatNumber, formatDate, notify } from 'src/const/mixins'
 import { getDownload } from 'src/const/services'
+import NewImageCarouselDialog from 'src/components/NewImageCarouselDialog.vue'
 export default {
+  components: {
+    NewImageCarouselDialog
+  },
   data () {
     return {
+      /**
+       * Controls the image carousel dialog visibility
+       * @type {boolean}
+       */
+      showCarousel: false,
+      /**
+       * Images to display in the carousel
+       * @type {Array}
+       */
+      carouselImages: [],
+      /**
+       * Controls the annul confirmation dialog
+       * @type {boolean}
+       */
+      confirmAnnulDialog: false,
+      /**
+       * Controls the add payment dialog
+       * @type {boolean}
+       */
+      addPaymentDialog: false,
       formatDate,
       loadingDownload: 0,
       /**
-       * Value knob
-       * @type {Number}
+       * Dialog filter status
+       * @type {Boolean}
        */
       dialogFilter: false,
+      /**
+       * Date panel selection
+       * @type {String}
+       */
+      datePanel: 'day',
+      /**
+       * Advanced filters object
+       * @type {Object}
+       */
+      advanceFilters: {
+        from: null,
+        to: null,
+        day: null,
+        purchase_code: '',
+        purchase_number: '',
+        provider: null,
+        coin: null
+      },
+      /**
+       * Providers list for filter
+       * @type {Array}
+       */
+      providersOptions: [],
+      /**
+       * Coins list for filter
+       * @type {Array}
+       */
+      coins: [],
       /**
        * Loading provider status
        * @type {Boolean}
@@ -708,16 +961,115 @@ export default {
       this.getPurchases(this.params)
     },
     /**
+     * Clear all advanced filters
+     */
+    clearFilters () {
+      this.advanceFilters = {
+        from: null,
+        to: null,
+        day: null,
+        purchase_code: '',
+        purchase_number: '',
+        provider: null,
+        coin: null
+      }
+      this.datePanel = 'day'
+      this.applyFilters()
+    },
+    /**
+     * Apply advanced filters and refresh list
+     */
+    applyFilters () {
+      this.dialogFilter = false
+      this.params.page = 1
+      this.getPurchases(this.params)
+    },
+    /**
+     * Filter providers for select
+     */
+    filterProviders (val, update) {
+      this.$api.get('providers', {
+        params: {
+          paginate: true,
+          perPage: 20,
+          dataSearch: {
+            name: val,
+            document_number: val
+          }
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            // Se usa data.data porque el endpoint es paginado
+            this.providersOptions = Array.isArray(data) ? data : (data.data || [])
+          })
+        })
+        .catch(err => {
+          console.error('Error fetching providers:', err)
+        })
+    },
+    /**
+     * Filter coins for select
+     */
+    filterCoins (val, update) {
+      this.$api.get('coins', {
+        params: {
+          paginate: true,
+          perPage: 20,
+          dataSearch: {
+            name: val
+          }
+        }
+      })
+        .then(({ data }) => {
+          update(() => {
+            // Se usa data.data porque el endpoint es paginado
+            this.coins = Array.isArray(data) ? data : (data.data || [])
+          })
+        })
+    },
+    /**
      * Get all purchases
      */
     getPurchases (params = this.params) {
       this.visible = true
+
+      // Construct advanced filters
+      const dataEqualFilter = {
+        branch_office_id: this.branchOffice?.id
+      }
+
+      const dataSearch = { ...params.dataSearch }
+
+      // Add advanced filters if they exist
+      if (this.advanceFilters.purchase_code) {
+        dataSearch.purchase_code = this.advanceFilters.purchase_code
+      }
+      if (this.advanceFilters.purchase_number) {
+        dataSearch.purchase_number = this.advanceFilters.purchase_number
+      }
+      if (this.advanceFilters.provider) {
+        dataEqualFilter.provider_id = this.advanceFilters.provider.id
+      }
+      if (this.advanceFilters.coin) {
+        dataEqualFilter.coin_id = this.advanceFilters.coin.id
+      }
+
+      // Date Filters
+      const dateFilter = {}
+      if (this.datePanel === 'day' && this.advanceFilters.day) {
+        dateFilter.day = this.advanceFilters.day
+      } else if (this.datePanel === 'between' && this.advanceFilters.from && this.advanceFilters.to) {
+        dateFilter.from = this.advanceFilters.from
+        dateFilter.to = this.advanceFilters.to
+      }
+
       this.$api.get('purchases', {
         params: {
           ...params,
-          dataEqualFilter: {
-            branch_office_id: this.branchOffice?.id
-          }
+          dataSearch,
+          dataEqualFilter,
+          ...dateFilter
         }
       })
         .then(({ data }) => {
@@ -859,9 +1211,26 @@ export default {
       }
     },
     /**
-     * Change status
-     * @param {Object} data purchase
-     * @param {Number} index index status
+     * Opens the image carousel at a specific slide index
+     * @params {number} startIndex the index of the image the carousel opens at
+     */
+    openCarousel (startIndex = 0) {
+      if (!this.purchase?.images) return
+      // Filter only images (exclude PDFs)
+      this.carouselImages = this.purchase.images.filter(
+        f => f.url && !f.url.toLowerCase().endsWith('.pdf')
+      )
+      this.showCarousel = true
+    },
+    /**
+     * Navigates the user to the edit purchase page with the purchase loaded
+     */
+    goToEditPurchase () {
+      this.$router.push({ path: '/compras/nueva', query: { id: this.purchase.id } })
+      this.openEditPurchase = false
+    },
+    /**
+     * Cancels/annuls the current purchase by changing its status
      */
     async cancelPurchase () {
       try {
@@ -870,6 +1239,7 @@ export default {
         this.getPurchases()
         notify('Factura anulada exitosamente', 'positive', 'check_circle')
         this.openEditPurchase = false
+        this.confirmAnnulDialog = false
       } catch (error) {
         notify(error.message, 'negative', 'warning')
       } finally {

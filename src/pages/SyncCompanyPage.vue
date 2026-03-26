@@ -48,45 +48,122 @@
       <!-- Sync Complete State -->
       <div v-else-if="showSyncComplete" class="complete-state">
         <div class="success-animation">
-          <div class="checkmark-circle">
-            <q-icon name="check" size="48px" color="white" />
+          <div class="checkmark-circle" :class="{ 'warning-circle': syncStatus.errors_count > 0 }">
+            <q-icon :name="syncStatus.errors_count > 0 ? 'warning' : 'check'" size="48px" color="white" />
           </div>
         </div>
-        <h2 class="complete-title">¡Sincronización Completada!</h2>
-        <p class="complete-subtitle">Los datos de tu empresa han sido migrados exitosamente</p>
+        <h2 class="complete-title">
+          {{ syncStatus.errors_count > 0 ? 'Sincronización con Errores' : '¡Sincronización Completada!' }}
+        </h2>
+        <p class="complete-subtitle">
+          {{ syncStatus.errors_count > 0 ? 'La migración terminó pero algunas tablas fallaron.' : 'Los datos de tu empresa han sido migrados exitosamente.' }}
+        </p>
 
         <!-- Errors Summary Hidden as requested -->
-        <!-- <div v-if="syncStatus.errors_count > 0" class="errors-summary">
-          <div class="errors-header">
-            <q-icon name="warning" color="warning" size="20px" />
-            <span>{{ syncStatus.errors_count }} advertencia(s) durante la sincronización</span>
-          </div>
-          <q-expansion-item
-            label="Ver detalles"
-            dense
-            class="errors-expansion"
-          >
-            <div class="errors-list">
-              <div v-for="(err, index) in syncStatus.errors.slice(0, 5)" :key="index" class="error-item">
-                <strong>{{ err.table }}:</strong> {{ err.message }}
-              </div>
-              <div v-if="syncStatus.errors.length > 5" class="more-errors">
-                Y {{ syncStatus.errors.length - 5 }} errores más...
-              </div>
-            </div>
-          </q-expansion-item>
-        </div> -->
+        <!-- <div v-if="syncStatus.errors_count > 0" class="errors-summary">...</div> -->
 
         <q-btn
-          label="Ir al Login"
-          color="primary"
+          v-if="syncStatus.errors_count > 0"
+          label="Reintentar Tablas Fallidas"
+          class="resume-btn"
           unelevated
           no-caps
           size="lg"
-          class="login-btn"
+          :loading="startingSyncLoading"
+          @click="resumeSync"
+        >
+          <q-icon name="autorenew" class="q-ml-sm" />
+        </q-btn>
+
+        <q-btn
+          label="Ir al Login"
+          :class="syncStatus.errors_count > 0 ? 'outline-btn' : 'login-btn'"
+          unelevated
+          no-caps
+          size="lg"
           @click="goToLogin"
         >
           <q-icon name="login" class="q-ml-sm" />
+        </q-btn>
+      </div>
+
+      <!-- Incomplete Sync Detected (WhatsApp/Google Drive-style resume) -->
+      <div v-else-if="showIncompleteSync" class="incomplete-state">
+        <div class="incomplete-icon-wrap">
+          <div class="incomplete-icon">
+            <q-icon name="cloud_sync" size="44px" color="white" />
+          </div>
+          <div class="incomplete-pulse"></div>
+        </div>
+
+        <h2 class="incomplete-title">Sincronización incompleta</h2>
+        <p class="incomplete-subtitle">
+          Se encontró una sincronización anterior que no se completó.<br>
+          Puedes continuar exactamente donde se quedó.
+        </p>
+
+        <!-- Previous progress summary -->
+        <div class="incomplete-summary">
+          <div class="summary-progress">
+            <div class="summary-progress-bar">
+              <div class="summary-progress-fill" :style="{ width: syncStatus.progress + '%' }"></div>
+            </div>
+            <span class="summary-progress-text">{{ syncStatus.progress }}% completado previamente</span>
+          </div>
+          <div class="summary-stats">
+            <div class="summary-stat">
+              <q-icon name="check_circle" size="16px" color="positive" />
+              <span>{{ completedTablesCount }} tablas completadas</span>
+            </div>
+            <div v-if="failedTablesCount > 0" class="summary-stat">
+              <q-icon name="error" size="16px" color="negative" />
+              <span>{{ failedTablesCount }} tablas fallidas</span>
+            </div>
+            <div v-if="pendingTablesCount > 0" class="summary-stat">
+              <q-icon name="schedule" size="16px" color="grey" />
+              <span>{{ pendingTablesCount }} tablas pendientes</span>
+            </div>
+          </div>
+
+          <!-- Mini table status -->
+          <div v-if="Object.keys(syncStatus.table_status || {}).length > 0" class="incomplete-table-grid">
+            <div
+              v-for="(status, table) in syncStatus.table_status"
+              :key="table"
+              class="table-status-item"
+              :class="status.status"
+            >
+              <q-icon
+                :name="getTableStatusIcon(status.status)"
+                size="14px"
+                :color="getTableStatusColor(status.status)"
+              />
+              <span>{{ formatTableName(table) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <q-btn
+          label="Continuar donde quedó"
+          class="continue-btn"
+          unelevated
+          no-caps
+          size="lg"
+          :loading="startingSyncLoading"
+          @click="resumeSync"
+        >
+          <q-icon name="play_arrow" class="q-mr-sm" />
+        </q-btn>
+
+        <q-btn
+          label="Empezar desde cero"
+          class="outline-btn"
+          unelevated
+          no-caps
+          size="md"
+          @click="startSync"
+        >
+          <q-icon name="refresh" class="q-mr-sm" />
         </q-btn>
       </div>
 
@@ -178,11 +255,10 @@
         <q-btn
           v-if="!isSyncing"
           :label="company.already_synced ? 'Re-sincronizar' : 'Iniciar Sincronización'"
-          color="primary"
+          class="sync-btn"
           unelevated
           no-caps
           size="lg"
-          class="sync-btn"
           :loading="startingSyncLoading"
           @click="startSync"
         >
@@ -283,6 +359,42 @@ const showSyncComplete = computed(() => {
 })
 
 /**
+ * Check if there is an incomplete/failed sync that can be resumed (WhatsApp-style)
+ * Shows when the user returns and a previous sync didn't finish completely
+ * @type {import('vue').ComputedRef<boolean>}
+ */
+const showIncompleteSync = computed(() => {
+  return syncStatus.value.status === 'failed' && company.value !== null
+})
+
+/**
+ * Count of completed tables from the previous sync attempt
+ * @type {import('vue').ComputedRef<number>}
+ */
+const completedTablesCount = computed(() => {
+  const ts = syncStatus.value.table_status || {}
+  return Object.values(ts).filter(s => s.status === 'completed').length
+})
+
+/**
+ * Count of failed tables from the previous sync attempt
+ * @type {import('vue').ComputedRef<number>}
+ */
+const failedTablesCount = computed(() => {
+  const ts = syncStatus.value.table_status || {}
+  return Object.values(ts).filter(s => s.status === 'failed').length
+})
+
+/**
+ * Count of tables that never ran (not in table_status at all)
+ * @type {import('vue').ComputedRef<number>}
+ */
+const pendingTablesCount = computed(() => {
+  const total = syncStatus.value.total_tables || 0
+  return Math.max(0, total - completedTablesCount.value - failedTablesCount.value)
+})
+
+/**
  * Show persistent banner when sync is in progress
  * @type {import('vue').ComputedRef<boolean>}
  */
@@ -380,7 +492,7 @@ const stopListenRealTime = () => {
 }
 
 /**
- * Start data synchronization
+ * Start data synchronization from scratch
  * @returns {Promise<void>}
  */
 const startSync = async () => {
@@ -396,7 +508,6 @@ const startSync = async () => {
         message: 'Sincronización iniciada',
         icon: 'sync'
       })
-      // setupRealTimeListener is already called within fetchSyncStatus or initially
       setupRealTimeListener()
     } else {
       Notify.create({
@@ -410,6 +521,43 @@ const startSync = async () => {
     Notify.create({
       type: 'negative',
       message: err.response?.data?.message || 'Error al iniciar sincronización',
+      icon: 'error'
+    })
+  } finally {
+    startingSyncLoading.value = false
+  }
+}
+
+/**
+ * Resume data synchronization exactly where it left off
+ * @returns {Promise<void>}
+ */
+const resumeSync = async () => {
+  startingSyncLoading.value = true
+
+  try {
+    const response = await api.post(`/sync-company/${companyId.value}/resume`)
+
+    if (response.data.success) {
+      syncStatus.value = response.data.data
+      Notify.create({
+        type: 'warning',
+        message: 'Reanudando sincronización...',
+        icon: 'play_arrow'
+      })
+      setupRealTimeListener()
+    } else {
+      Notify.create({
+        type: 'negative',
+        message: response.data.message || 'Error al reanudar sincronización',
+        icon: 'error'
+      })
+    }
+  } catch (err) {
+    console.error('Error resuming sync:', err)
+    Notify.create({
+      type: 'negative',
+      message: err.response?.data?.message || 'Error al reanudar sincronización',
       icon: 'error'
     })
   } finally {
@@ -708,6 +856,155 @@ onUnmounted(() => {
   padding: 10px 24px;
 }
 
+/* Incomplete Sync State (WhatsApp-style resume) */
+.incomplete-state {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.incomplete-icon-wrap {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+}
+
+.incomplete-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+  animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.incomplete-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.3);
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  animation: incompletePulse 2s ease-in-out infinite;
+}
+
+@keyframes incompletePulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.4);
+    opacity: 0;
+  }
+}
+
+.incomplete-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 8px 0;
+}
+
+.incomplete-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0 0 20px 0;
+  line-height: 1.5;
+}
+
+.incomplete-summary {
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.summary-progress {
+  margin-bottom: 12px;
+}
+
+.summary-progress-bar {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.summary-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #6366f1);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.summary-progress-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.summary-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.summary-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.incomplete-table-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.continue-btn {
+  width: 100%;
+  height: 56px;
+  border-radius: 14px;
+  font-size: 17px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%) !important;
+  color: white !important;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+  transition: all 0.3s ease;
+  margin-bottom: 12px;
+  animation: continueGlow 2s ease-in-out infinite;
+}
+
+.continue-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 32px rgba(59, 130, 246, 0.5);
+}
+
+@keyframes continueGlow {
+  0%, 100% {
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 8px 32px rgba(59, 130, 246, 0.6);
+  }
+}
+
 /* Complete State */
 .complete-state {
   text-align: center;
@@ -729,6 +1026,11 @@ onUnmounted(() => {
   margin: 0 auto;
   animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
+}
+
+.warning-circle {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4);
 }
 
 .complete-title {
@@ -798,6 +1100,41 @@ onUnmounted(() => {
 .login-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 28px rgba(102, 126, 234, 0.45);
+}
+
+.resume-btn {
+  width: 100%;
+  height: 52px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+  color: white !important;
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.35);
+  transition: all 0.3s ease;
+  margin-bottom: 12px;
+}
+
+.resume-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(245, 158, 11, 0.45);
+}
+
+.outline-btn {
+  width: 100%;
+  height: 52px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  background: transparent !important;
+  color: #4b5563 !important;
+  border: 2px solid #9ca3af !important;
+  box-shadow: none;
+  transition: all 0.3s ease;
+}
+
+.outline-btn:hover {
+  background: rgba(156, 163, 175, 0.1) !important;
 }
 
 @keyframes scaleIn {
@@ -1016,6 +1353,12 @@ onUnmounted(() => {
   50% {
     opacity: 0.6;
   }
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 /* Sync Button */

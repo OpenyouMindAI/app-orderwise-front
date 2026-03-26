@@ -43,7 +43,7 @@
                 </q-item-section>
               </q-item>
               <q-separator dark />
-              <q-item clickable v-close-popup @click="logout">
+              <q-item clickable v-close-popup @click="handleLogout">
                 <q-item-section avatar>
                   <q-icon name="logout" color="negative" />
                 </q-item-section>
@@ -156,6 +156,7 @@
 import { mapState, mapActions } from 'pinia'
 import { authentication } from 'src/stores/module-authentication'
 import { useCommandStore } from 'src/stores/command'
+import { useOrderStore } from 'src/stores/order'
 
 export default {
   name: 'CatalogLayout',
@@ -208,6 +209,17 @@ export default {
   },
   methods: {
     ...mapActions(authentication, ['logout']),
+    async handleLogout () {
+      try {
+        await this.logout()
+        const commandStore = useCommandStore()
+        commandStore.resetCommand()
+        const orderStore = useOrderStore()
+        orderStore.resetOrderStore()
+      } catch (error) {
+        console.error('Logout error:', error)
+      }
+    },
     openSearchDialog () {
       this.searchQuery = this.searchQueryFromUrl
       this.searchDialog = true

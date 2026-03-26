@@ -3292,15 +3292,17 @@ export default {
      * Select a product by index for keyboard navigation
      * @param {Number} index - Product index
      */
-    selectProduct (index) {
+    selectProduct (index, shouldFocus = true) {
       this.selectedProductIndex = index
       this.keyboardNavigationActive = true
       // Focus the table to ensure keyboard events are captured
-      this.$nextTick(() => {
-        if (this.$refs.productsTable && this.$refs.productsTable.$el) {
-          this.$refs.productsTable.$el.focus()
-        }
-      })
+      if (shouldFocus) {
+        this.$nextTick(() => {
+          if (this.$refs.productsTable && this.$refs.productsTable.$el) {
+            this.$refs.productsTable.$el.focus()
+          }
+        })
+      }
     },
     /**
      * Move to next product (TAB key)
@@ -3393,11 +3395,11 @@ export default {
      * Auto-select the last added product in the cart
      * Reusable function for keyboard navigation enhancement
      */
-    selectLastAddedProduct () {
+    selectLastAddedProduct (shouldFocus = true) {
       this.$nextTick(() => {
         const newProductIndex = this.products.length - 1
         if (newProductIndex >= 0) {
-          this.selectProduct(newProductIndex)
+          this.selectProduct(newProductIndex, shouldFocus)
         }
       })
     },
@@ -3587,7 +3589,9 @@ export default {
      */
     async processBarcode (barcode) {
       try {
-        if (!barcode || typeof barcode !== 'string' || barcode.length < 13) {
+        if (!barcode) return
+
+        if (typeof barcode !== 'string' || barcode.length < 13) {
           this.getOneProduct(barcode)
           return
         }
@@ -3647,15 +3651,24 @@ export default {
           this.validateProduct(product, false)
 
           this.barcode = null
+          this.$nextTick(() => {
+            this.$refs.barcode?.focus()
+          })
           return
         }
 
         // No es balanza
-        this.getOneProduct(barcode)
+        await this.getOneProduct(barcode)
+        this.$nextTick(() => {
+          this.$refs.barcode?.focus()
+        })
       } catch (error) {
         console.error('Error procesando código de balanza:', error)
         notify('Error procesando producto', 'negative', 'warning')
-        this.getOneProduct(barcode)
+        await this.getOneProduct(barcode)
+        this.$nextTick(() => {
+          this.$refs.barcode?.focus()
+        })
       }
     },
     /**
@@ -4080,7 +4093,6 @@ export default {
         paginate: true,
         dataSearch: {
           name: this.filter,
-          code: this.filter,
           barcode: this.filter
         }
       }
@@ -4324,7 +4336,7 @@ export default {
         branch_office_id: this.branchOffice?.id,
         address: this.formattedAddress,
         products: this.products,
-        status: this.invoice?.status || this.isNotLocal ? 'pending' : 'delivered',
+        status: this.invoice?.status || (this.isNotLocal ? 'pending' : 'delivered'),
         payments: this.payments.filter(payment => payment.amount > 0).map(payment => ({
           ...payment,
           payment_type: paymentType
@@ -4332,7 +4344,9 @@ export default {
         total_amount: this.totalBill,
         tables: this.tableSelected.map(table => table?.id || table),
         electronic_invoice: this.invoiceType?.bill,
-        voucherType: this.invoiceType?.bill ? this.voucherType : null
+        voucherType: this.invoiceType?.bill ? this.voucherType : null,
+        // Lógica de herencia: Si la sucursal tiene point_of_sale, incluirlo para que el backend lo use
+        point_of_sale: this.branchOffice?.point_of_sale || null
       }
       return invoiceModel
     },
@@ -4551,8 +4565,8 @@ export default {
         cartProduct
       ]
 
-      // Seleccionar automáticamente el producto recién agregado
-      this.selectLastAddedProduct()
+      // Seleccionar automáticamente el producto recién agregado (sin quitar el foco del buscador)
+      this.selectLastAddedProduct(false)
     },
     /**
      * Valida y agrega productos al carrito con cálculos precisos
@@ -4569,7 +4583,7 @@ export default {
         return
       }
 
-      const isWeightProduct = data?.unit_of_measure?.acronym === 'KG'
+      const isWeightProduct = data?.unit_of_measure?.acronym !== 'U'
       const quantity = this.quantity || 1
 
       // Manejo especial para productos por peso

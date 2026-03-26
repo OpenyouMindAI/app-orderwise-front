@@ -3,9 +3,9 @@ name: Deploy Production in Qbitsinc Hostinger
 on:
   push:
     branches:
-      - develop
-      - master
-      - main
+      - aerwqs-develop
+      - aerwqs-master
+      - aerwqs-main
 
 jobs:
   deploy-in-qbitsinc-hostinger:

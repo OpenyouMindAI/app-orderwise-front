@@ -65,8 +65,6 @@
 
   /* Tipografía elegante */
   --font-primary: 'Lato', sans-serif;
-  --font-secondary: 'Cormorant', serif;
-  --font-accent: 'Playfair Display', serif;
 }
 
 /* Estilos globales refinados */
@@ -87,9 +85,18 @@ body {
   padding: var(--spacing-md);
 }
 
+/* FIX - Marco blanco al abrir modales:
+ * Quasar activa q-body--force-scrollbar-x/y para evitar saltos de layout,
+ * creando "gutters" (franjas reservadas para scrollbars) que muestran el
+ * background del body. Como el body ya está position:fixed en ese momento,
+ * forzar overflow:hidden elimina esos gutters sin afectar el scroll normal. */
+body.q-body--prevent-scroll {
+  overflow: hidden !important;
+}
+
 /* Tipografía elegante */
 .modern-title {
-  font-family: var(--font-accent);
+  font-family: var(--font-primary);
   font-weight: 500;
   font-size: 1.9rem;
   color: var(--text);
@@ -99,7 +106,7 @@ body {
 }
 
 .section-title {
-  font-family: var(--font-accent);
+  font-family: var(--font-primary);
   font-weight: 400;
   font-size: 1.4rem;
   margin: var(--spacing-lg) 0 var(--spacing-md);
@@ -108,7 +115,7 @@ body {
 }
 
 .card-title {
-  font-family: var(--font-secondary);
+  font-family: var(--font-primary);
   font-weight: 500;
   font-size: 1.1rem;
   color: var(--text);
@@ -118,7 +125,7 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-secondary);
+  font-family: var(--font-primary);
   font-weight: 500;
   line-height: 1.2;
   color: var(--text);
@@ -202,7 +209,7 @@ p {
 }
 
 .stat-value {
-  font-family: var(--font-secondary);
+  font-family: var(--font-primary);
   font-size: 1.5rem;
   font-weight: 500;
   color: var(--text);
@@ -453,7 +460,7 @@ p {
 }
 
 .q-card__title {
-  font-family: var(--font-secondary) !important;
+  font-family: var(--font-primary) !important;
   font-weight: 500 !important;
   color: var(--text) !important;
   font-size: 1.1rem !important;
@@ -484,8 +491,14 @@ p {
   box-shadow: var(--shadow-focus) !important;
 }
 
-.q-drawer, .q-dialog__inner {
+.q-drawer {
   border-radius: var(--border-radius-lg) !important;
+}
+
+/* El q-dialog__inner es un contenedor de pantalla completa.
+ * Aplicarle bordes redondeados provoca "huecos" blancos en las esquinas. */
+.q-dialog__inner {
+  border-radius: 0 !important;
 }
 
 .q-tab-panels {
@@ -710,7 +723,6 @@ p {
   font-size: 14px;
   font-weight: 600;
   line-height: 1.3;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
   margin-bottom: 12px;
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -971,12 +983,6 @@ p {
 /* Mejoras para switches */
 .q-toggle__track {
   border-radius: 12px !important;
-}
-
-/* Mejoras para steppers */
-.q-stepper {
-  border-radius: 12px !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
 }
 
 /* Mejoras para timelines */

@@ -740,40 +740,179 @@
           </div>
 
           <q-form @submit="onSubmitConfig" class="step-form">
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="field-label">
-                  Punto de venta
-                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
-                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
-                      Número de punto de venta específico para esta sucursal
-                    </q-tooltip>
-                  </q-icon>
-                </label>
-                <q-input
-                  v-model="companyConfig.point_of_sale"
-                  outlined
-                  dense
-                  class="custom-input"
-                />
+            <div class="row q-col-gutter-md">
+              <div class="col-12">
+                <div class="text-subtitle2 text-primary text-weight-bold q-mb-sm text-uppercase">
+                  DATOS PRINCIPALES
+                </div>
+                <div class="row q-col-gutter-md">
+                  <div class="col-12">
+                    <q-input
+                      v-model="branchConfig.name"
+                      outlined
+                      dense
+                      label="Nombre de la Sucursal *"
+                      :rules="[val => !!val || 'El campo es requerido.']"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="badge" color="grey-6" />
+                      </template>
+                    </q-input>
+                  </div>
+                </div>
               </div>
 
-              <div class="form-group">
-                <label class="field-label">
-                  Lista de precios por defecto
-                  <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
-                    <q-tooltip class="bg-grey-8" :offset="[0, 8]">
-                      Lista de precios que se aplicará por defecto en esta sucursal (1-5)
-                    </q-tooltip>
-                  </q-icon>
-                </label>
-                <q-select
-                  v-model="companyConfig.other.default_price_list"
-                  :options="['1', '2', '3', '4', '5']"
-                  outlined
-                  dense
-                  class="custom-input"
-                />
+              <!-- Separator -->
+              <div class="col-12 q-py-none">
+                <q-separator />
+              </div>
+
+              <!-- Datos Fiscales -->
+              <div class="col-12">
+                <div class="text-subtitle2 text-primary text-weight-bold q-mb-md text-uppercase">
+                  DATOS FISCALES (Opcional)
+                </div>
+                <div class="row q-col-gutter-md">
+                  <div class="col-12 col-md-6">
+                    <q-input
+                      v-model="branchConfig.business_name"
+                      outlined
+                      dense
+                      label="Razón Social"
+                      hint="Nombre legal"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="business" color="grey-6" />
+                      </template>
+                    </q-input>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <q-input
+                      v-model="branchConfig.document_number"
+                      outlined
+                      dense
+                      label="CUIT/CUIL"
+                      mask="##-########-#"
+                      hint="Ej: 20-12345678-9"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="assignment_ind" color="grey-6" />
+                      </template>
+                    </q-input>
+                  </div>
+
+                  <div class="col-12 col-md-4">
+                    <q-input
+                      v-model.number="branchConfig.point_of_sale"
+                      type="number"
+                      outlined
+                      dense
+                      label="Punto de Venta"
+                      hint="PDV asignado (AFIP)"
+                      min="1"
+                      max="9999"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="point_of_sale" color="grey-6" />
+                      </template>
+                    </q-input>
+                  </div>
+
+                  <div class="col-12 col-md-4">
+                    <q-input
+                      v-model="branchConfig.income_brut"
+                      outlined
+                      dense
+                      label="Ingresos Brutos"
+                      hint="Nro de IIBB"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="account_balance_wallet" color="grey-6" />
+                      </template>
+                    </q-input>
+                  </div>
+
+                  <div class="col-12 col-md-4">
+                    <q-input
+                      v-model="branchConfig.activity_start_date"
+                      type="date"
+                      outlined
+                      dense
+                      label="Inicio Actividades"
+                      hint="Fecha de alta"
+                      stack-label
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="event" color="grey-6" />
+                      </template>
+                    </q-input>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Separator -->
+              <div class="col-12 q-py-none">
+                <q-separator />
+              </div>
+
+              <!-- Configuración Operativa -->
+              <div class="col-12">
+                <div class="text-subtitle2 text-primary text-weight-bold q-mb-md text-uppercase">
+                  CONFIGURACIÓN OPERATIVA
+                </div>
+                <div class="row q-col-gutter-md">
+                  <div class="col-12 col-md-6">
+                    <div class="form-group">
+                      <label class="field-label">
+                        Lista de precios por defecto
+                        <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                          <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                            Lista de precios que se aplicará por defecto en esta sucursal (1-5)
+                          </q-tooltip>
+                        </q-icon>
+                      </label>
+                      <q-select
+                        v-model="branchConfig.default_price_list"
+                        :options="['1', '2', '3', '4', '5']"
+                        outlined
+                        dense
+                        class="custom-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <div class="form-group">
+                      <label class="field-label">
+                        Impresora por defecto
+                        <q-icon name="help_outline" size="16px" color="grey-6" class="q-ml-xs">
+                          <q-tooltip class="bg-grey-8" :offset="[0, 8]">
+                            Aplica la impresora por defecto en esta sucursal
+                          </q-tooltip>
+                        </q-icon>
+                      </label>
+                      <q-select
+                        v-model="branchConfig.printer"
+                        :options="printers"
+                        option-label="name"
+                        option-value="id"
+                        outlined
+                        dense
+                        class="custom-input"
+                        @filter="filterPrinters"
+                      >
+                        <template v-slot:no-option>
+                          <q-item>
+                            <q-item-section class="text-grey">
+                              No results
+                            </q-item-section>
+                          </q-item>
+                        </template>
+                      </q-select>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -896,6 +1035,18 @@ const companyConfig = ref({
   open_cashbox: company.value?.company_config?.open_cashbox || true
 })
 
+// Branch office config (local state for Step 2)
+const branchConfig = ref({
+  name: '',
+  business_name: '',
+  document_number: '',
+  point_of_sale: null,
+  income_brut: '',
+  activity_start_date: '',
+  default_price_list: '1',
+  printer: null
+})
+
 const menuConfig = ref({
   ...companyConfig.value?.other?.menu
 })
@@ -931,8 +1082,18 @@ const formattedAddress = ref('')
 
 // Load branch office config into the form on component mount
 onMounted(async () => {
+  console.log(branchOffice.value)
   if (branchOffice.value) {
-    companyConfig.value.other.default_price_list = branchOffice.value.default_price_list
+    branchConfig.value = {
+      name: branchOffice.value.name,
+      business_name: branchOffice.value.business_name,
+      document_number: branchOffice.value.document_number,
+      income_brut: branchOffice.value.income_brut,
+      activity_start_date: branchOffice.value.activity_start_date,
+      point_of_sale: branchOffice.value.point_of_sale,
+      default_price_list: String(branchOffice.value.default_price_list || '1'),
+      printer: branchOffice.value.printer
+    }
   }
 
   // Inicializar dirección si existe
@@ -1438,8 +1599,14 @@ const onSubmitConfig = async () => {
     if (step.value === 2) {
       const payload = {
         branch_office_id: branchOffice.value.id,
-        point_of_sale: companyConfig.value.point_of_sale,
-        default_price_list: companyConfig.value.other.default_price_list
+        name: branchConfig.value.name,
+        business_name: branchConfig.value.business_name,
+        document_number: branchConfig.value.document_number,
+        income_brut: branchConfig.value.income_brut,
+        activity_start_date: branchConfig.value.activity_start_date,
+        point_of_sale: branchConfig.value.point_of_sale,
+        default_price_list: branchConfig.value.default_price_list,
+        printer_id: branchConfig.value.printer?.id
       }
       const { data } = await api.post('branch-office-configs', payload)
 

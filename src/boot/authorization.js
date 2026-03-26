@@ -21,6 +21,20 @@ const CONFIG = {
     'business-types'
   ],
   ROUTES_WITHOUT_MODULE_CHECK: ['Profile', 'ChangeCompany', 'VerifySession'],
+  PREMIUM_MODULES: [
+    'SalesInventoryReport',
+    'ProductKardex',
+    'TransferProduct',
+    'Promotions',
+    'BranchOffice',
+    'Integrations',
+    'Company',
+    'Cashbox',
+    'Seller',
+    'Client',
+    'DeliveryPerson'
+  ],
+  ROOT_ONLY_ROUTES: ['AdminDashboard', 'DashboardManager'],
   DEBOUNCE_TIME: 2000
 }
 
@@ -38,9 +52,14 @@ const hasValidToken = (store) => {
     return false
   }
 
-  // Si tiene token y sesión de usuario, está autenticado.
-  // La validación de si tiene empresa o no se maneja en el flujo de cada página/layout,
-  // no debemos expulsarlo al login solo por no tener empresa aún (ej. durante el onboarding).
+  // Validación proactiva del tiempo de expiración
+  if (store.setTimeOut && store.setTimeOut > 0) {
+    const now = Date.now()
+    if (now >= store.setTimeOut) {
+      return false
+    }
+  }
+
   return true
 }
 
@@ -71,8 +90,8 @@ const getDefaultRoute = (user) => {
 const validateModuleAccess = (store, to) => {
   const user = store.userSession
 
-  // Super usuarios tienen acceso total
-  if (user?.is_root || user?.is_super_admin) {
+  // Solo el Root tiene acceso total absoluto para evitar bloqueos del sistema
+  if (user?.is_root) {
     return null
   }
 
@@ -81,81 +100,91 @@ const validateModuleAccess = (store, to) => {
     return null
   }
 
-  const modules = user?.roles?.[0]?.modules
+  // Obtener todos los módulos de todos los roles del usuario
+  const modules = user?.roles?.reduce((acc, role) => {
+    return acc.concat(role.modules || [])
+  }, []) || []
 
-  // Sin módulos asignados, permitir acceso
-  if (!modules || modules.length === 0) {
-    return null
+  // 1. Validar rutas exclusivas de Root
+  if (CONFIG.ROOT_ONLY_ROUTES.includes(to.name) && !user?.is_root) {
+    return '/'
   }
 
-  // Validar acceso al módulo específico
-  if (user?.company_session_id) {
-    const hasModuleAccess = modules.some(module => module.link === to.name)
+  // 2. Validar restricciones de Plan (Módulos Premium) - Bloqueo absoluto por plan
+  const isDemo = store.isDemo || store.isClientDemo
+  const isFree = store.currentPlan?.slug === 'free' || store.subscriptionPlan === 'Free'
 
-    if (!hasModuleAccess && modules[0]?.link) {
-      return { name: modules[0].link }
+  if ((isDemo || isFree) && CONFIG.PREMIUM_MODULES.includes(to.name)) {
+    return '/'
+  }
+
+  // 3. Validar acceso por Módulos (RBAC)
+  if (user?.company_session_id) {
+    const userModules = modules.map(m => m.link)
+    const hasModuleAccess = userModules.includes(to.name)
+
+    // Si la ruta es un módulo premium o una de las rutas conocidas como "Módulos Principales",
+    // entonces validamos estrictamente que la tenga.
+    const isMainModule = CONFIG.PREMIUM_MODULES.includes(to.name) ||
+                        ['Product', 'Category', 'User', 'Role', 'Invoice', 'Cashbox', 'BranchOffice'].includes(to.name)
+
+    if (isMainModule && !hasModuleAccess) {
+      return '/'
     }
   }
 
   return null
 }
 
-/**
- * Handles session expiration by logging out and redirecting to login
- * @params {Object} store - Authentication store
- * @params {Object} router - Vue router instance
- * @return {Promise<void>}
- */
-const handleSessionExpiration = async (store, router) => {
-  notifySession('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.')
-
-  try {
-    await store.forceLogout()
-  } catch (error) {
-    console.error('Error durante logout:', error)
-  }
-
-  router.push('/login')
-}
+// La lógica de redirección ahora se maneja directamente en el interceptor de la API
+// para garantizar que cualquier error 401 dispare el cierre de sesión inmediato.
 
 export default boot(async ({ router, store }) => {
   let pendingSessionExpiration = null
 
-  // API Response Interceptor
-  api.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-      const $store = authentication()
-      const status = error.response?.status
+  // Interceptor de respuestas API
+  /**
+   * Handles API response errors globally, including session expiration (401),
+   * permission issues (403), and validation errors (422).
+   * @params {Error} error The interceptor error object
+   * @return {Promise} Rejected promise with normalized error data
+   */
+  api.interceptors.response.use(null, async (error) => {
+    const $store = authentication()
+    const status = error.response?.status || error.status
 
-      // Validate if the URL is excluded from 401 handling
-      const isExcludedUrl = CONFIG.EXCLUDED_URLS.some(url =>
-        error.config?.url?.includes(url)
-      )
+    // Validar si la URL está excluida del manejo de 401
+    const isExcludedUrl = CONFIG.EXCLUDED_URLS.some(url =>
+      error.config?.url?.includes?.(url) || (typeof error.url === 'string' && error.url.includes(url))
+    )
 
-      if (status === 401 && !isExcludedUrl) {
-        // Prevent multiple simultaneous logouts using debounce
-        if (!pendingSessionExpiration) {
-          pendingSessionExpiration = handleSessionExpiration($store, router)
+    if (status === 401 && !isExcludedUrl) {
+      if (!pendingSessionExpiration) {
+        pendingSessionExpiration = (async () => {
+          notifySession('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.')
+          await $store.forceLogout()
 
-          setTimeout(() => {
-            pendingSessionExpiration = null
-          }, CONFIG.DEBOUNCE_TIME)
-        }
+          // Intentar navegación suave, si falla, forzar recarga al login
+          try {
+            await router.push('/login')
+          } catch (e) {
+            window.location.href = '#/login'
+          }
+        })()
 
         await pendingSessionExpiration
-      } else if (status === 403) {
-        notifyError('No tienes permisos para acceder a este recurso')
-      } else if (status === 422) {
-        notifyValidationErrors(error, 'Error de validación')
       }
-
-      // Centralized error normalization (moved from services.js)
-      // This ensures components receive a consistent error format
-      const normalizedError = error?.response?.data || error
-      return Promise.reject(normalizedError)
+    } else if (status === 403) {
+      notifyError('No tienes permisos para acceder a este recurso')
+    } else if (status === 422) {
+      notifyValidationErrors(error, 'Error de validación')
     }
-  )
+
+    // Centralized error normalization (moved from services.js)
+    // This ensures components receive a consistent error format
+    const normalizedError = error?.response?.data || error
+    return Promise.reject(normalizedError)
+  })
 
   // Guard de navegación
   router.beforeEach(async (to, from, next) => {

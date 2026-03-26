@@ -8,132 +8,16 @@
     </div>
 
     <!-- Card principal -->
-    <div class="login-card">
-      <!-- Logo -->
-      <div class="logo-section">
-        <q-img :src="qBitsLogo.black" class="logo-img"/>
-      </div>
-      <!-- Título -->
-      <div class="header-section">
-        <span class="welcome-title">Bienvenido</span>
-        <p class="welcome-subtitle">Accede a tu cuenta para continuar</p>
-      </div>
-
-      <!-- Formulario -->
-      <q-form @submit="loginAt" class="login-form">
-        <!-- Input Usuario -->
-        <div class="input-container">
-          <q-input
-            v-model="username"
-            ref="username"
-            name="username"
-            placeholder="Usuario o correo electrónico"
-            dark
-            class="custom-input"
-            @keyup.enter="loginAt"
-            :rules="[val => !!val || 'El campo es requerido.']"
-          >
-            <template v-slot:prepend>
-              <q-icon name="person" color="primary" size="20px"/>
-            </template>
-          </q-input>
-        </div>
-
-        <!-- Input Contraseña -->
-        <div class="input-container">
-          <q-input
-            v-model="password"
-            ref="password"
-            name="password"
-            placeholder="Contraseña"
-            :type="showPassword ? 'text' : 'password'"
-            dark
-            class="custom-input"
-            @keyup.enter="loginAt"
-            :rules="[val => !!val || 'El campo es requerido.']"
-          >
-            <template v-slot:prepend>
-              <q-icon name="lock" color="primary" size="20px"/>
-            </template>
-            <template v-slot:append>
-              <q-icon
-                :name="showPassword ? 'visibility' : 'visibility_off'"
-                color="grey-5"
-                size="20px"
-                class="cursor-pointer"
-                @click="showPassword = !showPassword"
-              />
-            </template>
-          </q-input>
-        </div>
-
-        <!-- Recordarme y Olvidaste contraseña -->
-        <div class="options-container">
-          <q-checkbox
-            v-model="remember"
-            label="Recordarme"
-            color="cyan"
-            dark
-            dense
-            class="remember-checkbox"
-          />
-          <a href="#" class="forgot-password-link" @click.prevent="showForgotPasswordDialog = true">¿Olvidaste tu contraseña?</a>
-        </div>
-
-        <!-- Botón Iniciar Sesión -->
-        <q-btn
-          type="submit"
-          color="primary"
-          class="login-btn"
-          :loading="btnDisable"
-          :disable="btnDisable"
-          unelevated
-          no-caps
-          size="lg"
-        >
-          <q-icon name="login" size="20px" class="q-mr-sm"/>
-          Iniciar Sesión
-        </q-btn>
-
-        <!-- Divider -->
-        <div class="divider-container">
-          <div class="divider-line"></div>
-          <span class="divider-text">O continúa con</span>
-          <div class="divider-line"></div>
-        </div>
-
-        <!-- Botones Sociales -->
-        <div class="social-container">
-          <button type="button" class="social-btn google-btn" @click="handleGoogleLogin" :disabled="googleLoading">
-            <q-spinner v-if="googleLoading" color="white" size="18px"/>
-            <template v-else>
-              <svg class="social-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-              </svg>
-              <span>Google</span>
-            </template>
-          </button>
-
-          <!-- <button type="button" class="social-btn facebook-btn" @click="handleFacebookLogin" :disabled="facebookLoading">
-            <q-spinner v-if="facebookLoading" color="white" size="18px"/>
-            <template v-else>
-              <svg class="social-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" fill="#1877F2"/>
-              </svg>
-              <span>Facebook</span>
-            </template>
-          </button> -->
-        </div>
-
-        <!-- Registro -->
-        <div class="register-container">
-          <span class="register-text">¿No tienes cuenta? <router-link to="/register" class="register-link">Crear cuenta</router-link></span>
-        </div>
-      </q-form>
-    </div>
+    <LoginForm
+      :showLogo="true"
+      :showHeader="true"
+      :showRegisterLink="true"
+      :loading="btnDisable"
+      :loadingGoogle="googleLoading"
+      @submit="handleFormSubmit"
+      @google-login="handleGoogleLogin"
+      @forgot-password="showForgotPasswordDialog = true"
+    />
 
     <!-- Password Reset Dialogs -->
     <ForgotPasswordDialog
@@ -173,10 +57,17 @@
       :user-email="userEmail"
       @success="handleCompanySetupSuccess"
     />
+
+    <BusinessTypeModal
+      v-model="showBusinessTypeSetup"
+      :loading="loadingCompanySetup"
+      @submit="handleBusinessTypeNext"
+      @back="showBusinessTypeSetup = false"
+    />
   </div>
 </template>
 <script>
-import { logo, qBitsLogo } from 'src/const/mixins'
+import { qBitsLogo } from 'src/const/mixins'
 import { Notify } from 'quasar'
 import { mapActions, mapState } from 'pinia'
 import { authentication } from 'stores/module-authentication'
@@ -187,6 +78,8 @@ import VerifyResetCodeDialog from 'src/components/VerifyResetCodeDialog.vue'
 import NewPasswordDialog from 'src/components/NewPasswordDialog.vue'
 import EmailVerificationModal from 'src/components/Auth/EmailVerificationModal.vue'
 import CompanySetupModal from 'src/components/Register/CompanySetupModal.vue'
+import LoginForm from 'src/components/Auth/LoginForm.vue'
+import BusinessTypeModal from 'src/components/Register/BusinessTypeModal.vue'
 
 export default {
   name: 'LoginPage',
@@ -195,7 +88,9 @@ export default {
     VerifyResetCodeDialog,
     NewPasswordDialog,
     EmailVerificationModal,
-    CompanySetupModal
+    CompanySetupModal,
+    LoginForm,
+    BusinessTypeModal
   },
   data () {
     return {
@@ -205,30 +100,20 @@ export default {
        */
       qBitsLogo,
       /**
-       * Remember me checkbox state
-       * @type {Boolean}
-       */
-      remember: true,
-      /**
-       * Dialog visibility state
-       * @type {Boolean}
-       */
-      dialog: false,
-      /**
-       * Logo object
-       * @type {Object}
-       */
-      logo,
-      /**
-       * Slide state
+       * User email for verification
        * @type {String}
        */
-      slide: 'style',
+      userEmail: '',
       /**
-       * Show/hide password toggle
+       * Redirect route after login
+       * @type {String|null}
+       */
+      redirect: null,
+      /**
+       * Login button disabled state
        * @type {Boolean}
        */
-      showPassword: false,
+      btnDisable: false,
       /**
        * Google login loading state
        * @type {Boolean}
@@ -286,10 +171,20 @@ export default {
        */
       showCompanySetup: false,
       /**
-       * User email for verification
-       * @type {String}
+       * Show business type setup modal
+       * @type {Boolean} Visibility of the business type setup modal
        */
-      userEmail: '',
+      showBusinessTypeSetup: false,
+      /**
+       * Loading state for company setup
+       * @type {Boolean} Whether the company setup is currently loading
+       */
+      loadingCompanySetup: false,
+      /**
+       * Temporary company data
+       * @type {Object|null} Temporary data stored during the setup process
+       */
+      tempCompanyData: null,
       /**
        * Username or email for login
        * @type {String}
@@ -301,20 +196,10 @@ export default {
        */
       password: '',
       /**
-       * Redirect route after login
-       * @type {String|null}
-       */
-      redirect: null,
-      /**
-       * Login button disabled state
+       * Remember me checkbox state
        * @type {Boolean}
        */
-      btnDisable: false,
-      /**
-       * Download URL
-       * @type {String|null}
-       */
-      urlDownload: null,
+      remember: true,
       /**
        * Error message translations
        * @type {Object}
@@ -342,7 +227,7 @@ export default {
      * Access token
      * @returns {String|null}
      */
-    ...mapState(authentication, ['access_token'])
+    ...mapState(authentication, ['access_token', 'userGetter'])
   },
   async mounted () {
     this.$q.dark.set(this.darkMode)
@@ -452,6 +337,16 @@ export default {
       }
     },
     /**
+     * Handle form submit from LoginForm
+     * @param {Object} formData - Form data from LoginForm
+     */
+    async handleFormSubmit (formData) {
+      this.username = formData.username
+      this.password = formData.password
+      this.remember = formData.remember
+      await this.loginAt()
+    },
+    /**
      * Load Google Identity Services script
      */
     loadGoogleScript () {
@@ -464,12 +359,10 @@ export default {
       }
       document.head.appendChild(script)
     },
-    /**
-     * Initialize Google Sign-In
-     */
     initializeGoogleSignIn () {
       if (window.google && window.google.accounts) {
         try {
+          console.log('Initializing Google GSI with Client ID:', process.env.GOOGLE_CLIENT_ID)
           // Inicializar Google Identity Services
           window.google.accounts.id.initialize({
             client_id: process.env.GOOGLE_CLIENT_ID,
@@ -482,6 +375,17 @@ export default {
           this.googleClient = window.google.accounts.oauth2.initTokenClient({
             client_id: process.env.GOOGLE_CLIENT_ID,
             scope: 'email profile',
+            error_callback: (error) => {
+              console.error('Google OAuth Error (Details):', error)
+              // NOTA: 'popup_failed_to_open' es un error falso de GSI en localhost
+              // cuando el popup SÍ se abre. Solo resetear si el navegador lo bloquea realmente.
+              if (error.type === 'popup_blocked_by_browser') {
+                this.googleLoading = false
+                notify('El navegador bloqueó la ventana de Google. Permite los popups e intenta de nuevo.', 'negative', 'warning')
+              }
+              // Para popup_failed_to_open: no hacemos nada, la ventana sí se abrió.
+              // El handleGoogleTokenResponse o su error/cierre manejara el loading.
+            },
             callback: this.handleGoogleTokenResponse
           })
         } catch (error) {
@@ -493,35 +397,27 @@ export default {
      * Handle Google login button click
      */
     async handleGoogleLogin () {
+      console.log('Google login button clicked')
       this.googleLoading = true
 
       try {
         // Detectar si es móvil nativo (Capacitor)
         if (this.$q.platform.is.nativeMobile && window.Capacitor) {
+          console.log('Starting mobile Google login flow')
           await this.handleGoogleLoginMobile()
         } else if (window.google && window.google.accounts) {
-          // Web: Usar Google Identity Services
-          try {
-            // Intentar con One Tap primero
-            window.google.accounts.id.prompt((notification) => {
-              if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                // Si One Tap no funciona, usar OAuth2 popup
-                console.log('One Tap not available, using OAuth2 popup')
-                this.openGoogleOAuthPopup()
-              }
-            })
-          } catch (error) {
-            console.error('Error with Google One Tap:', error)
-            // Fallback a OAuth2 popup
-            this.openGoogleOAuthPopup()
-          }
+          console.log('Starting web Google login flow (OAuth Popup)')
+          // Abrir popup OAuth directamente — el One Tap no funciona en localhost
+          // El spinner se mantiene hasta que el usuario elige cuenta o cierra la ventana
+          this.openGoogleOAuthPopup()
         } else {
+          console.error('Google GSI not available')
           this.googleLoading = false
           notify('Google Sign-In no está disponible', 'negative', 'warning')
         }
       } catch (error) {
         this.googleLoading = false
-        console.error('Google login error:', error)
+        console.error('Google login error (Initial):', error)
         notify('Error al iniciar sesión con Google', 'negative', 'warning')
       }
     },
@@ -593,6 +489,24 @@ export default {
       if (this.googleClient) {
         try {
           this.googleClient.requestAccessToken()
+
+          // Detectar cuando el usuario cierra la ventana de Google sin seleccionar cuenta.
+          // Google no dispara ningún evento en ese caso, pero la ventana principal recupera el foco.
+          const handleWindowFocus = () => {
+            // Dar un pequeño margen para que el callback de éxito se ejecute primero
+            setTimeout(() => {
+              if (this.googleLoading) {
+                console.log('Google popup closed without account selection')
+                this.googleLoading = false
+              }
+            }, 500)
+            window.removeEventListener('focus', handleWindowFocus)
+          }
+
+          // Escuchar el foco un tick después de abrir el popup
+          setTimeout(() => {
+            window.addEventListener('focus', handleWindowFocus)
+          }, 100)
         } catch (error) {
           this.googleLoading = false
           notify('Error al abrir Google Sign-In', 'negative', 'warning')
@@ -607,6 +521,13 @@ export default {
      * @param {Object} tokenResponse - OAuth2 token response object
      */
     async handleGoogleTokenResponse (tokenResponse) {
+      console.log('Google Token Response received:', tokenResponse)
+      if (tokenResponse && tokenResponse.error) {
+        console.error('Google Token Response Error:', tokenResponse.error)
+        this.googleLoading = false
+        return
+      }
+
       if (tokenResponse && tokenResponse.access_token) {
         try {
           // Obtener información del usuario con el access token
@@ -639,17 +560,22 @@ export default {
     async authenticateWithGoogle (email, name, googleId, picture) {
       try {
         // Crear un credential con toda la información
-        const credential = btoa(JSON.stringify({
+        const payload = {
           email,
           name,
           google_id: googleId,
           picture
-        }))
+        }
+        console.log('Google Manual Payload details:', payload)
+        const credential = btoa(JSON.stringify(payload))
 
+        console.log('Authenticating with Google (Manual Payload):', { email, name, google_id: googleId })
         const result = await this.$api.post('/authentication/google', {
-          credential
-          // NO enviar email y name por separado, ya están en el credential
+          credential,
+          email,
+          name
         })
+        console.log('Google Auth Result:', result.data)
 
         if (result.data.access_token) {
           // Usar el mismo método que el login normal para guardar la sesión
@@ -658,15 +584,20 @@ export default {
           if (result.data.user?.roles?.length === 0) {
             notify('Usuario no tiene permisos', 'negative', 'warning')
           } else {
+            console.log('Login successful, redirecting home')
             this.$router.push({ name: 'Home' })
           }
         }
       } catch (error) {
-        console.error('Google authentication error:', error)
+        console.error('Google authentication error (Manual):', error)
+        console.error('Status:', error.response?.status)
+        console.error('Data:', error.response?.data)
 
         if (error.response?.status === 404) {
+          console.error('User not found (404) for email:', email)
           notify('No hay un usuario registrado con ese email', 'negative', 'warning')
         } else if (error.response?.status === 401) {
+          console.error('Access denied (401). Possible token/payload issue.')
           notify('No pudimos validar tu cuenta de Google. Inténtalo de nuevo.', 'negative', 'warning')
         } else {
           notify('Error al iniciar sesión con Google.', 'negative', 'warning')
@@ -680,45 +611,47 @@ export default {
      * @param {Object} response - Google authentication response
      */
     async handleGoogleCallback (response) {
+      console.log('Google handling callback. Response:', !!response.credential)
+      this.googleLoading = true
+
       if (!response.credential) {
+        this.googleLoading = false
         notify('No se pudo obtener las credenciales de Google', 'negative', 'warning')
         return
       }
 
-      this.googleLoading = true
-
       try {
-        const result = await this.$axios.post('/authentication/google', {
-          credential: response.credential
-        })
+        // En lugar de enviar el JWT crudo, vamos a decodificarlo y usar el flujo de authenticateWithGoogle
+        // que es más consistente con lo que se usa en registro y móvil.
+        console.log('Decoding Google JWT...')
+        const base64Url = response.credential.split('.')[1]
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+        }).join(''))
 
-        if (result.data.access_token) {
-          // Guardar token en localStorage
-          localStorage.setItem('access_token', result.data.access_token)
-          localStorage.setItem('token_type', result.data.token_type)
-          localStorage.setItem('user', JSON.stringify(result.data.user))
+        const userInfo = JSON.parse(jsonPayload)
+        console.log('Decoded User Info:', userInfo)
 
-          notify('Inicio de sesión exitoso', 'positive', 'check_circle')
-
-          // Redirigir según el tipo de usuario
-          if (result.data.user?.roles?.length === 0) {
-            notify('Usuario no tiene permisos', 'negative', 'warning')
-          } else {
-            this.$router.push({ name: 'Home' })
-          }
+        if (userInfo && userInfo.email) {
+          await this.authenticateWithGoogle(
+            userInfo.email,
+            userInfo.name,
+            userInfo.sub,
+            userInfo.picture
+          )
+        } else {
+          throw new Error('Información de usuario incompleta en el token')
         }
       } catch (error) {
-        console.error('Google login error:', error)
+        console.error('Google login error (Callback):', error)
 
         if (error.response?.status === 404) {
-          // Usuario no existe
           notify('No hay un usuario registrado con ese email', 'negative', 'warning')
         } else if (error.response?.status === 401) {
-          // Token inválido
           notify('No pudimos validar tu cuenta de Google. Inténtalo de nuevo.', 'negative', 'warning')
         } else {
-          // Error genérico
-          notify('Error al iniciar sesión con Google.', 'negative', 'warning')
+          notify('Error al procesar la cuenta de Google.', 'negative', 'warning')
         }
       } finally {
         this.googleLoading = false
@@ -894,8 +827,8 @@ export default {
         }
 
         if (!data.company_session || data.company_session === null) {
-          notify('Configura tu empresa para continuar', 'info', 'business')
-          this.showCompanySetup = true
+          notify('Selecciona tu rubro para continuar', 'info', 'business')
+          this.showBusinessTypeSetup = true
           this.btnDisable = false
           return
         }
@@ -910,26 +843,67 @@ export default {
           return
         }
 
-        this.$router.push({ name: 'Home' })
+        this.$router.push({ name: this.redirect || 'Home' })
 
         this.btnDisable = false
       } catch (error) {
-        Notify.create({
-          message: this.messageError[error?.data?.message] || error.message,
-          color: 'negative',
-          position: 'top',
-          icon: 'warning',
-          timeout: 5000,
-          actions: [
-            {
-              label: 'OK',
-              color: 'white',
-              handler: () => {
-                this.btnDisable = false
+        // Handle company blocking errors specifically
+        if (error.response?.status === 403 && error.response?.data?.code === 'COMPANY_BLOCKED') {
+          const status = error.response.data.status
+          const reason = error.response.data.reason
+          
+          let blockingMessage = 'Acceso denegado'
+          if (status === 'suspended') {
+            blockingMessage = `Empresa suspendida: ${reason}`
+          } else if (status === 'blocked') {
+            blockingMessage = `Empresa bloqueada: ${reason}`
+          } else if (status === 'expired') {
+            blockingMessage = `Suscripción vencida: ${reason}`
+          }
+          
+          Notify.create({
+            message: blockingMessage,
+            color: 'negative',
+            position: 'top',
+            icon: 'block',
+            timeout: 10000,
+            actions: [
+              {
+                label: 'Contactar Soporte',
+                color: 'white',
+                handler: () => {
+                  // Redirigir a soporte o abrir email
+                  window.location.href = 'mailto:soporte@orderwise.com'
+                }
+              },
+              {
+                label: 'OK',
+                color: 'white',
+                handler: () => {
+                  this.btnDisable = false
+                }
               }
-            }
-          ]
-        })
+            ]
+          })
+        } else {
+          // Handle other errors normally
+          Notify.create({
+            message: this.messageError[error?.data?.message] || error.message,
+            color: 'negative',
+            position: 'top',
+            icon: 'warning',
+            timeout: 5000,
+            actions: [
+              {
+                label: 'OK',
+                color: 'white',
+                handler: () => {
+                  this.btnDisable = false
+                }
+              }
+            ]
+          })
+        }
       } finally {
         this.btnDisable = false
       }
@@ -1005,8 +979,8 @@ export default {
         if (!data.user.company_session || data.user.company_session === null) {
           // Pequeña pausa antes de mostrar el siguiente modal
           await new Promise(resolve => setTimeout(resolve, 300))
-          notify('Ahora configura tu empresa', 'info', 'business')
-          this.showCompanySetup = true
+          notify('Ahora selecciona tu rubro', 'info', 'business')
+          this.showBusinessTypeSetup = true
         } else {
           // Tiene empresa, redirigir al dashboard
           if (data.user.is_root) {
@@ -1060,6 +1034,58 @@ export default {
       } catch (error) {
         console.error('Error al configurar empresa:', error)
         notify('Error al configurar la empresa', 'negative', 'warning')
+      }
+    },
+
+    /**
+     * Handle business type selection
+     * @param {Object} businessData - Selected business type data
+     */
+    async handleBusinessTypeNext (businessData) {
+      this.tempCompanyData = businessData
+      await this.autoSetupCompany()
+      this.showBusinessTypeSetup = false
+    },
+
+    /**
+     * Automatically setup company using user data and selected business type
+     */
+    async autoSetupCompany () {
+      try {
+        this.loadingCompanySetup = true
+
+        // Obtener datos del usuario desde el store
+        const user = this.userGetter || {}
+
+        // Construir nombre completo de la empresa
+        const firstName = user.name || ''
+        const lastName = user.last_name || ''
+        const companyName = `${firstName} ${lastName}`.trim() || 'Mi Empresa'
+
+        const email = user.email || ''
+        const phoneNumber = user.phone_number || user.phone || null
+
+        const payload = {
+          company_name: companyName,
+          company_document: null,
+          company_email: email,
+          company_phone: phoneNumber,
+          company_address: null,
+          business_type_id: this.tempCompanyData?.business_type_id || null,
+          country_id: null,
+          copy_test_products: false
+        }
+
+        const { data } = await this.$api.post('authentication/setup-company', payload)
+        await this.handleCompanySetupSuccess(data)
+      } catch (error) {
+        console.error('❌ Error en auto-setup:', error)
+        // Si falla el auto-setup, mostramos el modal manual
+        this.showCompanySetup = true
+        const errorMessage = error.response?.data?.message || 'No se pudo completar la configuración automática.'
+        notify(errorMessage, 'negative', 'warning')
+      } finally {
+        this.loadingCompanySetup = false
       }
     },
 

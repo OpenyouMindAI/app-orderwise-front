@@ -307,6 +307,24 @@
         <div class="stat-card-shine"></div>
       </div>
 
+      <!-- Init Cashbox Card (apertura de caja) -->
+      <div v-if="totalsAmount.init_cashbox > 0" class="stat-card-compact stat-card-warning animate-scale-in" style="animation-delay: 0.22s;">
+        <div class="stat-card-bg">
+          <div class="stat-card-circle"></div>
+        </div>
+        <div class="stat-card-content-compact">
+          <div class="stat-icon-wrapper-compact warning">
+            <q-icon name="lock_open" size="24px" />
+          </div>
+          <div class="stat-info-compact">
+            <div class="stat-label-compact">Apertura de Caja</div>
+            <div class="stat-value-compact">{{ formatCurrency(totalsAmount.init_cashbox) }}</div>
+            <div class="stat-description-compact">Saldo inicial al abrir caja</div>
+          </div>
+        </div>
+        <div class="stat-card-shine"></div>
+      </div>
+
       <!-- Real Sales Card -->
       <div class="stat-card-compact stat-card-purple animate-scale-in" style="animation-delay: 0.25s;">
         <div class="stat-card-bg">
@@ -319,7 +337,7 @@
           <div class="stat-info-compact">
             <div class="stat-label-compact">Monto Real Esperado</div>
             <div class="stat-value-compact">{{ formatCurrency(totalsAmount.real_sales) }}</div>
-            <div class="stat-description-compact">Venta + Entradas - Salidas</div>
+            <div class="stat-description-compact">Ventas + Entradas - Salidas + Apertura</div>
           </div>
         </div>
         <div class="stat-card-shine"></div>
@@ -436,6 +454,14 @@
                       <div class="text-caption text-grey-7" style="font-size: 10px;">Ventas</div>
                       <div class="text-subtitle2 text-weight-bold text-positive">
                         {{ formatCurrency(day.paid_sales) }}
+                      </div>
+                    </div>
+
+                    <!-- Init Cashbox -->
+                    <div v-if="day.init_cashbox > 0" class="col-auto text-right">
+                      <div class="text-caption text-grey-7" style="font-size: 10px;">Apertura</div>
+                      <div class="text-subtitle2 text-weight-bold text-warning">
+                        +{{ formatCurrency(day.init_cashbox) }}
                       </div>
                     </div>
 
@@ -1209,6 +1235,8 @@ export default {
      * Aggregated totals for the report
      * @type {import('vue').Ref<{
      *   paid_sales?: number,
+     *   init_cashbox?: number,
+     *   close_cashbox?: number,
      *   sum_amount?: number,
      *   difference_report?: string
      * }>}

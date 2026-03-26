@@ -83,7 +83,7 @@
       :placeholder="isCustomStyled ? label : undefined"
       :options="options"
       @filter="filterFn"
-      behavior="dialog"
+      behavior="menu"
       :loading="loading"
       clearable
       hide-selected
