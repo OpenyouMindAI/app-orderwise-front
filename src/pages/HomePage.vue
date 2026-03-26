@@ -757,7 +757,8 @@ const loadTodayStats = async () => {
   const today = date.formatDate(new Date(), 'YYYY-MM-DD')
   const params = {
     day: today,
-    branch_office_id: [branchOffice.value.id]
+    branch_office_id: [branchOffice.value.id],
+    onlyClients: false
   }
 
   // Group 1: Immediate - Financial critical stats

@@ -4336,7 +4336,7 @@ export default {
         branch_office_id: this.branchOffice?.id,
         address: this.formattedAddress,
         products: this.products,
-        status: this.invoice?.status || this.isNotLocal ? 'pending' : 'delivered',
+        status: this.invoice?.status || (this.isNotLocal ? 'pending' : 'delivered'),
         payments: this.payments.filter(payment => payment.amount > 0).map(payment => ({
           ...payment,
           payment_type: paymentType
