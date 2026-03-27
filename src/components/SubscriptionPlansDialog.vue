@@ -957,6 +957,7 @@ export default {
         localStorage.setItem('mp_preference_id', response.data.preference_id)
         localStorage.setItem('mp_plan_id', plan.id)
         localStorage.setItem('mp_plan_name', plan.name)
+        localStorage.setItem('mp_business_type_id', route.query.business_type_id || store.userSession?.company_session?.business_type?.id || '')
 
         notify('Redirigiendo a Mercado Pago...', 'info', 'payment')
 
