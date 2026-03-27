@@ -1,618 +1,581 @@
 <template>
   <div class="success-page-fullscreen">
+    <!-- Animated Background -->
     <div class="animated-bg">
       <div class="blob blob-1"></div>
       <div class="blob blob-2"></div>
-      <div class="grid-overlay"></div>
     </div>
 
     <div class="content-wrapper">
-      <div class="hero-card">
-        <div class="hero-badge">
-          <q-icon name="bolt" size="18px" />
-          <span>Activación automática</span>
+      <transition name="scale-fade" mode="out-in">
+        <div v-if="loading" class="card loading-card" key="loading">
+          <div class="spinner-container">
+            <svg class="spinner" viewBox="0 0 50 50">
+              <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"></circle>
+            </svg>
+          </div>
+          <h2 class="card-title">Verificando pago</h2>
+          <p class="card-text">Un momento por favor...</p>
         </div>
 
-        <div v-if="loading" class="state-block">
-          <div class="spinner-shell">
-            <q-spinner-tail size="62px" color="primary" />
+        <!-- Success State -->
+        <div v-else-if="paymentVerified" class="card success-card" key="success">
+          <div class="icon-container success-icon">
+            <svg viewBox="0 0 24 24" class="check-svg">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+            </svg>
           </div>
 
-          <h1 class="hero-title">Estamos dejando tu cuenta lista</h1>
-          <p class="hero-text">
-            Validamos tu pago, creamos tu empresa, cargamos tus productos y te ingresamos automáticamente.
-          </p>
+          <h1 class="card-title text-gradient">¡Todo listo!</h1>
+          <p class="card-text">Tu suscripción ha sido activada correctamente.</p>
 
-          <div class="steps-list">
-            <div
-              v-for="(step, index) in steps"
-              :key="step.key"
-              class="step-item"
-              :class="{
-                active: currentStepIndex === index,
-                done: currentStepIndex > index || (provisionSuccess && currentStepIndex >= index),
-                pending: currentStepIndex < index
-              }"
-            >
-              <div class="step-indicator">
-                <q-icon v-if="currentStepIndex > index || (provisionSuccess && currentStepIndex >= index)" name="check" size="16px" />
-                <span v-else>{{ index + 1 }}</span>
-              </div>
-              <div class="step-copy">
-                <div class="step-title">{{ step.label }}</div>
-                <div class="step-subtitle">{{ step.description }}</div>
-              </div>
-            </div>
-          </div>
+          <div class="divider"></div>
 
-          <div class="loading-caption">
-            {{ currentStepLabel }}
-          </div>
-        </div>
-
-        <div v-else-if="provisionSuccess" class="state-block success-state">
-          <div class="success-icon-wrap">
-            <q-icon name="task_alt" size="52px" />
-          </div>
-          <h1 class="hero-title success-title">¡Todo listo!</h1>
-          <p class="hero-text">
-            Tu empresa ya fue creada, tus productos fueron cargados y estás entrando al sistema.
-          </p>
-
+          <!-- Payment Details (Combined) -->
           <div class="details-grid" v-if="paymentDetails">
-            <div class="detail-card">
-              <span class="detail-label">Pago</span>
-              <span class="detail-value">{{ paymentDetails.payment_id }}</span>
+            <div class="detail-item">
+              <span class="label">Plan</span>
+              <span class="value">{{ paymentDetails.plan_name }}</span>
             </div>
-            <div class="detail-card">
-              <span class="detail-label">Monto</span>
-              <span class="detail-value">${{ paymentDetails.amount }}</span>
+            <div class="detail-item">
+              <span class="label">Monto</span>
+              <span class="value">${{ paymentDetails.amount }}</span>
             </div>
-            <div class="detail-card">
-              <span class="detail-label">Empresa</span>
-              <span class="detail-value">{{ paymentDetails.company_name }}</span>
+            <div class="detail-item">
+              <span class="label">ID de Pago</span>
+              <span class="value">{{ paymentDetails.payment_id }}</span>
             </div>
-            <div class="detail-card">
-              <span class="detail-label">Redirección</span>
-              <span class="detail-value">Billing</span>
+            <div class="detail-item">
+              <span class="label">Fecha</span>
+              <span class="value">{{ paymentDetails.date }}</span>
             </div>
           </div>
 
-          <div class="redirect-pill">
-            <q-spinner-dots size="20px" color="positive" />
-            <span>Ingresando al sistema...</span>
-          </div>
+          <!-- Action Button -->
+          <button @click="goHome" class="btn-primary q-mt-md">
+            <span>{{ needsCompanySetup ? 'Configurar mi empresa' : 'Ir al Inicio' }}</span>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
         </div>
 
-        <div v-else class="state-block error-state">
-          <div class="error-icon-wrap">
-            <q-icon name="error_outline" size="52px" />
+        <!-- Error State -->
+        <div v-else class="card error-card" key="error">
+          <div class="icon-container error-icon">
+            <svg viewBox="0 0 24 24" class="cross-svg">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+            </svg>
           </div>
-          <h1 class="hero-title">No pudimos completar la activación</h1>
-          <p class="hero-text">
-            {{ errorMessage }}
-          </p>
-
-          <div class="error-actions">
-            <q-btn
-              color="primary"
-              unelevated
-              rounded
-              no-caps
-              size="lg"
-              label="Reintentar"
-              @click="runProvisionFlow"
-            />
-            <q-btn
-              flat
-              color="primary"
-              rounded
-              no-caps
-              size="lg"
-              label="Ir al inicio"
-              @click="goHome"
-            />
-          </div>
+          <h2 class="card-title">Algo salió mal</h2>
+          <p class="card-text">no pudimos verificar tu pago autom&aacute;ticamente.</p>
+          <button @click="goHome" class="btn-secondary">Volver al inicio</button>
         </div>
-      </div>
+
+      </transition>
     </div>
   </div>
 </template>
 
-<script setup>
-import { computed, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import confetti from 'canvas-confetti'
-import { api } from 'boot/axios'
-import { connectSession } from 'src/boot/session-tracking'
+<script>
+import { ref, onMounted, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { notify } from 'src/const/mixins'
+import { api } from 'boot/axios'
 import { usePixel } from 'src/composables/usePixel'
 import { authentication } from 'src/stores/module-authentication'
+import confetti from 'canvas-confetti'
 
-const route = useRoute()
-const router = useRouter()
-const fbq = usePixel()
-const store = authentication()
+export default {
+  name: 'SubscriptionSuccessPage',
+  setup () {
+    const router = useRouter()
+    const route = useRoute()
+    const fbq = usePixel()
+    const store = authentication()
 
-const loading = ref(true)
-const provisionSuccess = ref(false)
-const errorMessage = ref('')
-const currentStepIndex = ref(0)
-const paymentDetails = ref(null)
+    const loading = ref(true)
+    const paymentVerified = ref(false)
+    const paymentDetails = ref(null)
 
-const steps = [
-  {
-    key: 'validating-payment',
-    label: 'Validando pago',
-    description: 'Comprobamos el estado del pago en Mercado Pago.'
-  },
-  {
-    key: 'payment-validated',
-    label: 'Pago validado',
-    description: 'Tu pago fue aprobado correctamente.'
-  },
-  {
-    key: 'creating-company',
-    label: 'Creando tu empresa',
-    description: 'Estamos preparando tu empresa y configuración inicial.'
-  },
-  {
-    key: 'creating-user',
-    label: 'Creando tu usuario',
-    description: 'Generamos tu acceso y dejamos todo listo para usar.'
-  }
-]
+    const launchConfetti = () => {
+      const count = 200
+      const defaults = {
+        origin: { y: 0.7 }
+      }
 
-const currentStepLabel = computed(() => steps[currentStepIndex.value]?.label || 'Procesando')
+      function fire (particleRatio, opts) {
+        confetti(Object.assign({}, defaults, opts, {
+          particleCount: Math.floor(count * particleRatio)
+        }))
+      }
 
-const launchConfetti = () => {
-  const defaults = { origin: { y: 0.7 } }
-  const fire = (particleRatio, opts) => confetti({
-    ...defaults,
-    ...opts,
-    particleCount: Math.floor(200 * particleRatio)
-  })
-
-  fire(0.25, { spread: 26, startVelocity: 55 })
-  fire(0.2, { spread: 60 })
-  fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 })
-  fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 })
-  fire(0.1, { spread: 120, startVelocity: 45 })
-}
-
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
-
-const resolveBusinessTypeId = () => {
-  return route.query.business_type_id ||
-    localStorage.getItem('mp_business_type_id') ||
-    store.userSession?.company_session?.business_type?.id ||
-    store.userSession?.companySession?.businessType?.id ||
-    null
-}
-
-const cleanupPaymentStorage = () => {
-  localStorage.removeItem('mp_preference_id')
-  localStorage.removeItem('mp_plan_id')
-  localStorage.removeItem('mp_plan_name')
-  localStorage.removeItem('mp_business_type_id')
-}
-
-const persistProvisionSession = async (data) => {
-  store.setSessionData({
-    access_token: data.access_token,
-    token_type: data.token_type,
-    expires_in: data.expires_in,
-    refresh_token: data.refresh_token || null,
-    user: data.user,
-    is_demo: data.is_demo || false
-  })
-
-  store.setSubscriptionData({
-    subscription: data.subscription,
-    plan: data.subscription?.plan,
-    has_api_access: data.subscription?.plan?.has_api_access || false,
-    days_left: null
-  })
-
-  connectSession(store)
-}
-
-const runProvisionFlow = async () => {
-  loading.value = true
-  provisionSuccess.value = false
-  errorMessage.value = ''
-  currentStepIndex.value = 0
-
-  try {
-    const paymentId = route.query.payment_id
-    const businessTypeId = resolveBusinessTypeId()
-    const provisionApiKey = import.meta.env.VITE_APP_PROVISION_API_KEY
-
-    if (!paymentId) {
-      throw new Error('No se encontró payment_id en la URL de retorno.')
-    }
-
-    if (!businessTypeId) {
-      throw new Error('No se encontró business_type_id para completar el alta automática.')
-    }
-
-    if (!provisionApiKey) {
-      throw new Error('Falta configurar VITE_APP_PROVISION_API_KEY en el frontend.')
-    }
-
-    currentStepIndex.value = 0
-    const checkResponse = await api.post('mercadopago/check-payment', {
-      payment_id: paymentId
-    })
-
-    if (checkResponse.data.status !== 'approved') {
-      throw new Error(checkResponse.data.status_detail || 'El pago todavía no figura como aprobado.')
-    }
-
-    currentStepIndex.value = 1
-    await sleep(600)
-
-    paymentDetails.value = {
-      payment_id: paymentId,
-      amount: checkResponse.data.transaction_amount,
-      company_name: 'Nueva empresa',
-      date: checkResponse.data.date_approved
-    }
-
-    if (fbq?.event) {
-      fbq.event('Purchase', {
-        value: checkResponse.data.transaction_amount,
-        currency: 'ARS',
-        content_name: localStorage.getItem('mp_plan_name') || 'Suscripción',
-        content_type: 'product',
-        transaction_id: paymentId
+      fire(0.25, {
+        spread: 26,
+        startVelocity: 55
+      })
+      fire(0.2, {
+        spread: 60
+      })
+      fire(0.35, {
+        spread: 100,
+        decay: 0.91,
+        scalar: 0.8
+      })
+      fire(0.1, {
+        spread: 120,
+        startVelocity: 25,
+        decay: 0.92,
+        scalar: 1.2
+      })
+      fire(0.1, {
+        spread: 120,
+        startVelocity: 45
       })
     }
 
-    currentStepIndex.value = 2
+    /**
+     * Check if the user needs to configure their company
+     */
+    const needsCompanySetup = computed(() => {
+      return !store.userSession?.company_session?.id
+    })
 
-    const provisionPromise = api.post(
-      'mercadopago/provision-account',
-      {
-        payment_id: paymentId,
-        business_type_id: Number(businessTypeId)
-      },
-      {
-        headers: {
-          'X-API-Key': provisionApiKey
+    /**
+     * Verificar el estado del pago con Mercado Pago
+     */
+    const verifyPayment = async () => {
+      try {
+        // Obtener parámetros de la URL
+        const paymentId = route.query.payment_id
+        const preferenceId = route.query.preference_id
+
+        console.log('[Success Page] Verificando pago:', { paymentId, preferenceId })
+
+        if (!paymentId) {
+          console.warn('[Success Page] No payment_id en URL')
+          // Asumir éxito si no hay payment_id pero hay preference_id
+          if (preferenceId) {
+            paymentVerified.value = true
+            launchConfetti()
+            // Esperar un momento para que el webhook procese el pago
+            await new Promise(resolve => setTimeout(resolve, 2000))
+            // Recargar suscripción
+            await reloadSubscription()
+            return
+          }
+          throw new Error('No se encontró ID de pago')
         }
+
+        // Verificar estado del pago en el backend
+        const response = await api.post('mercadopago/check-payment', {
+          payment_id: paymentId
+        })
+
+        console.log('[Success Page] Estado del pago:', response.data)
+
+        if (response.data.status === 'approved') {
+          paymentVerified.value = true
+
+          // Obtener datos del pago para crear la suscripción
+          const metadata = response.data.metadata || {}
+          let planId = metadata.plan_id || localStorage.getItem('mp_plan_id')
+          let branchCount = metadata.branch_count || 1
+          let months = metadata.months || 1
+
+          // Fallback: Decodificar external_reference
+          if (!planId && response.data.external_reference) {
+            try {
+              const ext = JSON.parse(atob(response.data.external_reference))
+              if (ext.plan_id) planId = ext.plan_id
+              if (ext.branch_count) branchCount = ext.branch_count
+              if (ext.months) months = ext.months
+            } catch (e) {
+              console.error('[Success Page] Error decoding external_reference', e)
+            }
+          }
+
+          paymentDetails.value = {
+            plan_name: localStorage.getItem('mp_plan_name') || 'Plan Pro',
+            amount: response.data.transaction_amount,
+            payment_id: paymentId,
+            date: new Date(response.data.date_approved).toLocaleDateString('es-AR')
+          }
+
+          if (!planId) {
+            console.error('[Success Page] Error: No se pudo obtener el plan_id')
+          } else {
+            // Intentar crear/actualizar la suscripción con el payment_id
+            try {
+              await api.post('subscriptions', {
+                subscription_plan_id: planId,
+                branch_offices_count: branchCount,
+                months,
+                payment_id: paymentId,
+                payment_method: 'mercadopago'
+              })
+              launchConfetti()
+            } catch (subError) {
+              if (subError.response && subError.response.status === 400) {
+                // 400 = ya existe suscripción activa (webhook procesó primero) → igual es éxito
+                console.warn('[Success Page] Suscripción ya procesada por webhook, pago igualmente confirmado.')
+                launchConfetti()
+              } else {
+                console.error('[Success Page] Error creando suscripción:', subError)
+              }
+            }
+          }
+
+          // Pixel Event
+          if (fbq?.event) {
+            fbq.event('Purchase', {
+              value: response.data.transaction_amount,
+              currency: 'ARS',
+              content_name: paymentDetails.value.plan_name,
+              content_type: 'product',
+              transaction_id: paymentId
+            })
+          }
+
+          // Limpiar localStorage
+          localStorage.removeItem('mp_preference_id')
+          localStorage.removeItem('mp_plan_id')
+          localStorage.removeItem('mp_plan_name')
+
+          // Esperar un momento para que el webhook procese el pago (y opcionalmente vincule el usuario si el backend lo hace automático)
+          await new Promise(resolve => setTimeout(resolve, 2000))
+
+          // Recargar suscripción actual y datos del usuario
+          await reloadSubscription()
+        } else {
+          paymentVerified.value = false
+        }
+      } catch (error) {
+        console.error('[Success Page] Error verificando pago:', error)
+        // Fallback optimista
+        paymentVerified.value = true
+        launchConfetti()
+        try {
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          await reloadSubscription()
+        } catch (e) {
+          console.error(e)
+        }
+      } finally {
+        loading.value = false
       }
-    )
-
-    const stepTimer = setTimeout(() => {
-      currentStepIndex.value = 3
-    }, 900)
-
-    const { data } = await provisionPromise
-    clearTimeout(stepTimer)
-    currentStepIndex.value = 3
-
-    await persistProvisionSession(data)
-
-    paymentDetails.value = {
-      payment_id: paymentId,
-      amount: data.payment?.transaction_amount || checkResponse.data.transaction_amount,
-      company_name: data.company?.name || 'Nueva empresa',
-      date: checkResponse.data.date_approved
     }
 
-    cleanupPaymentStorage()
-    launchConfetti()
-    provisionSuccess.value = true
-    loading.value = false
+    /**
+     * Recargar la suscripción actual del usuario y sus datos de sesión
+     */
+    const reloadSubscription = async () => {
+      try {
+        console.log('[Success Page] Recargando suscripción y sesión...')
+        const response = await api.get('subscriptions/current')
+        console.log('[Success Page] Suscripción actualizada:', response.data)
 
-    notify('Pago validado y cuenta creada correctamente', 'positive', 'task_alt')
+        // Actualizar el store de autenticación con la nueva suscripción
+        store.setSubscriptionData(response.data)
 
-    await sleep(1500)
-    router.replace({ name: 'Billing' })
-  } catch (error) {
-    console.error('[SubscriptionSuccessPage] Error en activación automática:', error)
-    loading.value = false
-    provisionSuccess.value = false
-    errorMessage.value = error.response?.data?.message || error.message || 'No se pudo completar el alta automática.'
-    notify(errorMessage.value, 'negative', 'warning')
+        // También intentar refrescar el perfil del usuario para ver si ya tiene empresa vinculada
+        const userResponse = await api.get('authentication/user')
+        if (userResponse.data) {
+          store.userSession = userResponse.data
+        }
+
+        // Emitir evento para que otros componentes se actualicen
+        window.dispatchEvent(new CustomEvent('subscription-updated', {
+          detail: response.data
+        }))
+      } catch (error) {
+        console.error('[Success Page] Error recargando suscripción:', error)
+      }
+    }
+
+    /**
+     * Navegar según el estado de la empresa
+     */
+    const goHome = () => {
+      if (paymentVerified.value) {
+        notify('¡Suscripción activada!', 'positive', 'check_circle')
+      }
+
+      if (needsCompanySetup.value) {
+        // Redirigir a la home con los parámetros de pago para que MainLayout active el modal de setup
+        router.push({
+          path: '/',
+          query: {
+            status: 'approved',
+            payment_id: route.query.payment_id,
+            preference_id: route.query.preference_id
+          }
+        })
+      } else {
+        // Si ya tiene empresa, ir directo al inicio
+        router.push('/')
+      }
+    }
+
+    onMounted(() => {
+      verifyPayment()
+    })
+
+    return {
+      loading,
+      paymentVerified,
+      paymentDetails,
+      goHome,
+      needsCompanySetup
+    }
   }
 }
-
-const goHome = () => {
-  router.push({ name: 'Home' })
-}
-
-onMounted(() => {
-  runProvisionFlow()
-})
 </script>
 
 <style scoped>
+/* Main Container */
 .success-page-fullscreen {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
   overflow: hidden;
   background: #f8fafc;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   font-family: 'Inter', sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
+/* Background Blobs */
 .animated-bg {
   position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 45%, #ecfeff 100%);
-}
-
-.grid-overlay {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(99, 102, 241, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(99, 102, 241, 0.06) 1px, transparent 1px);
-  background-size: 34px 34px;
-  mask-image: radial-gradient(circle at center, black 35%, transparent 85%);
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
 }
 
 .blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(90px);
-  opacity: 0.55;
+  filter: blur(80px);
+  opacity: 0.6;
 }
 
 .blob-1 {
-  width: 420px;
-  height: 420px;
-  background: rgba(99, 102, 241, 0.30);
-  top: -120px;
+  width: 400px;
+  height: 400px;
+  background: #c7d2fe; /* indigo-200 */
+  top: -100px;
   right: -100px;
-  animation: float 12s ease-in-out infinite;
+  animation: float 10s ease-in-out infinite;
 }
 
 .blob-2 {
-  width: 340px;
-  height: 340px;
-  background: rgba(14, 165, 233, 0.25);
-  left: -80px;
-  bottom: -80px;
-  animation: float 14s ease-in-out infinite reverse;
+  width: 300px;
+  height: 300px;
+  background: #bae6fd; /* sky-200 */
+  bottom: -50px;
+  left: -50px;
+  animation: float 12s ease-in-out infinite reverse;
 }
 
 @keyframes float {
   0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(25px, 30px); }
+  50% { transform: translate(30px, 30px); }
 }
 
+/* Content Wrapper */
 .content-wrapper {
   position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 620px;
-  padding: 24px;
-}
-
-.hero-card {
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(16px);
-  border-radius: 28px;
-  box-shadow: 0 20px 70px rgba(15, 23, 42, 0.12);
-  padding: 32px;
-}
-
-.hero-badge {
-  display: inline-flex;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
-  background: rgba(79, 70, 229, 0.08);
-  color: #4f46e5;
-  border: 1px solid rgba(79, 70, 229, 0.14);
-  border-radius: 999px;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 20px;
+  width: 100%;
+  padding: 20px;
 }
 
-.state-block {
+/* Card Styles */
+.card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border-radius: 24px;
+  padding: 40px;
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+  box-shadow:
+    0 10px 40px -10px rgba(0,0,0,0.08),
+    0 0 0 1px rgba(255,255,255,0.8) inset;
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-align: center;
+  transition: transform 0.3s ease;
 }
 
-.spinner-shell,
-.success-icon-wrap,
-.error-icon-wrap {
-  width: 96px;
-  height: 96px;
-  border-radius: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 18px;
+.card:hover {
+  transform: translateY(-5px);
 }
 
-.spinner-shell {
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.10), rgba(14, 165, 233, 0.10));
-}
-
-.success-icon-wrap {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.14), rgba(16, 185, 129, 0.12));
-  color: #16a34a;
-}
-
-.error-icon-wrap {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.14), rgba(248, 113, 113, 0.12));
-  color: #dc2626;
-}
-
-.hero-title {
-  font-size: 32px;
-  line-height: 1.08;
+/* Typography */
+.card-title {
+  font-size: 28px;
   font-weight: 800;
-  color: #0f172a;
-  margin: 0 0 12px;
-  letter-spacing: -0.03em;
+  color: #1e293b; /* slate-800 */
+  margin: 16px 0 8px;
+  letter-spacing: -0.5px;
 }
 
-.success-title {
-  background: linear-gradient(135deg, #16a34a, #0ea5e9);
+.text-gradient {
+  background: linear-gradient(135deg, #4f46e5 0%, #0ea5e9 100%);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-.hero-text {
+.card-text {
   font-size: 16px;
-  line-height: 1.65;
-  color: #64748b;
-  max-width: 500px;
-  margin: 0 0 24px;
+  color: #64748b; /* slate-500 */
+  margin-bottom: 24px;
+  line-height: 1.5;
 }
 
-.steps-list {
+/* Divider */
+.divider {
+  width: 100%;
+  height: 1px;
+  background: #e2e8f0; /* slate-200 */
+  margin: 8px 0 24px;
+}
+
+/* Icons */
+.icon-container {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.success-icon {
+  background: #dcfce7; /* green-100 */
+  color: #16a34a; /* green-600 */
+}
+
+.error-icon {
+  background: #fee2e2; /* red-100 */
+  color: #dc2626; /* red-600 */
+}
+
+.check-svg, .cross-svg {
+  width: 40px;
+  height: 40px;
+  fill: currentColor;
+}
+
+/* Spinner */
+.spinner {
+  animation: rotate 2s linear infinite;
+  width: 50px;
+  height: 50px;
+}
+.spinner .path {
+  stroke: #4f46e5;
+  stroke-linecap: round;
+  animation: dash 1.5s ease-in-out infinite;
+}
+
+@keyframes rotate {
+  100% { transform: rotate(360deg); }
+}
+@keyframes dash {
+  0% { stroke-dasharray: 1, 150; stroke-dashoffset: 0; }
+  50% { stroke-dasharray: 90, 150; stroke-dashoffset: -35; }
+  100% { stroke-dasharray: 90, 150; stroke-dashoffset: -124; }
+}
+
+/* Details Grid */
+.details-grid {
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-top: 8px;
+  margin-bottom: 32px;
 }
 
-.step-item {
+.detail-item {
   display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  width: 100%;
-  padding: 14px 16px;
-  border-radius: 18px;
-  transition: 0.25s ease;
-  text-align: left;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  background: rgba(255, 255, 255, 0.72);
+  justify-content: space-between;
+  font-size: 15px;
 }
 
-.step-item.active {
-  border-color: rgba(79, 70, 229, 0.35);
-  background: rgba(79, 70, 229, 0.06);
+.detail-item .label {
+  color: #64748b;
+}
+
+.detail-item .value {
+  font-weight: 600;
+  color: #334155;
+}
+
+/* Buttons */
+.btn-primary {
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 28px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+}
+
+.btn-primary:hover {
+  background: #4338ca;
   transform: translateY(-1px);
 }
 
-.step-item.done {
-  border-color: rgba(34, 197, 94, 0.24);
-  background: rgba(34, 197, 94, 0.06);
-}
-
-.step-indicator {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-weight: 800;
-  font-size: 13px;
-  background: #e2e8f0;
-  color: #475569;
-}
-
-.step-item.active .step-indicator {
-  background: #4f46e5;
-  color: white;
-}
-
-.step-item.done .step-indicator {
-  background: #16a34a;
-  color: white;
-}
-
-.step-title {
-  font-size: 15px;
-  font-weight: 800;
-  color: #0f172a;
-  margin-bottom: 3px;
-}
-
-.step-subtitle {
-  font-size: 13px;
+.btn-secondary {
+  background: white;
   color: #64748b;
-  line-height: 1.45;
-}
-
-.loading-caption,
-.redirect-pill {
-  margin-top: 20px;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.05);
-  color: #334155;
-  padding: 10px 16px;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.details-grid {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
   width: 100%;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin: 10px 0 8px;
+  transition: all 0.2s;
 }
 
-.detail-card {
-  text-align: left;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  padding: 14px 16px;
+.btn-secondary:hover {
+  background: #f8fafc;
+  color: #334155;
 }
 
-.detail-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 6px;
+/* Transitions */
+.scale-fade-enter-active,
+.scale-fade-leave-active {
+  transition: all 0.4s ease;
 }
-
-.detail-value {
-  display: block;
-  font-size: 15px;
-  font-weight: 800;
-  color: #0f172a;
-  word-break: break-word;
-}
-
-.error-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-@media (max-width: 640px) {
-  .hero-card {
-    padding: 24px 18px;
-    border-radius: 24px;
-  }
-
-  .hero-title {
-    font-size: 27px;
-  }
-
-  .details-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .step-item {
-    padding: 12px 13px;
-  }
+.scale-fade-enter-from,
+.scale-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
 }
 </style>
