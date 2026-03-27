@@ -1127,7 +1127,7 @@
                 <th class="text-left">Hora</th>
                 <th class="text-left">Descripción</th>
                 <th class="text-right">Monto</th>
-                <th class="text-right" v-if="userSession?.is_root">Acciones</th>
+                <th class="text-right" v-if="userSession?.is_root || validate">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -1147,14 +1147,16 @@
                 <td class="text-right" :class="item.type_cashflow === 'debit' ? 'text-positive' : 'text-negative'">
                   {{ formatNumber(item.amount) }}
                 </td>
-                <td v-if="userSession?.is_root" class="text-right">
+                <td v-if="userSession?.is_root || validate" class="text-right">
                   <q-btn
                     flat
                     round
                     color="negative"
                     icon="delete"
                     @click="deleteCashflow(item)"
-                  />
+                  >
+                    <q-tooltip>Eliminar</q-tooltip>
+                  </q-btn>
                 </td>
               </tr>
               <tr>
@@ -1827,17 +1829,30 @@ export default {
       this.loadInitialPaymentData()
     },
 
+    /**
+     * Muestra confirmación y elimina una entrada/salida de caja.
+     * Visible para root y super administrador.
+     * @param {Object} cashflow - Objeto de flujo de caja a eliminar
+     */
     deleteCashflow (cashflow) {
-      console.log(cashflow)
-      this.$api.delete(`cashflows/${cashflow.id}`)
-        .then(() => {
-          this.cashFlowDetails(cashflow)
-          this.getCashflowTotals()
-          notify('Flujo de dinero eliminado correctamente', 'positive', 'check')
-        })
-        .catch(error => {
-          notify(error.message, 'negative', 'warning')
-        })
+      const tipo = cashflow.type_cashflow === 'debit' ? 'entrada' : 'salida'
+      this.$q.dialog({
+        title: `Eliminar ${tipo}`,
+        message: `¿Estás seguro de eliminar esta ${tipo} de <b>${this.formatNumber(cashflow.amount)}</b>?<br>Esta acción no se puede deshacer.`,
+        html: true,
+        ok: { label: 'Eliminar', color: 'negative', unelevated: true },
+        cancel: { label: 'Cancelar', flat: true }
+      }).onOk(() => {
+        this.$api.delete(`cashflows/${cashflow.id}`)
+          .then(() => {
+            this.cashFlowDetails(cashflow)
+            this.getCashflowTotals()
+            notify('Eliminado correctamente', 'positive', 'check')
+          })
+          .catch(error => {
+            notify(error.response?.data?.message || error.message, 'negative', 'warning')
+          })
+      })
     },
 
     /**
