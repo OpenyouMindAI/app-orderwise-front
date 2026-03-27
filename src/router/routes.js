@@ -488,7 +488,7 @@ const routes = [
   {
     path: '/subscription/success',
     name: 'SubscriptionSuccess',
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: false },
     component: () => import('pages/SubscriptionSuccessPage.vue')
   },
   {
