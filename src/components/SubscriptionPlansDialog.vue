@@ -1,6 +1,6 @@
 <template>
   <div>
-    <q-dialog v-model="showDialog" persistent :maximized="isMobile" transition-show="slide-up" transition-hide="slide-down">
+    <q-dialog v-model="showDialog" persistent :maximized="isMobile" transition-show="slide-up" transition-hide="slide-down" no-focus-restore>
       <q-card flat class="modern-pricing" :dark="$q.dark.isActive">
         <!-- Close Button -->
         <q-btn
@@ -350,7 +350,7 @@
     </q-dialog>
 
     <!-- Cancel Confirmation Dialog -->
-    <q-dialog v-model="showCancelDialog">
+    <q-dialog v-model="showCancelDialog" no-focus-restore>
       <q-card class="cancel-dialog">
         <q-card-section class="cancel-header">
           <q-icon name="warning_amber" size="48px" color="warning" />

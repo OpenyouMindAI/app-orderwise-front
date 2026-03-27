@@ -6,6 +6,7 @@
     transition-show="scale"
     transition-hide="scale"
     class="custom-dialog-wrapper"
+    no-focus-restore
   >
     <RegistrationForm
       :showLogo="true"

@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-model="show" @hide="onHide">
+  <q-dialog v-model="show" @hide="onHide" no-focus-restore>
     <q-card :style="$q.screen.lt.sm ? 'min-width: 90vw;' : 'width: 800px; max-width: 80vw;'">
       <q-form @submit="saveCashflow" class="column">
         <!-- Header -->
@@ -715,7 +715,8 @@ export default {
             ok: {
               label: 'Continuar',
               color: 'primary'
-            }
+            },
+            noFocusRestore: true
           }).onOk(async (source) => {
             await this.captureImage(source)
           })
