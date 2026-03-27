@@ -653,6 +653,20 @@
                         >
                           <q-tooltip>Ver imagen</q-tooltip>
                         </q-btn>
+
+                        <!-- Botón eliminar arqueo -->
+                        <q-btn
+                          flat
+                          color="negative"
+                          icon="delete"
+                          size="sm"
+                          round
+                          :loading="deletingWithdrawalId === withdrawal.id"
+                          :disable="deletingWithdrawalId === withdrawal.id"
+                          @click="confirmDeleteWithdrawal(withdrawal)"
+                        >
+                          <q-tooltip>Eliminar arqueo</q-tooltip>
+                        </q-btn>
                       </div>
                     </div>
                   </div>
@@ -1268,6 +1282,8 @@ export default {
     const currentWithdrawal = ref(null)
     const cashflow = ref({})
     const savingWithdrawalId = ref(null)
+    /** ID del arqueo que se está eliminando (para mostrar loading en el botón) */
+    const deletingWithdrawalId = ref(null)
     const showFilters = ref(true)
 
     // Global Withdrawal State
@@ -1847,6 +1863,60 @@ export default {
     }
 
     /**
+     * Muestra un diálogo de confirmación antes de eliminar un arqueo.
+     * @param {Object} withdrawal - Objeto arqueo a eliminar
+     */
+    const confirmDeleteWithdrawal = (withdrawal) => {
+      $q.dialog({
+        title: 'Eliminar arqueo',
+        message: `¿Estás seguro de eliminar el arqueo de <b>${formatCurrency(withdrawal.amount)}</b>?<br>Esta acción no se puede deshacer.`,
+        html: true,
+        ok: { label: 'Eliminar', color: 'negative', unelevated: true },
+        cancel: { label: 'Cancelar', flat: true }
+      }).onOk(() => {
+        deleteWithdrawal(withdrawal)
+      })
+    }
+
+    /**
+     * Elimina un arqueo (soft delete) vía DELETE /cashflow/{id}
+     * y lo remueve del listado local sin recargar toda la página.
+     * @param {Object} withdrawal - Objeto arqueo a eliminar
+     */
+    const deleteWithdrawal = async (withdrawal) => {
+      deletingWithdrawalId.value = withdrawal.id
+      try {
+        await api.delete(`cashflow/${withdrawal.id}`)
+
+        // Remover del estado local sin recargar
+        for (const day of daysData.value) {
+          if (!day.cashboxes) continue
+          for (const cashbox of day.cashboxes) {
+            if (!cashbox.withdrawals) continue
+            const idx = cashbox.withdrawals.findIndex(w => w.id === withdrawal.id)
+            if (idx >= 0) {
+              cashbox.withdrawals.splice(idx, 1)
+              break
+            }
+          }
+        }
+
+        $q.notify({ type: 'positive', message: 'Arqueo eliminado correctamente', position: 'top', timeout: 2000 })
+
+        // Recargar para actualizar diferencias
+        await loadWithdrawals()
+      } catch (error) {
+        $q.notify({
+          type: 'negative',
+          message: 'Error al eliminar el arqueo',
+          caption: error.response?.data?.message || error.message
+        })
+      } finally {
+        deletingWithdrawalId.value = null
+      }
+    }
+
+    /**
      * Gets a paginated subset of withdrawals for a specific day
      * @param {Array} dayWithdrawals - Array of withdrawals for the day
      * @param {string} day - The day identifier
@@ -2359,6 +2429,9 @@ export default {
 
       // Withdrawal Operations
       updateWithdrawal,
+      confirmDeleteWithdrawal,
+      deleteWithdrawal,
+      deletingWithdrawalId,
       openCashflowModal,
       onCashflowSaved,
       savingWithdrawalId,
