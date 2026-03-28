@@ -12,15 +12,30 @@ let totalTimeBetweenKeys = 0
 // Configuración ajustable
 const config = {
   minLength: 5, // Longitud mínima del código
-  maxAvgTime: 50, // Tiempo máximo promedio entre caracteres (ms)
+  maxAvgTime: 80, // Tiempo máximo promedio entre caracteres (ms)
+  finishDelay: 120, // Si no llega Enter, cerrar lectura por pausa corta
   allowedChars: /^[a-zA-Z0-9-]+$/ // Caracteres permitidos en el código
 }
+
+let finishTimer = null
 
 const resetScanState = () => {
   barcodeBuffer = ''
   lastKeyTime = null
   keyPressCount = 0
   totalTimeBetweenKeys = 0
+  if (finishTimer) {
+    clearTimeout(finishTimer)
+    finishTimer = null
+  }
+}
+
+const emitIfValidScan = () => {
+  const avgTimePerChar = totalTimeBetweenKeys / Math.max(1, (keyPressCount - 1))
+  if (barcodeBuffer.length >= config.minLength && avgTimePerChar < config.maxAvgTime) {
+    emit('barcode-scanned', barcodeBuffer)
+  }
+  resetScanState()
 }
 
 const handleKeyDown = (event) => {
@@ -36,29 +51,24 @@ const handleKeyDown = (event) => {
     lastKeyTime = currentTime
     barcodeBuffer = event.key
     keyPressCount = 1
+    if (finishTimer) clearTimeout(finishTimer)
+    finishTimer = setTimeout(() => emitIfValidScan(), config.finishDelay)
     return
   }
 
   // Si ya estamos en medio de un posible escaneo
   if (barcodeBuffer !== '') {
-    // Calcular tiempo desde la última tecla
     const timeSinceLastKey = currentTime - lastKeyTime
     lastKeyTime = currentTime
 
     if (event.key !== 'Enter') {
-      // Acumular tiempo y contar teclas
       totalTimeBetweenKeys += timeSinceLastKey
       keyPressCount += 1
       barcodeBuffer += event.key
+      if (finishTimer) clearTimeout(finishTimer)
+      finishTimer = setTimeout(() => emitIfValidScan(), config.finishDelay)
     } else {
-      // Se presionó Enter - verificar si es un escaneo válido
-      const avgTimePerChar = totalTimeBetweenKeys / Math.max(1, (keyPressCount - 1))
-
-      // Verificar requisitos
-      if (barcodeBuffer.length >= config.minLength && avgTimePerChar < config.maxAvgTime) {
-        emit('barcode-scanned', barcodeBuffer)
-      }
-      resetScanState()
+      emitIfValidScan()
     }
   }
 }

@@ -166,7 +166,6 @@
                   style="width: 100% !important; max-width: none !important;"
                   @keyup.enter="processBarcode(barcode)"
                   @update:model-value="handleBarcodeInput"
-                  @focus="scanner = false"
                   @blur="handleBarcodeBlur"
                   :class="$q.screen.lt.md ? 'compact-input' : ''"
                 />
@@ -1829,7 +1828,7 @@ export default {
 
       currentCashierSession: null,
 
-      scanner: false,
+      scanner: true,
 
       // Cash Box System
       showCashBoxDialog: false,
