@@ -68,37 +68,6 @@
         </div>
         <q-space />
 
-        <!-- Branch Office Indicator -->
-        <!-- Support Button (Replaces Branch Office Indicator) -->
-        <div class="support-indicator">
-          <q-btn
-            v-if="userSession?.is_root"
-            flat
-            dense
-            no-caps
-            class="support-btn-header"
-            label="Suporte Admin"
-            @click="changeRoute('AdminSupport', 'Suporte Admin')"
-          >
-            <q-icon name="support_agent" size="20px" />
-            <q-tooltip>Centro de Soporte para Administradores</q-tooltip>
-          </q-btn>
-          <q-btn
-            v-else
-            flat
-            dense
-            no-caps
-            label="Contactanos"
-            class="support-btn-header"
-            @click="changeRoute('Support', 'Suporte')"
-          >
-            <q-icon name="support_agent" size="20px" />
-            <q-tooltip>Centro de Soporte y Ayuda</q-tooltip>
-          </q-btn>
-        </div>
-
-        <q-space />
-
         <!-- Right: Actions -->
         <div class="navbar-right">
           <!-- Botón Crear Mi Empresa (Escritorio/Tablet) -->
@@ -180,19 +149,27 @@
           >
             <q-tooltip>Escanear QR</q-tooltip>
           </q-btn>
-          <!-- Chat IA (Visible en Desktop y Tablet) -->
+
+          <!-- Soporte Chat -->
           <q-btn
+            v-if="userSession"
             flat
             dense
-            icon="smart_toy"
             round
-            color="primary"
-            @click="changeRoute('AiChat', 'Chat con IA')"
-            v-if="userSession?.is_root && !$q.screen.xs"
-            class="ai-chat-btn"
+            icon="chat"
+            @click="handleChatButtonClick"
+            class="support-chat-toggle-btn"
           >
-            <q-tooltip>Chat con IA - Asistente Virtual</q-tooltip>
+            <q-badge
+              v-if="totalSupportUnread > 0"
+              color="red"
+              floating
+            >
+              {{ totalSupportUnread }}
+            </q-badge>
+            <q-tooltip>Chat de Soporte</q-tooltip>
           </q-btn>
+
           <!-- Herramientas -->
           <q-btn flat dense icon="apps" round @click="loadIntegrations">
             <q-tooltip class="text-body2">
@@ -216,17 +193,6 @@
                   >
                     <q-icon name="sync_alt" size="24px" />
                     <span class="tool-label">Empresa</span>
-                  </div>
-
-                  <!-- Chat IA (Solo Mobile XS) -->
-                  <div
-                    v-if="userSession?.is_root && $q.screen.xs"
-                    class="tool-item"
-                    :class="{ 'tool-active': $route.name === 'AiChat' }"
-                    @click="changeRoute('AiChat', 'Chat con IA')"
-                  >
-                    <q-icon name="smart_toy" size="24px" color="primary" />
-                    <span class="tool-label">Chat IA</span>
                   </div>
 
                   <!-- Tour de Página (Solo Mobile XS) -->
@@ -584,11 +550,11 @@
 
         <q-scroll-area class="col">
           <q-expansion-item
-            v-for="(category_module, index) in filteredDataMenu"
+            v-for="category_module in filteredDataMenu"
             expand-separator
             :key="category_module.id"
             :icon="category_module.icon"
-            :default-opened="index === 0"
+            v-model="expansionStates[category_module.id]"
             :label="category_module.name"
           >
             <div v-for="list in category_module.modules" :key="list.id">
@@ -693,9 +659,6 @@
       @open-subscription="showSubscriptionDialog = true"
     />
 
-    <!-- Global Support Chat Bubble -->
-    <SupportChatBubble />
-
     <!-- Register Dialog -->
     <register-dialog
       v-model="showCreateCompanyDialog"
@@ -728,6 +691,21 @@
       :show-back-link="true"
       @verified="handleOtpVerified"
       @back="showOtpVerification = false; showCreateCompanyDialog = true"
+    />
+
+    <!-- Global Support Chat Bubble -->
+    <SupportChatBubble
+      v-if="$route.name !== 'Support' && $route.name !== 'AdminSupport'"
+      ref="supportChat"
+    />
+
+    <SupportNotificationToast
+      ref="supportToast"
+      :avatar="toastData.avatar"
+      :name="toastData.name"
+      :message="toastData.message"
+      :duration="10000"
+      @click="handleChatButtonClick"
     />
 
     <bottom-nav v-if="!$route.meta.hideBottomNav" :data-menu="dataMenu" />
@@ -801,6 +779,8 @@ import {
 import { useDemoPersuasion } from 'src/composables/useDemoPersuasion'
 import { useCompanySetup } from 'src/composables/useCompanySetup'
 import ProPlanPromoBanner from 'src/components/ProPlanPromoBanner.vue'
+import SupportChatBubble from 'src/components/SupportChatBubble.vue'
+import SupportNotificationToast from 'src/components/SupportNotificationToast.vue'
 
 export default {
   name: 'MainLayout',
@@ -818,7 +798,8 @@ export default {
     IntegrationDynamic,
     BottomNav,
     ProPlanPromoBanner,
-    SupportChatBubble: () => import('src/components/SupportChatBubble.vue')
+    SupportChatBubble,
+    SupportNotificationToast
   },
   data () {
     return {
@@ -969,7 +950,30 @@ export default {
        * Subscription renewal button state
        * @type {Boolean}
        */
-      showRenewButton: false
+      showRenewButton: false,
+      /**
+       * Total unread support messages
+       * @type {Number}
+       */
+      totalSupportUnread: 5,
+      /**
+       * Toast notification data
+       */
+      toastData: {
+        avatar: '',
+        name: '',
+        message: ''
+      },
+      /**
+       * Menu expansion states
+       * @type {Object}
+       */
+      expansionStates: {},
+      /**
+       * Previous menu expansion states (before search)
+       * @type {Object}
+       */
+      previousExpansionStates: {}
     }
   },
   computed: {
@@ -1124,6 +1128,29 @@ export default {
             }).length > 0
           )
         })
+
+        // Initialize expansion states
+        this.dataMenu.forEach((item, index) => {
+          if (this.expansionStates[item.id] === undefined) {
+            this.expansionStates[item.id] = index === 0
+          }
+        })
+      }
+    },
+    menuSearch (newVal, oldVal) {
+      if (newVal && !oldVal) {
+        // Search started: save current states
+        this.previousExpansionStates = JSON.parse(JSON.stringify(this.expansionStates))
+        // Expand all
+        Object.keys(this.expansionStates).forEach(key => {
+          this.expansionStates[key] = true
+        })
+      } else if (!newVal && oldVal) {
+        // Search cleared or closed: restore states
+        Object.keys(this.previousExpansionStates).forEach(key => {
+          this.expansionStates[key] = this.previousExpansionStates[key]
+        })
+        this.previousExpansionStates = {}
       }
     },
     $route (to, from) {
@@ -1131,7 +1158,7 @@ export default {
     },
     mustSelectPlan: {
       handler (val) {
-        if (val) {
+        if (val && import.meta.env.VITE_ENABLE_DEMO_PERSUASION !== 'false') {
           this.showSubscriptionDialog = true
         } else {
           this.showSubscriptionDialog = false
@@ -1186,10 +1213,12 @@ export default {
         this.setNotification(notification)
       })
 
-    this.$echo.private(`support.user.${this.userSession.id}`)
-      .listen('.message.sent', (data) => {
-        this.handleGlobalSupportMessage(data)
-      })
+    if (this.userSession?.id) {
+      this.$echo.private(`support.user.${this.userSession.id}`)
+        .listen('.message.sent', (data) => {
+          this.handleGlobalSupportMessage(data)
+        })
+    }
 
     // Listen for subscription updates
     window.addEventListener('subscription-updated', () => {
@@ -1239,6 +1268,11 @@ export default {
 
     // Init demo persuasion logic (immediate trigger + timer)
     this.initDemoPersuasion()
+
+    // Mock Notification for Demonstration
+    setTimeout(() => {
+      this.testToast()
+    }, 1000)
   },
 
   beforeUnmount () {
@@ -1568,8 +1602,7 @@ export default {
         // Recargar los módulos y estados para que el menú se vea correctamente sin refrescar
         this.loadingPage()
 
-        console.log('🏁 handleCompanySetupSuccess (MainLayout) - Evitando redirección para inspección')
-        // this.$router.push('/')
+        this.$router.push('/')
       } catch (error) {
         console.error('Error al procesar configuración de empresa:', error)
         notify('Error al procesar la configuración', 'negative', 'warning')
@@ -1932,6 +1965,7 @@ export default {
         }
       })
     },
+
     /**
      * Maneja un mensaje de soporte entrante globalmente
      * @param {Object} data data del evento
@@ -1942,6 +1976,7 @@ export default {
 
       // Actualizar la campanita
       this.getDataNotification()
+      this.getSupportUnreadCount()
 
       this.setNotification({
         data: {
@@ -1951,7 +1986,18 @@ export default {
         },
         id: data.chat_id
       })
+
+      // NEW: Trigger the custom popup toast
+      this.toastData = {
+        avatar: data.message.sender_avatar || data.message.sender?.avatar || '',
+        name: data.message.sender_name || data.message.sender?.name || 'Soporte',
+        message: data.message.content || ''
+      }
+      this.$nextTick(() => {
+        this.$refs.supportToast?.show()
+      })
     },
+
     async getDataNotification () {
       try {
         const { data } = await api.get('notifications', {
@@ -1960,6 +2006,23 @@ export default {
         this.numberOfNotifications = data.data
       } catch (error) {
         console.log(error.message)
+      }
+    },
+
+    /**
+     * Get total unread support chat messages
+     */
+    async getSupportUnreadCount () {
+      this.totalSupportUnread = 5 // MOCK FOR DEMONSTRATION - KEEP IT FIXED
+      if (!this.userSession) return
+      try {
+        const params = {
+          is_root: this.isRootOrSuperAdmin() ? 1 : 0
+        }
+        await api.get('support-chats', { params })
+        // Real logic commented for mock focus
+      } catch (error) {
+        console.error('Error loading support unread count:', error)
       }
     },
 
@@ -2163,12 +2226,13 @@ export default {
      * @returns {Object}
      */
     validateRole (roles = []) {
-      const rol = this.userSession?.roles[0]
       if (this.userSession?.is_root) return true
-      if (roles && roles.length > 0 && rol) {
-        return roles.some((element) => element.id === rol.id)
-      }
-      return false
+      if (!roles || roles.length === 0) return true
+
+      const userRoles = this.userSession?.roles || []
+      return userRoles.some(userRole =>
+        roles.some(allowedRole => allowedRole.id === userRole.id)
+      )
     },
     /**
      * Check if user is root or super admin
@@ -2267,6 +2331,7 @@ export default {
       this.getDataNotification()
       this.getBrachOffice()
       this.loadSubscriptionInfo()
+      this.getSupportUnreadCount()
       this.cuit = this.userSession?.company_session?.document_number
       this.loadingTasks()
     },
@@ -2357,8 +2422,8 @@ export default {
      * Shows create company dialog every 5 minutes for demo accounts
      */
     startDemoReminder () {
-      // Solo iniciar si es cuenta demo
-      if ((!this.isDemo && !this.isClientDemo) || this.userSession?.is_root) {
+      // Solo iniciar si es cuenta demo y está habilitada la persuasión
+      if ((!this.isDemo && !this.isClientDemo) || this.userSession?.is_root || import.meta.env.VITE_ENABLE_DEMO_PERSUASION === 'false') {
         return
       }
 
@@ -2387,6 +2452,38 @@ export default {
       }
     },
 
+    /**
+     * Test notification toast with mock data
+     */
+    testToast () {
+      this.toastData = {
+        avatar: 'https://cdn.quasar.dev/img/avatar2.jpg',
+        name: 'Palma (Soporte)',
+        message: '¡Hola! ¿En qué puedo ayudarte hoy con tu pedido?'
+      }
+      this.$nextTick(() => {
+        this.$refs.supportToast?.show()
+      })
+    },
+    /**
+     * Handle chat button click based on screen size
+     */
+    handleChatButtonClick () {
+      if (this.$q.screen.xs) {
+        this.$router.push('/support')
+      } else {
+        this.$refs.supportChat?.toggleMiniChat()
+      }
+    },
+    /**
+     * Handle support click from the Facebook card in the drawer
+     */
+    handleSupportClick () {
+      console.log('Support card clicked', this.$refs.supportChat)
+      if (this.$refs.supportChat) {
+        this.$refs.supportChat.toggleMiniChat()
+      }
+    },
     /**
      * Logout map actions
      */
@@ -2559,6 +2656,20 @@ export default {
 }
 
 .tour-btn-navbar:active {
+  transform: scale(0.95);
+}
+
+/* Chat Toggle Button in Navbar */
+.support-chat-toggle-btn {
+  transition: all 0.3s ease;
+}
+
+.support-chat-toggle-btn:hover {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.support-chat-toggle-btn:active {
   transform: scale(0.95);
 }
 
@@ -3889,6 +4000,16 @@ body.body--dark .renew-subscription-btn {
 @supports (padding: max(0px)) {
   .with-bottom-nav {
     padding-bottom: max(64px, env(safe-area-inset-bottom)) !important;
+  }
+}
+
+.support-card-floating-wrapper {
+  z-index: 9998;
+  width: 350px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+  &:hover {
+    transform: translateY(-5px);
   }
 }
 

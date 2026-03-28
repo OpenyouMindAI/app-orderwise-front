@@ -205,7 +205,7 @@ export default {
           if (!planId) {
             console.error('[Success Page] Error: No se pudo obtener el plan_id')
           } else {
-            // Intentar crear/asignar la suscripción
+            // Intentar crear/actualizar la suscripción con el payment_id
             try {
               await api.post('subscriptions', {
                 subscription_plan_id: planId,
@@ -217,7 +217,9 @@ export default {
               launchConfetti()
             } catch (subError) {
               if (subError.response && subError.response.status === 400) {
-                // Ignorar si ya existe
+                // 400 = ya existe suscripción activa (webhook procesó primero) → igual es éxito
+                console.warn('[Success Page] Suscripción ya procesada por webhook, pago igualmente confirmado.')
+                launchConfetti()
               } else {
                 console.error('[Success Page] Error creando suscripción:', subError)
               }

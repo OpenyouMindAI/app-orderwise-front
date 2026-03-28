@@ -447,7 +447,7 @@ const routes = [
         path: 'admin/support',
         name: 'AdminSupport',
         meta: { requiresAuth: true, hideBottomNav: true },
-        component: () => import('pages/AdminSupportPage.vue')
+        component: () => import('pages/SupportChatPage.vue')
       }
     ]
   },
@@ -490,6 +490,12 @@ const routes = [
     name: 'SubscriptionSuccess',
     meta: { requiresAuth: true },
     component: () => import('pages/SubscriptionSuccessPage.vue')
+  },
+  {
+    path: '/subscription/provision',
+    name: 'SubscriptionProvision',
+    meta: { requiresAuth: false },
+    component: () => import('pages/SubscriptionProvisionPage.vue')
   },
   {
     path: '/subscription/failure',

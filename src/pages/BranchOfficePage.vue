@@ -603,6 +603,7 @@ export default {
         }
         localStorage.setItem('mp_plan_id', this.currentSubscription.plan.id)
         localStorage.setItem('mp_plan_name', this.currentSubscription.plan.name || 'Plan actual')
+        localStorage.setItem('mp_business_type_id', this.userSession?.company_session?.business_type?.id || '')
 
         Notify.create({
           message: 'Redirigiendo a Mercado Pago...',

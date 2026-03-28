@@ -3,7 +3,7 @@
     <div class="chat-container">
       <!-- Sidebar con lista de tickets -->
       <div class="chat-sidebar" :class="{ 'mobile-hidden': selectedChat && $q.screen.lt.md }">
-        <div class="sidebar-header">
+        <div v-if="!isRoot" class="sidebar-header">
           <div class="header-content">
             <q-icon name="forum" size="32px" color="white" />
             <div class="header-text">
@@ -11,86 +11,198 @@
               <div class="header-subtitle">¿En qué podemos ayudarte?</div>
             </div>
           </div>
-          <q-btn
-            flat
-            round
-            dense
-            icon="add"
-            color="white"
-            @click="openNewTicketDialog"
-            class="new-chat-btn"
-          >
-            <q-tooltip>Nuevo ticket</q-tooltip>
-          </q-btn>
         </div>
 
-        <div class="chat-list">
-          <q-scroll-area class="fit">
-            <div v-if="loading && chats.length === 0" class="text-center q-pa-md">
-              <q-spinner color="primary" size="40px" />
-            </div>
-
-            <div v-else-if="chats.length === 0" class="empty-state">
-              <q-icon name="chat_bubble_outline" size="64px" color="grey-5" />
-              <div class="empty-text">No tienes tickets de soporte</div>
-              <q-btn
-                flat
-                color="primary"
-                label="Crear ticket"
-                icon="add"
-                @click="openNewTicketDialog"
-              />
-            </div>
-
-            <div v-else class="chats-list-wrapper">
+        <div class="chat-list column no-wrap">
+          <!-- Admin tools (Persistent Header) -->
+          <div v-if="isRoot" class="admin-sidebar-header q-pt-md">
+            <div class="sidebar-tabs" :class="{ 'users-active': sidebarView === 'users' }">
+              <div class="tab-indicator"></div>
               <div
-                v-for="chat in chats"
-                :key="chat.id"
-                class="chat-item-wrapper"
-                :class="{ 'active': selectedChat?.id === chat.id }"
-                @click="selectChat(chat)"
+                class="tab-item"
+                :class="{ active: sidebarView === 'chats' }"
+                @click="sidebarView = 'chats'; loadChats()"
               >
-                <div class="chat-item-content">
-                  <div class="chat-avatar">
-                    <q-avatar size="49px" :color="chat.type === 'info' ? 'secondary' : (chat.type === 'sales' ? 'orange' : getStatusColor(chat.status))" text-color="white">
-                      <q-icon :name="chat.type === 'info' ? 'info' : (chat.type === 'sales' ? 'point_of_sale' : getStatusIcon(chat.status))" size="24px" />
-                    </q-avatar>
-                  </div>
-                  <div class="chat-info">
-                    <div class="chat-header-row">
-                      <div class="chat-title">{{ chat.subject || 'Sin asunto' }}</div>
-                      <q-badge
-                        :color="chat.type === 'info' ? 'secondary' : (chat.type === 'sales' ? 'orange' : 'primary')"
-                        :label="chat.type === 'info' ? 'Información' : (chat.type === 'sales' ? 'Ventas' : 'Soporte')"
-                        class="q-ml-sm"
-                        outline
-                      />
-                      <q-badge
-                        v-if="chat.unread_count > 0"
-                        color="negative"
-                        :label="chat.unread_count"
-                        class="q-ml-sm"
-                      />
-                    </div>
-                    <div class="chat-preview">
-                      {{ truncateMessage(chat.last_message?.content) || 'Sin mensajes' }}
-                    </div>
-                  </div>
-                  <div class="chat-meta">
-                    <div class="chat-time">{{ formatDate(chat.last_message_at) }}</div>
-                    <q-chip
-                      :color="getStatusColor(chat.status)"
-                      text-color="white"
-                      size="sm"
-                      dense
-                    >
-                      {{ getStatusLabel(chat.status) }}
-                    </q-chip>
-                  </div>
-                </div>
+                <span>Chats</span>
+                <q-badge v-if="unreadCount > 0" color="negative" floating>{{ unreadCount }}</q-badge>
+              </div>
+              <div
+                class="tab-item"
+                :class="{ active: sidebarView === 'users' }"
+                @click="sidebarView = 'users'; fetchUsers()"
+              >
+                <span>Personas</span>
               </div>
             </div>
-          </q-scroll-area>
+
+            <div class="sidebar-search q-pb-sm">
+              <q-input
+                v-model="activeSearchValue"
+                dense
+                rounded
+                outlined
+                :placeholder="sidebarView === 'chats' ? 'Buscar chats...' : 'Buscar personas...'"
+                class="search-input"
+                @keyup.enter="handleSearch"
+              >
+                <template v-slot:prepend><q-icon name="search" size="20px" /></template>
+                <template v-slot:append v-if="activeSearchValue">
+                  <q-icon name="close" size="16px" class="cursor-pointer" @click="activeSearchValue = ''" />
+                </template>
+              </q-input>
+            </div>
+
+            <!-- Filtros de estado unificados -->
+            <div v-if="isRoot && sidebarView === 'chats'" class="status-filters q-pb-md">
+              <q-chip
+                v-for="status in statusOptions"
+                :key="status.value || 'all'"
+                clickable
+                @click="filters.status = status.value; loadChats()"
+                :class="['status-chip', { active: filters.status === status.value }]"
+                size="sm"
+              >
+                {{ status.label }}
+              </q-chip>
+            </div>
+          </div>
+
+          <!-- Animated Content -->
+          <div class="col relative-position overflow-hidden">
+            <transition name="slide-fade-content" mode="out-in">
+              <!-- ===== VISTA DE CHATS ===== -->
+              <div v-if="sidebarView === 'chats'" key="chats-view" class="fit column no-wrap">
+                <q-scroll-area class="col">
+                  <div v-if="loading && chats.length === 0" class="text-center q-pa-md">
+                    <q-spinner color="primary" size="40px" />
+                  </div>
+
+                  <div v-else-if="isRoot && chats.length === 0" class="empty-state">
+                    <q-icon name="chat_bubble_outline" size="64px" color="grey-5" />
+                    <div class="empty-text">No hay chats para estos filtros</div>
+                  </div>
+
+                  <div v-else class="chats-list-wrapper">
+                    <div
+                      v-for="chat in (isRoot ? chats : displayChannels)"
+                      :key="chat.id || chat.type"
+                      class="chat-item-wrapper"
+                      :class="{ 'active': selectedChat?.id === chat.id || selectedChat?.type === chat.type }"
+                      @click="selectChat(chat)"
+                    >
+                      <div class="chat-item-content">
+                        <div class="chat-avatar">
+                          <template v-if="isRoot">
+                            <q-avatar size="49px" class="shadow-1">
+                              <img
+                                v-if="getChatPartner(chat)?.avatar"
+                                :src="getChatPartner(chat).avatar"
+                                @error="handleAvatarError(getChatPartner(chat))"
+                              />
+                              <div v-else class="avatar-fallback bg-primary text-white">
+                                {{ getInitials(getChatPartner(chat)?.name) }}
+                              </div>
+                            </q-avatar>
+                          </template>
+                          <template v-else>
+                            <q-avatar size="49px" class="shadow-1" :class="chat.avatarClass || 'palma-avatar'">
+                              <q-icon :name="chat.icon || 'auto_awesome'" size="24px" color="white" />
+                            </q-avatar>
+                          </template>
+                        </div>
+                        <div class="chat-info">
+                          <div class="chat-header-row">
+                            <div class="chat-title">{{ isRoot ? (getChatPartner(chat)?.name || 'Usuario') : chat.subject }}</div>
+                            <q-badge
+                              v-if="chat.unread_count > 0"
+                              color="negative"
+                              :label="chat.unread_count"
+                              class="q-ml-sm"
+                            />
+                          </div>
+                          <div class="chat-preview">
+                            {{ truncateMessage(chat.last_message?.content) || (isRoot ? chat.subject : chat.description) }}
+                          </div>
+                        </div>
+                        <div class="chat-meta">
+                          <div v-if="chat.last_message_at || chat.updated_at" class="chat-time">{{ formatDate(chat.last_message_at || chat.updated_at) }}</div>
+                          <q-chip
+                            v-if="!isRoot && chat.status"
+                            :color="getStatusColor(chat.status)"
+                            text-color="white"
+                            size="sm"
+                            dense
+                          >
+                            {{ getStatusLabel(chat.status) }}
+                          </q-chip>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Pagination for Admin -->
+                    <div v-if="isRoot && pagination.lastPage > 1" class="text-center q-pa-sm">
+                      <q-pagination
+                        v-model="pagination.page"
+                        :max="pagination.lastPage"
+                        :max-pages="3"
+                        direction-links
+                        flat
+                        dense
+                        size="sm"
+                        @update:model-value="loadChats"
+                      />
+                    </div>
+                  </div>
+                </q-scroll-area>
+              </div>
+
+              <!-- ===== VISTA DE PERSONAS (ADMIN) ===== -->
+              <div v-else key="users-view" class="fit column no-wrap">
+                <q-scroll-area class="col">
+                  <div class="users-section q-pa-md">
+                    <div v-if="onlineUsersFiltered.length > 0">
+                      <div class="section-label">En línea — {{ onlineUsersFiltered.length }}</div>
+                      <div v-for="user in onlineUsersFiltered" :key="'on-' + user.id" class="chat-item-wrapper" @click="openChatWithUser(user)">
+                        <div class="chat-item-content">
+                           <q-avatar size="48px">
+                            <img v-if="user.avatar" :src="user.avatar" @error="handleAvatarError(user)" />
+                            <div v-else class="avatar-fallback bg-primary text-white">{{ getInitials(user.name) }}</div>
+                            <div class="chat-status-dot active"></div>
+                          </q-avatar>
+                          <div class="chat-info">
+                            <div class="chat-title">{{ user.name }}</div>
+                            <div class="chat-preview text-positive">Activo ahora</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div v-if="offlineUsersFiltered.length > 0" class="q-mt-md">
+                      <div class="section-label">Otros usuarios — {{ offlineUsersFiltered.length }}</div>
+                      <div v-for="user in offlineUsersFiltered" :key="'off-' + user.id" class="chat-item-wrapper" @click="openChatWithUser(user)">
+                        <div class="chat-item-content">
+                           <q-avatar size="48px">
+                            <img v-if="user.avatar" :src="user.avatar" @error="handleAvatarError(user)" />
+                            <div v-else class="avatar-fallback bg-grey-5 text-white">{{ getInitials(user.name) }}</div>
+                            <div class="chat-status-dot inactive"></div>
+                          </q-avatar>
+                          <div class="chat-info">
+                            <div class="chat-title">{{ user.name }}</div>
+                            <div class="chat-preview">{{ user.company || 'Sin empresa' }}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div v-if="uniqueUsers.length === 0 && !loading" class="empty-state">
+                      <q-icon name="person_search" size="56px" color="grey-4" />
+                      <div class="empty-text">No se encontraron usuarios</div>
+                    </div>
+                  </div>
+                </q-scroll-area>
+              </div>
+            </transition>
+          </div>
         </div>
       </div>
 
@@ -103,11 +215,15 @@
             <q-icon name="point_of_sale" size="80px" color="orange" class="icon-sales" />
             <q-icon name="info" size="80px" color="secondary" class="icon-info" />
           </div>
-          <div class="empty-title">Centro de Clientes</div>
+          <div class="empty-title">{{ isRoot ? 'Monitor de Soporte' : 'Centro de Ayuda' }}</div>
           <div class="empty-subtitle">
-            Estamos aquí para ayudarte. Ya sea soporte técnico, información de planes o asesoría de ventas, inicia una conversación con nuestro equipo.
+            {{ isRoot
+                ? 'Gestiona tus tickets y conversa con tus usuarios en tiempo real. Selecciona una conversación del panel lateral para comenzar.'
+                : 'Nuestro equipo de soporte está listo para ayudarte. Inicia una conversación para asistencia técnica, dudas sobre planes o consultas de ventas.'
+            }}
           </div>
           <q-btn
+            v-if="!isRoot"
             unelevated
             color="primary"
             label="Iniciar conversación"
@@ -131,11 +247,17 @@
               @click="selectedChat = null"
               class="q-mr-sm"
             />
-            <q-avatar :color="selectedChat.type === 'info' ? 'secondary' : (selectedChat.type === 'sales' ? 'orange' : getStatusColor(selectedChat.status))" text-color="white" size="40px">
-              <q-icon :name="selectedChat.type === 'info' ? 'info' : (selectedChat.type === 'sales' ? 'point_of_sale' : 'support_agent')" />
+            <q-avatar v-if="isRoot" size="40px" class="shadow-1">
+              <img v-if="selectedChat.client?.avatar" :src="selectedChat.client.avatar" @error="handleAvatarError(selectedChat.client)" />
+              <div v-else class="avatar-fallback bg-primary text-white">
+                {{ getInitials(selectedChat.client?.name) }}
+              </div>
+            </q-avatar>
+            <q-avatar v-else size="40px" class="shadow-1" :class="selectedChat.avatarClass || 'palma-avatar'">
+              <q-icon :name="selectedChat.icon || 'auto_awesome'" size="20px" color="white" />
             </q-avatar>
             <div class="header-info">
-              <div class="chat-name">{{ selectedChat.subject }}</div>
+              <div class="chat-name">{{ isRoot ? selectedChat.client?.name : (selectedChat.subject || 'Soporte') }}</div>
               <div class="chat-status">
                 <q-chip
                   :color="getStatusColor(selectedChat.status)"
@@ -145,20 +267,43 @@
                 >
                   {{ getStatusLabel(selectedChat.status) }}
                 </q-chip>
-                <span v-if="selectedChat.admin" class="q-ml-sm text-caption">
-                  Atendido por: {{ selectedChat.admin.name }}
+                <span v-if="!isRoot" class="q-ml-sm text-caption text-grey-7">
+                  {{ selectedChat.subject }}
+                </span>
+                <span v-if="selectedChat.admin && !isRoot" class="q-ml-sm text-caption">
+                  · Atendido por: {{ selectedChat.admin.name }}
+                </span>
+                <span v-if="isRoot" class="q-ml-sm text-caption text-grey-7">
+                  {{ selectedChat.subject }}
                 </span>
               </div>
             </div>
             <q-space />
             <q-chip
+              v-if="selectedChat.type === 'support' || isRoot"
               :color="getPriorityColor(selectedChat.priority)"
               text-color="white"
-              size="sm"
-              icon="priority_high"
+              class="priority-chip"
             >
-              {{ getPriorityLabel(selectedChat.priority) }}
+              <q-icon
+                :name="selectedChat.priority === 'urgent' ? 'bolt' : 'priority_high'"
+                size="14px"
+                class="q-mr-xs"
+              />
+              <span class="text-weight-bold">{{ getPriorityLabel(selectedChat.priority) }}</span>
             </q-chip>
+            <q-btn v-if="isRoot" flat round dense icon="more_vert" color="grey-7" class="q-ml-sm">
+              <q-menu>
+                <q-list style="min-width: 150px">
+                  <q-item v-if="selectedChat.status !== 'closed'" clickable v-close-popup @click="closeChat">
+                    <q-item-section class="text-negative">Cerrar Ticket</q-item-section>
+                  </q-item>
+                  <q-item v-else clickable v-close-popup @click="reopenChat">
+                    <q-item-section>Reabrir Ticket</q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </q-btn>
           </div>
 
           <!-- Mensajes -->
@@ -168,72 +313,121 @@
                 <div
                   v-for="message in messages"
                   :key="message.id"
-                  :class="['message-wrapper', isOwnMessage(message) ? 'user-message' : 'assistant-message']"
+                  :class="['message-wrapper', isOwnMessage(message) ? 'user-message' : 'assistant-message', { 'is-audio': message.type === 'audio' }]"
                 >
-                  <div class="message-bubble">
-                    <div class="message-sender" v-if="!isOwnMessage(message)">
-                      {{ message.sender?.name || 'Soporte' }}
-                    </div>
+                  <!-- Invoice message: render card directly, no bubble wrapper -->
+                  <template v-if="getInvoiceData(message.content)">
+                    <InvoiceReviewCard
+                      :data="getInvoiceData(message.content)"
+                      @confirm="(confirmedData) => {
+                        if (selectedChat?.id === 'mock-purchase') {
+                          const updated = updateMockMessage(message.id, { ...confirmedData, saveSuccess: true });
+                          if (updated) message.content = updated.content;
 
-                    <!-- Attachment: Image -->
-                    <div v-if="message.type === 'image' && message.attachment_url" class="message-attachment image-attachment">
-                      <div class="image-container" @click="openImagePreview(message, getMessageImages(message))">
-                        <q-img
-                          :src="message.attachment_url"
-                          :alt="message.attachment_name"
-                          class="attachment-image"
-                          fit="cover"
-                          :ratio="4/3"
-                        >
-                          <template v-slot:loading>
-                            <div class="image-loading">
-                              <q-spinner color="white" size="32px" />
-                            </div>
-                          </template>
-                        </q-img>
-                        <div class="image-overlay">
-                          <q-icon name="zoom_in" size="28px" color="white" />
+                          const successMsg = {
+                            id: 'msg-success-' + Date.now(),
+                            type: 'text',
+                            role: 'assistant',
+                            content: '¡Factura integrada con éxito! ✅ Los productos y la compra han sido registrados en el sistema.',
+                            sender_id: 'ia-system',
+                            created_at: new Date().toISOString()
+                          };
+
+                          messages.push(successMsg);
+                          saveMockPurchaseMessage(successMsg);
+                          scrollToBottom();
+                        } else {
+                          eventBus.emit('apply-invoice-data', confirmedData);
+                        }
+                      }"
+                      @discard="() => {
+                        deleteMockMessage(message.id);
+                        const idx = messages.indexOf(message);
+                        if (idx !== -1) messages.splice(idx, 1);
+                      }"
+                    />
+                  </template>
+
+                  <!-- Normal message bubble -->
+                  <template v-else>
+                    <div class="message-bubble" :class="{
+                      'audio-bubble': message.type === 'audio',
+                      'image-only-bubble': message.type === 'image' && (!message.content || message.content.trim() === '')
+                    }">
+                      <div class="message-sender" v-if="!isOwnMessage(message)">
+                        {{ message.sender?.name || (isRoot ? selectedChat.client?.name : 'Soporte') }}
+                      </div>
+
+                      <!-- Attachment: Audio -->
+                      <div v-if="message.type === 'audio' && message.attachment_url" class="message-attachment audio-attachment">
+                        <AudioPlayer
+                          :src="getFullUrl(message.attachment_url)"
+                          :filename="message.attachment_name || 'voice-message.webm'"
+                        />
+                      </div>
+
+                      <!-- Attachment: Image -->
+                      <div v-if="message.type === 'image' && message.attachment_url"
+                        class="message-attachment image-attachment"
+                        :class="{ 'image-only': !message.content || message.content.trim() === '' }"
+                      >
+                        <div class="image-container" @click="openImagePreview(message, getMessageImages(message))">
+                          <q-img
+                            :src="getFullUrl(message.attachment_url)"
+                            :alt="message.attachment_name"
+                            class="attachment-image"
+                            fit="cover"
+                          >
+                            <template v-slot:loading>
+                              <div class="image-loading">
+                                <q-spinner color="white" size="32px" />
+                              </div>
+                            </template>
+                          </q-img>
+                          <div class="image-overlay">
+                            <q-icon name="zoom_in" size="28px" color="white" />
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <!-- Attachment: Video -->
-                    <div v-if="message.type === 'video' && message.attachment_url" class="message-attachment video-attachment">
-                      <video
-                        :src="message.attachment_url"
-                        controls
-                        class="attachment-video"
-                        preload="metadata"
-                        playsinline
-                      ></video>
-                    </div>
+                      <!-- Attachment: Video -->
+                      <div v-if="message.type === 'video' && message.attachment_url" class="message-attachment video-attachment">
+                        <video
+                          :src="getFullUrl(message.attachment_url)"
+                          controls
+                          class="attachment-video"
+                          preload="metadata"
+                          playsinline
+                        ></video>
+                      </div>
 
-                    <!-- Attachment: File -->
-                    <div v-if="message.type === 'file' && message.attachment_url" class="message-attachment file-attachment">
-                      <a :href="message.attachment_url" target="_blank" class="file-link">
-                        <div class="file-icon-wrapper">
-                          <q-icon :name="getFileTypeIcon(message.attachment_mime)" size="28px" />
-                        </div>
-                        <div class="file-info">
-                          <div class="file-name">{{ message.attachment_name }}</div>
-                          <div class="file-size">{{ formatFileSize(message.attachment_size) }}</div>
-                        </div>
-                        <q-btn flat round dense icon="download" color="primary" />
-                      </a>
-                    </div>
+                      <!-- Attachment: File -->
+                      <div v-if="message.type === 'file' && message.attachment_url" class="message-attachment file-attachment">
+                        <a :href="getFullUrl(message.attachment_url)" target="_blank" class="file-link">
+                          <div class="file-icon-wrapper">
+                            <q-icon :name="getFileTypeIcon(message.attachment_mime)" size="28px" />
+                          </div>
+                          <div class="file-info">
+                            <div class="file-name">{{ message.attachment_name }}</div>
+                            <div class="file-size">{{ formatFileSize(message.attachment_size) }}</div>
+                          </div>
+                          <q-btn flat round dense icon="download" color="primary" />
+                        </a>
+                      </div>
 
-                    <div v-if="message.content" class="message-content">{{ message.content }}</div>
-                    <div class="message-footer">
-                      <span class="message-time">{{ formatTime(message.created_at) }}</span>
-                      <q-icon
-                        v-if="isOwnMessage(message)"
-                        :name="message.is_read ? 'done_all' : 'done'"
-                        :color="message.is_read ? 'primary' : 'grey'"
-                        size="16px"
-                        class="q-ml-xs"
-                      />
+                      <div v-if="message.content" class="message-content">{{ message.content }}</div>
+                      <div class="message-footer">
+                        <span class="message-time">{{ formatTime(message.created_at) }}</span>
+                        <q-icon
+                          v-if="isOwnMessage(message)"
+                          :name="message.is_read ? 'done_all' : 'done'"
+                          :color="message.is_read ? (message.type === 'audio' ? 'blue-2' : 'white') : 'grey-3'"
+                          size="16px"
+                          class="q-ml-xs"
+                        />
+                      </div>
                     </div>
-                  </div>
+                  </template>
                 </div>
 
                 <!-- Typing indicator -->
@@ -265,108 +459,91 @@
           </div>
 
           <!-- Input de mensaje -->
-          <div class="q-pa-md" v-if="selectedChat.status !== 'closed'">
-            <!-- Preview del archivo seleccionado -->
-            <div v-if="selectedFile" class="attachment-preview q-mb-sm">
-              <div class="preview-content">
-                <q-img
-                  v-if="selectedFilePreview && isImageFile(selectedFile)"
-                  :src="selectedFilePreview"
-                  class="preview-image"
-                  fit="contain"
-                />
-                <div v-else class="preview-file">
-                  <q-icon :name="getFileIcon(selectedFile)" size="32px" color="primary" />
-                  <span>{{ selectedFile.name }}</span>
-                </div>
-              </div>
-              <q-btn flat round dense icon="close" @click="clearSelectedFile" color="negative" />
+          <div class="page-messenger-footer q-pa-md" v-if="selectedChat.status !== 'closed'">
+            <!-- File preview compact -->
+            <div v-if="selectedFile" class="row items-center no-wrap bg-grey-2 q-pa-xs rounded-borders q-mb-sm" style="gap: 8px;">
+              <q-img
+                v-if="selectedFilePreview && isImageFile(selectedFile)"
+                :src="selectedFilePreview"
+                style="width: 40px; height: 40px; border-radius: 6px;"
+              />
+              <q-icon v-else :name="getFileIcon(selectedFile)" size="24px" color="primary" />
+              <div class="col ellipsis text-caption">{{ selectedFile.name }}</div>
+              <q-btn flat round dense icon="close" size="xs" @click="clearSelectedFile" />
             </div>
 
-            <div class="input-field">
+            <div class="row items-center no-wrap" style="gap: 4px;">
+              <!-- Attachment button (square, outside input) -->
+              <q-btn
+                flat
+                dense
+                icon="attach_file"
+                color="grey-7"
+                class="page-attachment-btn"
+              >
+                <q-menu fit anchor="top left" self="bottom left">
+                  <q-list dense style="min-width: 160px;">
+                    <q-item clickable v-close-popup @click="openFilePicker">
+                      <q-item-section avatar><q-icon name="photo_library" color="primary" /></q-item-section>
+                      <q-item-section>Galería</q-item-section>
+                    </q-item>
+                    <q-item clickable v-close-popup @click="openCamera">
+                      <q-item-section avatar><q-icon name="photo_camera" color="secondary" /></q-item-section>
+                      <q-item-section>Tomar Foto</q-item-section>
+                    </q-item>
+                    <q-item v-if="selectedChat?.id !== 'mock-purchase'" clickable v-close-popup @click="openVideoPicker">
+                      <q-item-section avatar><q-icon name="videocam" color="negative" /></q-item-section>
+                      <q-item-section>Video</q-item-section>
+                    </q-item>
+                    <q-item v-if="selectedChat?.id !== 'mock-purchase'" clickable v-close-popup @click="openDocumentPicker">
+                      <q-item-section avatar><q-icon name="description" color="warning" /></q-item-section>
+                      <q-item-section>Documento</q-item-section>
+                    </q-item>
+                  </q-list>
+                </q-menu>
+              </q-btn>
+
+              <!-- Text input (rounded, outlined — like Messenger) -->
               <q-input
                 v-model="newMessage"
                 placeholder="Escribe tu mensaje..."
-                filled
+                dense
+                rounded
+                outlined
+                bg-color="white"
                 autogrow
+                :max-rows="4"
                 :disable="sending"
+                hide-bottom-space
                 @keyup.enter.exact="sendMessage"
+                class="page-messenger-input col"
               >
-                <template v-slot:prepend>
-                  <q-btn-dropdown flat round dense icon="attach_file" color="grey">
-                    <q-list>
-                      <q-item clickable v-close-popup @click="openFilePicker">
-                        <q-item-section avatar>
-                          <q-icon name="photo_library" color="primary" />
-                        </q-item-section>
-                        <q-item-section>Galería</q-item-section>
-                      </q-item>
-                      <q-item clickable v-close-popup @click="openCamera">
-                        <q-item-section avatar>
-                          <q-icon name="photo_camera" color="secondary" />
-                        </q-item-section>
-                        <q-item-section>Tomar Foto</q-item-section>
-                      </q-item>
-                      <q-item clickable v-close-popup @click="openVideoPicker">
-                        <q-item-section avatar>
-                          <q-icon name="videocam" color="negative" />
-                        </q-item-section>
-                        <q-item-section>Video</q-item-section>
-                      </q-item>
-                      <q-item clickable v-close-popup @click="openDocumentPicker">
-                        <q-item-section avatar>
-                          <q-icon name="description" color="warning" />
-                        </q-item-section>
-                        <q-item-section>Documento</q-item-section>
-                      </q-item>
-                    </q-list>
-                  </q-btn-dropdown>
-                </template>
                 <template v-slot:append>
                   <q-btn
-                    round
+                    v-if="newMessage.trim() || selectedFile"
+                    flat round
                     icon="send"
-                    size="md"
-                    style="border-radius: 100px;"
-                    color="primary"
+                    :color="!isTyping ? 'primary' : 'grey-5'"
+                    size="sm"
                     @click="sendMessage"
-                    :disable="(!newMessage.trim() && !selectedFile) || sending"
                     :loading="sending"
+                    class="send-btn"
                   />
                 </template>
               </q-input>
+
+              <!-- Audio recorder outside input -->
+              <AudioRecorder
+                v-if="!newMessage.trim() && !selectedFile && selectedChat?.id !== 'mock-purchase'"
+                @send="sendAudioMessage"
+              />
             </div>
 
             <!-- Hidden file inputs -->
-            <input
-              type="file"
-              ref="fileInput"
-              accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx"
-              @change="handleFileSelect"
-              style="display: none"
-            />
-            <input
-              type="file"
-              ref="cameraInput"
-              accept="image/*"
-              capture="environment"
-              @change="handleFileSelect"
-              style="display: none"
-            />
-            <input
-              type="file"
-              ref="videoInput"
-              accept="video/*"
-              @change="handleFileSelect"
-              style="display: none"
-            />
-            <input
-              type="file"
-              ref="documentInput"
-              accept="application/pdf,.doc,.docx,.xls,.xlsx"
-              @change="handleFileSelect"
-              style="display: none"
-            />
+            <input type="file" ref="fileInput" accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx" @change="handleFileSelect" style="display: none" />
+            <input type="file" ref="cameraInput" accept="image/*" capture="environment" @change="handleFileSelect" style="display: none" />
+            <input type="file" ref="videoInput" accept="video/*" @change="handleFileSelect" style="display: none" />
+            <input type="file" ref="documentInput" accept="application/pdf,.doc,.docx,.xls,.xlsx" @change="handleFileSelect" style="display: none" />
           </div>
 
           <!-- Chat cerrado -->
@@ -416,7 +593,6 @@
               readonly
               hint="El título se asigna automáticamente según el asunto"
             />
-
 
             <q-input
               v-model="newTicket.message"
@@ -529,6 +705,12 @@ import { useQuasar } from 'quasar'
 import { format, formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 
+import AudioRecorder from 'src/components/AudioRecorder.vue'
+import AudioPlayer from 'src/components/AudioPlayer.vue'
+import { useSupportChat } from 'src/composables/useSupportChat'
+import InvoiceReviewCard from 'src/components/InvoiceReviewCard.vue'
+import eventBus from 'src/utils/eventBus'
+
 /**
  * Quasar instance
  * @type {object}
@@ -540,6 +722,36 @@ const $q = useQuasar()
  * @type {object}
  */
 const authStore = authentication()
+
+// ─── Shared support chat logic via composable ─────────────────────────────────
+const {
+  selectedFile,
+  selectedFilePreview,
+  fileInput,
+  cameraInput,
+  videoInput,
+  documentInput,
+  isImageFile,
+  getFileIcon,
+  getFileTypeIcon,
+  getFullUrl,
+  clearSelectedFile,
+  handleFileSelect,
+  openFilePicker,
+  openVideoPicker,
+  openDocumentPicker,
+  buildLocalMessage,
+  sendChatMessage,
+  sendAudioChatMessage,
+  saveMockPurchaseMessage,
+  updateMockMessage,
+  deleteMockMessage,
+  getInvoiceData,
+  formatFileSize
+} = useSupportChat()
+
+// openCamera for SupportChatPage just clicks the camera input directly
+const openCamera = () => cameraInput.value?.click()
 
 /**
  * Lista de chats de soporte
@@ -645,6 +857,135 @@ const showScrollButton = ref(false)
 const unreadMessagesBelow = ref(0)
 
 /**
+ * Admin Features State
+ */
+const sidebarView = ref('chats')
+const unreadCount = ref(0) // Total global unread for admin
+const userSearch = ref('')
+const sessionUsers = ref([])
+const filters = ref({
+  status: null,
+  search: ''
+})
+const pagination = ref({
+  page: 1,
+  lastPage: 1
+})
+
+const isRoot = computed(() => !!authStore.userSession?.is_root)
+
+/**
+ * Lógica de Buscador Unificado
+ */
+const activeSearchValue = computed({
+  get: () => sidebarView.value === 'chats' ? filters.value.search : userSearch.value,
+  set: (val) => {
+    if (sidebarView.value === 'chats') {
+      filters.value.search = val
+    } else {
+      userSearch.value = val
+    }
+  }
+})
+
+const handleSearch = () => {
+  if (sidebarView.value === 'chats') {
+    loadChats()
+  } else {
+    fetchUsers()
+  }
+}
+
+const statusOptions = [
+  { label: 'Todos', value: null },
+  { label: 'Abiertos', value: 'open' },
+  { label: 'En Progreso', value: 'in_progress' },
+  { label: 'Cerrados', value: 'closed' }
+]
+
+const uniqueUsers = computed(() => {
+  const map = new Map()
+  sessionUsers.value.forEach(session => {
+    const userId = session.user_id || session.user?.id
+    if (!userId) return
+    const existing = map.get(userId)
+    if (!existing || session.status === 'online') {
+      map.set(userId, {
+        id: userId,
+        name: session.user?.name || 'Usuario',
+        email: session.user?.email || '',
+        avatar: session.user?.avatar || null,
+        company: session.company?.name || '',
+        status: session.status,
+        lastActivity: session.last_activity_at
+      })
+    }
+  })
+  return Array.from(map.values())
+})
+
+const filteredUsers = computed(() => {
+  if (!userSearch.value) return uniqueUsers.value
+  const s = userSearch.value.toLowerCase()
+  return uniqueUsers.value.filter(u =>
+    u.name?.toLowerCase().includes(s) ||
+    u.email?.toLowerCase().includes(s) ||
+    u.company?.toLowerCase().includes(s)
+  )
+})
+
+const onlineUsersFiltered = computed(() => {
+  return filteredUsers.value.filter(u => u.status === 'online')
+})
+
+const offlineUsersFiltered = computed(() => {
+  return filteredUsers.value.filter(u => u.status !== 'online')
+})
+
+/**
+ * Envía un mensaje de audio
+ */
+const sendAudioMessage = async (audioBlob) => {
+  if (sending.value || !selectedChat.value) return
+
+  // Guard for mock chats
+  if (selectedChat.value.id === 'mock-purchase') {
+    $q.notify({ type: 'info', message: 'El chat de prueba no soporta audios' })
+    return
+  }
+
+  sending.value = true
+
+  const tempId = Date.now()
+  const tempMessage = {
+    id: tempId,
+    content: '',
+    type: 'audio',
+    sender_id: currentUser.value?.id,
+    sender: { name: currentUser.value?.name },
+    attachment_url: URL.createObjectURL(audioBlob),
+    attachment_name: 'voice-message.webm',
+    is_read: false,
+    created_at: new Date().toISOString()
+  }
+  messages.value.push(tempMessage)
+  await nextTick()
+  scrollToBottom()
+
+  try {
+    const data = await sendAudioChatMessage(selectedChat.value.id, audioBlob)
+    const index = messages.value.findIndex(m => m.id === tempId)
+    if (index !== -1) messages.value[index] = data.data || data
+  } catch (error) {
+    console.error('Error sending audio:', error)
+    messages.value = messages.value.filter(m => m.id !== tempId)
+    $q.notify({ type: 'negative', message: 'Error al enviar audio' })
+  } finally {
+    sending.value = false
+  }
+}
+
+/**
  * Indica si el usuario ha scrolleado hacia arriba
  * @type {import('vue').Ref<boolean>}
  */
@@ -655,42 +996,6 @@ const isUserScrolledUp = ref(false)
  * @type {import('vue').ComputedRef<string>}
  */
 const currentPreviewImage = computed(() => previewImages.value[currentPreviewIndex.value] || '')
-
-/**
- * Referencia al input de archivo
- * @type {import('vue').Ref<HTMLElement|null>}
- */
-const fileInput = ref(null)
-
-/**
- * Referencia al input de cámara
- * @type {import('vue').Ref<HTMLElement|null>}
- */
-const cameraInput = ref(null)
-
-/**
- * Referencia al input de video
- * @type {import('vue').Ref<HTMLElement|null>}
- */
-const videoInput = ref(null)
-
-/**
- * Referencia al input de documento
- * @type {import('vue').Ref<HTMLElement|null>}
- */
-const documentInput = ref(null)
-
-/**
- * Archivo seleccionado para enviar
- * @type {import('vue').Ref<File|null>}
- */
-const selectedFile = ref(null)
-
-/**
- * Preview URL del archivo seleccionado
- * @type {import('vue').Ref<string|null>}
- */
-const selectedFilePreview = ref(null)
 
 /**
  * Datos del nuevo ticket
@@ -721,14 +1026,83 @@ const categoryOptions = [
 const currentUser = computed(() => authStore.userSession)
 
 /**
+ * Handle Purchase Mock Chat
+ */
+const getPurchaseMock = () => {
+  const stored = localStorage.getItem('mock_purchase_chat')
+  if (stored) return JSON.parse(stored)
+
+  // Default initial mock state
+  return {
+    id: 'mock-purchase',
+    type: 'purchase',
+    subject: 'Cargar Compra con IA',
+    icon: 'receipt_long',
+    avatarClass: 'bg-orange',
+    description: 'Sube tu factura y automatiza',
+    messages: [
+      {
+        id: 'welcome-msg',
+        content: '¡Hola! Soy tu asistente de compras. Sube una foto de tu factura para procesarla automáticamente.',
+        sender_id: 'ia-system',
+        created_at: new Date().toISOString()
+      }
+    ],
+    updated_at: new Date().toISOString()
+  }
+}
+
+/**
+ * Display channels logic
+ */
+const displayChannels = computed(() => {
+  const types = [
+    { type: 'ai', subject: 'Asistente IA', icon: 'auto_awesome', avatarClass: 'palma-avatar', description: 'Resuelve tus dudas con IA' },
+    { type: 'support', subject: 'Soporte Técnico', icon: 'headset_mic', avatarClass: 'bg-primary', description: 'Chatea con nuestro equipo' },
+    { type: 'purchase', subject: 'Cargar Compra con IA', icon: 'receipt_long', avatarClass: 'bg-orange', description: 'Sube tu factura y automatiza' }
+  ]
+
+  const mockPurchase = getPurchaseMock()
+
+  return types.map(config => {
+    let base = {}
+    if (config.type === 'purchase') {
+      base = chats.value.find(c => c.type === 'purchase') || mockPurchase
+    } else {
+      base = chats.value.find(c => c.type === config.type) || {}
+    }
+
+    return {
+      ...base,
+      ...config, // UI Config always stays
+      unread_count: base.unread_count || 0
+    }
+  })
+})
+
+/**
  * Carga la lista de chats de soporte
  * @returns {Promise<void>}
  */
 const loadChats = async () => {
   loading.value = true
   try {
-    const { data } = await api.get('support-chats')
-    chats.value = data.data || data
+    let params = {}
+    if (isRoot.value) {
+      params = {
+        status: filters.value.status,
+        search: filters.value.search,
+        page: pagination.value.page
+      }
+    }
+    const { data } = await api.get('support-chats', { params })
+    if (isRoot.value) {
+      chats.value = data.data
+      pagination.value.lastPage = data.last_page
+      unreadCount.value = data.total_unread || 0
+    } else {
+      chats.value = data.data || data
+    }
   } catch (error) {
     console.error('Error loading chats:', error)
     $q.notify({
@@ -741,38 +1115,165 @@ const loadChats = async () => {
 }
 
 /**
+ * Carga usuarios para el monitor de soporte
+ */
+const fetchUsers = async () => {
+  if (!isRoot.value) return
+  loading.value = true
+  try {
+    const { data } = await api.get('user-sessions', {
+      params: {
+        status: 'all',
+        search: userSearch.value,
+        per_page: 100
+      }
+    })
+    sessionUsers.value = data.data || []
+  } catch (error) {
+    console.error('Error fetching users:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+/**
+ * Abre un chat con un usuario específico
+ */
+const openChatWithUser = async (user) => {
+  loading.value = true
+  try {
+    const { data } = await api.post('support-chats/open-direct', { user_id: user.id })
+    await loadChats()
+    selectChat(data.chat)
+  } catch (error) {
+    console.error('Error opening chat:', error)
+    $q.notify({ type: 'negative', message: 'No se pudo abrir la conversación' })
+  } finally {
+    loading.value = false
+  }
+}
+
+/**
+ * Cierra el chat seleccionado (Admin)
+ */
+const closeChat = async () => {
+  if (!selectedChat.value || !isRoot.value) return
+  try {
+    const { data } = await api.post(`support-chats/${selectedChat.value.id}/close`)
+    selectedChat.value = data.chat
+    loadChats()
+    $q.notify({ type: 'positive', message: 'Ticket cerrado' })
+  } catch (error) {
+    $q.notify({ type: 'negative', message: 'Error al cerrar' })
+  }
+}
+
+/**
+ * Reabre el chat seleccionado (Admin)
+ */
+const reopenChat = async () => {
+  if (!selectedChat.value || !isRoot.value) return
+  try {
+    const { data } = await api.post(`support-chats/${selectedChat.value.id}/reopen`)
+    selectedChat.value = data.chat
+    loadChats()
+    $q.notify({ type: 'positive', message: 'Ticket reabierto' })
+  } catch (error) {
+    $q.notify({ type: 'negative', message: 'Error al reabrir' })
+  }
+}
+
+/**
+ * Obtiene el compañero de chat (para admin)
+ */
+const getChatPartner = (chat) => {
+  return chat.client || chat.users?.find(u => u.id !== currentUser.value?.id)
+}
+
+/**
+ * Obtiene iniciales
+ */
+const getInitials = (name) => {
+  if (!name) return '?'
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
+}
+
+/**
+ * Maneja error de carga de avatar
+ */
+const handleAvatarError = (obj) => {
+  if (obj) obj.avatar = null
+}
+
+/**
  * Selecciona un chat y carga sus mensajes
  * @param {object} chat - Chat a seleccionar
  * @returns {Promise<void>}
  */
 const selectChat = async (chat) => {
-  selectedChat.value = chat
-  loading.value = true
-  try {
-    const { data } = await api.get(`support-chats/${chat.id}`)
-    messages.value = data.messages || []
-    selectedChat.value = data
-
-    // Actualizar contador de no leídos en la lista
-    const chatIndex = chats.value.findIndex(c => c.id === chat.id)
-    if (chatIndex !== -1) {
-      chats.value[chatIndex].unread_count = 0
+  if (chat.id === 'mock-purchase') {
+    selectedChat.value = chat
+    const stored = localStorage.getItem('mock_purchase_chat')
+    if (stored) {
+      const mock = JSON.parse(stored)
+      messages.value = mock.messages || []
+    } else {
+      messages.value = chat.messages || []
     }
-
-    // Suscribirse al canal del chat
-    subscribeToChat(chat.id)
-
     await nextTick()
     scrollToBottom()
-    attachScrollListener()
-  } catch (error) {
-    console.error('Error loading chat:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Error al cargar el chat'
-    })
-  } finally {
-    loading.value = false
+    return
+  }
+
+  if (chat.id) {
+    selectedChat.value = chat
+    loading.value = true
+    try {
+      const { data } = await api.get(`support-chats/${chat.id}`)
+      messages.value = data.messages || []
+      selectedChat.value = data
+
+      // Actualizar contador de no leídos en la lista
+      const chatIndex = chats.value.findIndex(c => c.id === chat.id)
+      if (chatIndex !== -1) {
+        chats.value[chatIndex].unread_count = 0
+      }
+
+      // Suscribirse al canal del chat
+      subscribeToChat(chat.id)
+
+      await nextTick()
+      scrollToBottom()
+      attachScrollListener()
+    } catch (error) {
+      console.error('Error loading chat:', error)
+      $q.notify({
+        type: 'negative',
+        message: 'Error al cargar el chat'
+      })
+    } finally {
+      loading.value = false
+    }
+  } else {
+    // Es un canal predefinido nuevo, iniciarlo
+    loading.value = true
+    try {
+      const payload = {
+        subject: chat.subject,
+        type: chat.type,
+        priority: 'medium',
+        message: 'Hola, me gustaría iniciar una conversación.'
+      }
+      const { data } = await api.post('support-chats', payload)
+      const newChat = data.raw_data || data.data || data
+      chats.value.push(newChat)
+      selectChat(newChat)
+    } catch (error) {
+      console.error('Error creating chat channel:', error)
+      $q.notify({ type: 'negative', message: 'Error al iniciar la conversación' })
+    } finally {
+      loading.value = false
+    }
   }
 }
 
@@ -859,190 +1360,72 @@ const sendMessage = async () => {
 
   const messageText = newMessage.value
   const fileToSend = selectedFile.value
+  const filePreview = selectedFilePreview.value
   newMessage.value = ''
   clearSelectedFile()
   sending.value = true
 
-  // Agregar mensaje temporalmente
-  const tempMessage = {
-    id: Date.now(),
-    content: messageText,
-    type: fileToSend ? (isImageFile(fileToSend) ? 'image' : isVideoFile(fileToSend) ? 'video' : 'file') : 'text',
-    sender_id: currentUser.value?.id,
-    sender: { name: currentUser.value?.name },
-    is_read: false,
-    created_at: new Date().toISOString()
-  }
+  // Build optimistic message
+  const tempMessage = buildLocalMessage({ messageText, fileToSend, filePreview })
+  tempMessage.sender = { name: currentUser.value?.name }
+  tempMessage.is_read = false
   messages.value.push(tempMessage)
 
   await nextTick()
   scrollToBottom()
 
   try {
-    const formData = new FormData()
-    if (messageText) {
-      formData.append('message', messageText)
-    }
-    if (fileToSend) {
-      formData.append('attachment', fileToSend)
+    isTyping.value = true
+    if (selectedChat.value.id === 'mock-purchase') {
+      const aiResponse = await saveMockPurchaseMessage(tempMessage)
+      if (aiResponse) {
+        // Mantenemos isTyping true durante la simulación de espera de respuesta
+        setTimeout(async () => {
+          messages.value.push({
+            ...aiResponse,
+            sender: { name: 'Asistente IA' }
+          })
+          isTyping.value = false
+          await nextTick()
+          scrollToBottom()
+        }, 1500)
+      } else {
+        isTyping.value = false
+      }
+      return
     }
 
-    const { data } = await api.post(`support-chats/${selectedChat.value.id}/messages`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
+    const data = await sendChatMessage(selectedChat.value.id, messageText, fileToSend, tempMessage.type)
 
     // Reemplazar mensaje temporal con el real
     const tempIndex = messages.value.findIndex(m => m.id === tempMessage.id)
     if (tempIndex !== -1) {
-      // Verificar si ya existe el mensaje real (por evento de socket)
-      if (messages.value.find(m => m.id === data.data.id)) {
+      if (messages.value.find(m => m.id === data.data?.id)) {
         messages.value.splice(tempIndex, 1)
       } else {
-        messages.value[tempIndex] = data.data
+        messages.value[tempIndex] = data.data || tempMessage
       }
     }
 
     // Actualizar último mensaje en la lista
     const chatIndex = chats.value.findIndex(c => c.id === selectedChat.value.id)
-    if (chatIndex !== -1) {
+    if (chatIndex !== -1 && data.data) {
       chats.value[chatIndex].last_message = data.data
       chats.value[chatIndex].last_message_at = data.data.created_at
     }
   } catch (error) {
     console.error('Error sending message:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Error al enviar el mensaje'
-    })
-    // Remover mensaje temporal en caso de error
+    $q.notify({ type: 'negative', message: 'Error al enviar el mensaje' })
     messages.value = messages.value.filter(m => m.id !== tempMessage.id)
+    isTyping.value = false
   } finally {
     sending.value = false
-  }
-}
-
-/**
- * Abre el selector de archivos
- * @returns {void}
- */
-const openFilePicker = () => {
-  fileInput.value?.click()
-}
-
-/**
- * Abre la cámara para tomar foto
- * @returns {void}
- */
-const openCamera = () => {
-  cameraInput.value?.click()
-}
-
-/**
- * Abre el selector de video
- * @returns {void}
- */
-const openVideoPicker = () => {
-  videoInput.value?.click()
-}
-
-/**
- * Abre el selector de documentos
- * @returns {void}
- */
-const openDocumentPicker = () => {
-  documentInput.value?.click()
-}
-
-/**
- * Maneja la selección de archivo
- * @param {Event} event - Evento de cambio del input
- * @returns {void}
- */
-const handleFileSelect = (event) => {
-  const file = event.target.files?.[0]
-  if (!file) return
-
-  // Validar tamaño (20MB max)
-  const maxSize = 20 * 1024 * 1024
-  if (file.size > maxSize) {
-    $q.notify({
-      type: 'warning',
-      message: 'El archivo no puede superar los 20MB'
-    })
-    event.target.value = ''
-    return
-  }
-
-  selectedFile.value = file
-
-  // Crear preview si es imagen
-  if (isImageFile(file)) {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      selectedFilePreview.value = e.target.result
+    // Solo apagamos isTyping aquí si no es mock-purchase, ya que mock-purchase
+    // maneja su propio apagado dentro del setTimeout para simular realismo.
+    if (selectedChat.value?.id !== 'mock-purchase') {
+      isTyping.value = false
     }
-    reader.readAsDataURL(file)
-  } else {
-    selectedFilePreview.value = null
   }
-
-  // Limpiar el input para permitir seleccionar el mismo archivo
-  event.target.value = ''
-}
-
-/**
- * Limpia el archivo seleccionado
- * @returns {void}
- */
-const clearSelectedFile = () => {
-  selectedFile.value = null
-  selectedFilePreview.value = null
-}
-
-/**
- * Verifica si el archivo es una imagen
- * @param {File} file - Archivo a verificar
- * @returns {boolean}
- */
-const isImageFile = (file) => {
-  return file.type.startsWith('image/')
-}
-
-/**
- * Verifica si el archivo es un video
- * @param {File} file - Archivo a verificar
- * @returns {boolean}
- */
-const isVideoFile = (file) => {
-  return file.type.startsWith('video/')
-}
-
-/**
- * Obtiene el icono según el tipo de archivo
- * @param {File} file - Archivo
- * @returns {string}
- */
-const getFileIcon = (file) => {
-  if (isImageFile(file)) return 'image'
-  if (isVideoFile(file)) return 'videocam'
-  if (file.type.includes('pdf')) return 'picture_as_pdf'
-  if (file.type.includes('word') || file.name.endsWith('.doc') || file.name.endsWith('.docx')) return 'description'
-  if (file.type.includes('excel') || file.name.endsWith('.xls') || file.name.endsWith('.xlsx')) return 'table_chart'
-  return 'attach_file'
-}
-
-/**
- * Formatea el tamaño del archivo
- * @param {number} bytes - Tamaño en bytes
- * @returns {string}
- */
-const formatFileSize = (bytes) => {
-  if (!bytes) return ''
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
 }
 
 /**
@@ -1129,27 +1512,13 @@ const downloadImage = () => {
 }
 
 /**
- * Obtiene el icono según el tipo MIME del archivo
- * @param {string} mimeType - Tipo MIME
- * @returns {string}
- */
-const getFileTypeIcon = (mimeType) => {
-  if (!mimeType) return 'attach_file'
-  if (mimeType.includes('pdf')) return 'picture_as_pdf'
-  if (mimeType.includes('word') || mimeType.includes('document')) return 'description'
-  if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return 'table_chart'
-  if (mimeType.includes('image')) return 'image'
-  if (mimeType.includes('video')) return 'videocam'
-  return 'attach_file'
-}
-
-/**
  * Verifica si el mensaje es del usuario actual
  * @param {object} message - Mensaje a verificar
  * @returns {boolean}
  */
 const isOwnMessage = (message) => {
-  return message.sender_id === currentUser.value?.id
+  if (!message) return false
+  return message.role === 'user' || message.sender_id === currentUser.value?.id
 }
 
 /**
@@ -1165,21 +1534,6 @@ const getStatusColor = (status) => {
     reopened: 'orange'
   }
   return colors[status] || 'grey'
-}
-
-/**
- * Obtiene el icono del estado
- * @param {string} status - Estado del chat
- * @returns {string}
- */
-const getStatusIcon = (status) => {
-  const icons = {
-    open: 'fiber_new',
-    in_progress: 'hourglass_top',
-    closed: 'check_circle',
-    reopened: 'refresh'
-  }
-  return icons[status] || 'help'
 }
 
 /**
@@ -1273,7 +1627,11 @@ const scrollToBottom = () => {
     isUserScrolledUp.value = false
 
     if (selectedChat.value && document.hasFocus()) {
-      api.post(`support-chats/${selectedChat.value.id}/read`)
+      if (selectedChat.value && selectedChat.value.id !== 'mock-purchase') {
+        try {
+          api.post(`support-chats/${selectedChat.value.id}/read`)
+        } catch (e) {}
+      }
     }
   }
 }
@@ -1294,7 +1652,11 @@ const handleScroll = (evt) => {
 
     // Si acabamos de bajar y estamos enfocados, marcar como leído
     if (wasScrolledUp && selectedChat.value && document.hasFocus()) {
-      api.post(`support-chats/${selectedChat.value.id}/read`)
+      if (selectedChat.value && selectedChat.value.id !== 'mock-purchase') {
+        try {
+          api.post(`support-chats/${selectedChat.value.id}/read`)
+        } catch (e) {}
+      }
     }
   } else {
     isUserScrolledUp.value = true
@@ -1322,6 +1684,22 @@ let currentChatChannel = null
  */
 const subscribeToEvents = () => {
   if (!echo || !currentUser.value) return
+
+  if (isRoot.value) {
+    // Canal global de admins
+    echo.private('support.admins')
+      .listen('.message.sent', (data) => {
+        handleGlobalMessage(data)
+      })
+      .listen('.chat.created', (data) => {
+        loadChats()
+        $q.notify({
+          message: `Nuevo ticket: ${data.chat.subject}`,
+          color: 'primary',
+          icon: 'support_agent'
+        })
+      })
+  }
 
   echo.private(`support.user.${currentUser.value.id}`)
     .listen('.message.sent', (data) => {
@@ -1363,7 +1741,9 @@ const subscribeToChat = (chatId) => {
 
           // Marcar como leído si estamos viendo y no estamos arriba
           if (document.hasFocus() && !isUserScrolledUp.value) {
-            api.post(`support-chats/${chatId}/read`)
+            if (chatId !== 'mock-purchase') {
+              api.post(`support-chats/${chatId}/read`)
+            }
           }
         }
       }
@@ -1415,6 +1795,9 @@ const handleGlobalMessage = (data) => {
  */
 const unsubscribeFromEvents = () => {
   if (echo) {
+    if (isRoot.value) {
+      echo.leave('support.admins')
+    }
     if (currentUser.value) {
       echo.leave(`support.user.${currentUser.value.id}`)
     }
@@ -1457,7 +1840,7 @@ onUnmounted(() => {
 
 .chat-container {
   display: flex;
-  height: calc(100vh - 120px);
+  height: 100%;
   padding: 20px;
   gap: 20px;
 
@@ -1472,7 +1855,7 @@ onUnmounted(() => {
   width: 380px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   background: transparent;
 
   @media (max-width: 1023px) {
@@ -1570,20 +1953,36 @@ onUnmounted(() => {
 }
 
 .chat-item-wrapper {
-  padding: 12px 16px;
+  padding: 16px;
   cursor: pointer;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
   background: white;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  margin: 4px 12px;
+  border-radius: 12px;
 
   &:hover {
-    background: #f0f4f8;
+    background: #f8fbff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
   }
 
   &.active {
     background: #e3f2fd;
-    border-left: 4px solid #1976d2;
-    padding-left: 12px;
+    transform: translateX(4px);
+    box-shadow: 0 4px 15px rgba(25, 118, 210, 0.1);
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 12px;
+      bottom: 12px;
+      width: 4px;
+      background: #1976d2;
+      border-radius: 0 4px 4px 0;
+    }
   }
 }
 
@@ -1592,12 +1991,24 @@ onUnmounted(() => {
   border-bottom-color: rgba(255, 255, 255, 0.05);
 
   &:hover {
-    background: #2d2d2d;
+    background: #252525;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
 
   &.active {
-    background: #1a237e;
-    border-left-color: #3f51b5;
+    background: rgba(25, 118, 210, 0.15);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 12px;
+      bottom: 12px;
+      width: 4px;
+      background: #90caf9;
+      border-radius: 0 4px 4px 0;
+    }
   }
 }
 
@@ -1609,6 +2020,30 @@ onUnmounted(() => {
 .chat-info {
   flex: 1;
   min-width: 0;
+}
+
+.avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.palma-avatar {
+  background: linear-gradient(135deg, #0084ff, #00c6ff);
+  box-shadow: 0 2px 8px rgba(0, 132, 255, 0.3);
+}
+
+.chat-avatar {
+  position: relative;
+  flex-shrink: 0;
 }
 
 .chat-header-row {
@@ -1653,6 +2088,239 @@ onUnmounted(() => {
 .chat-time {
   font-size: 11px;
   color: #90a4ae;
+}
+
+// Sidebar Admin Styles
+.sidebar-tabs {
+  display: flex;
+  background: transparent;
+  padding: 4px;
+  margin: 0 16px 12px 16px;
+  border-radius: 14px;
+  gap: 8px;
+  position: relative;
+  background: rgba(0, 0, 0, 0.03);
+
+  .tab-indicator {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc(50% - 8px);
+    background: white;
+    border-radius: 10px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    z-index: 0;
+  }
+
+  &.users-active .tab-indicator {
+    transform: translateX(calc(100% + 8px));
+  }
+
+  .tab-item {
+    flex: 1;
+    padding: 10px 12px;
+    text-align: center;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    color: #546e7a;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    position: relative;
+    z-index: 1;
+
+    &:hover:not(.active) {
+      color: #1976d2;
+    }
+
+    &.active {
+      color: #1976d2;
+    }
+  }
+}
+
+.body--dark .sidebar-tabs {
+  background: rgba(255, 255, 255, 0.04);
+  .tab-indicator {
+    background: #2c2c2c;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+  .tab-item.active {
+    color: #90caf9;
+  }
+}
+
+/* Transiciones de contenido */
+.slide-fade-content-enter-active,
+.slide-fade-content-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-fade-content-enter-from {
+  opacity: 0;
+  transform: translateX(15px);
+}
+
+.slide-fade-content-leave-to {
+  opacity: 0;
+  transform: translateX(-15px);
+}
+
+// Fade transition for search
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+.sidebar-search {
+  padding: 0 16px 8px 16px;
+  background: transparent;
+
+  .search-input {
+    :deep(.q-field__control) {
+      background: #f8f9fa;
+      border-radius: 14px;
+      box-shadow: none;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: #f1f3f5;
+        border-color: rgba(0, 0, 0, 0.08);
+      }
+      &.q-field__control--focused {
+        background: white;
+        border-color: #1976d2;
+        box-shadow: 0 4px 15px rgba(25, 118, 210, 0.08);
+      }
+    }
+  }
+}
+
+.body--dark .sidebar-search {
+  .search-input :deep(.q-field__control) {
+    background: #252525;
+    border-color: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.admin-sidebar-header {
+  background: white;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.02);
+  z-index: 10;
+}
+
+.body--dark .admin-sidebar-header {
+  background: #1e1e1e;
+  border-bottom-color: rgba(255, 255, 255, 0.03);
+}
+
+.status-filters {
+  display: flex;
+  gap: 6px;
+  padding: 0 16px 0 16px;
+  overflow-x: auto;
+  background: transparent;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+
+  .status-chip {
+    margin: 0;
+    transition: all 0.2s ease;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #f8f9fa;
+    color: #78909c;
+    height: 28px;
+    padding: 0 10px;
+    box-sizing: border-box;
+
+    &:hover:not(.active) {
+      background: #f1f3f5;
+      color: #1976d2;
+      border-color: rgba(25, 118, 210, 0.3);
+    }
+
+    &.active {
+      background: #1976d2;
+      color: white !important;
+      border-color: transparent;
+      box-shadow: 0 4px 10px rgba(25, 118, 210, 0.2);
+    }
+  }
+}
+
+.body--dark .status-filters {
+  .status-chip {
+    background: #2c2c2c;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #90a4ae;
+    &.active {
+      background: #1976d2;
+      color: white !important;
+      border-color: transparent;
+    }
+  }
+}
+
+.section-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #90a4ae;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+.chat-status-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid white;
+  &.active { background: #4caf50; }
+  &.inactive { background: #bdbdbd; }
+}
+
+// Pagination Admin
+.text-center.q-pa-sm {
+  background: white;
+  border-top: 1px solid rgba(0, 0, 0, 0.03);
+  padding: 12px !important;
+
+  :deep(.q-pagination) {
+    .q-btn {
+      border-radius: 8px;
+      margin: 0 2px;
+      &:hover { background: #f0f4f8; }
+    }
+    .q-btn--active {
+      background: #1976d2 !important;
+      color: white !important;
+      box-shadow: 0 4px 10px rgba(25, 118, 210, 0.2);
+    }
+  }
+}
+
+.body--dark .text-center.q-pa-sm {
+  background: #1e1e1e;
+  border-top-color: rgba(255, 255, 255, 0.05);
+  :deep(.q-pagination) {
+    .q-btn:hover { background: #2d2d2d; }
+  }
 }
 
 // Main chat area
@@ -1779,6 +2447,20 @@ onUnmounted(() => {
   margin-top: 4px;
 }
 
+.priority-chip {
+  height: 24px;
+  font-size: 11px;
+  padding: 0 12px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  .q-icon {
+    opacity: 0.9;
+  }
+}
+
 .messages-container {
   flex: 1;
   position: relative;
@@ -1791,10 +2473,10 @@ onUnmounted(() => {
 }
 
 .messages-list {
-  padding: 24px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
 }
 
 .message-wrapper {
@@ -1805,10 +2487,9 @@ onUnmounted(() => {
     align-self: flex-end;
 
     .message-bubble {
-      background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+      background-color: #0084ff;
       color: white;
-      border-radius: 20px 20px 4px 20px;
-      box-shadow: 0 4px 15px rgba(25, 118, 210, 0.2);
+      border-radius: 18px 18px 4px 18px;
     }
   }
 
@@ -1816,10 +2497,9 @@ onUnmounted(() => {
     align-self: flex-start;
 
     .message-bubble {
-      background: white;
-      color: #333;
-      border-radius: 20px 20px 20px 4px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      background: #f0f2f5;
+      color: #050505;
+      border-radius: 18px 18px 18px 4px;
     }
   }
 }
@@ -1830,9 +2510,17 @@ onUnmounted(() => {
 }
 
 .message-bubble {
-  padding: 12px 20px;
+  padding: 10px 16px;
   position: relative;
-  font-size: 15px;
+  font-size: 14.5px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+.message-sender {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  color: #65676b;
 }
 
 .message-content {
@@ -1856,8 +2544,43 @@ onUnmounted(() => {
 
 .body--dark .input-wrapper { background: #242526; }
 
-.input-field {
-  width: 100%;
+.page-messenger-footer {
+  background: #f8f9fa;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  position: relative;
+  z-index: 10;
+}
+
+.body--dark .page-messenger-footer {
+  background: #242526;
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.page-attachment-btn {
+  background: #f0f2f5;
+  border-radius: 8px !important;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 !important;
+  flex-shrink: 0;
+
+  &:hover {
+    background: #e4e6eb;
+  }
+}
+
+.body--dark .page-attachment-btn {
+  background: #3a3b3c;
+  &:hover { background: #4e4f50; }
+}
+
+.page-messenger-input {
+  font-size: 14px;
+}
+
+.send-btn {
+  margin-left: 4px;
 }
 
 .typing-indicator {
@@ -1905,43 +2628,88 @@ onUnmounted(() => {
 // Attachment Styles
 .message-attachment {
   margin-bottom: 8px;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
+
+  &.image-only {
+    margin-bottom: 0px;
+  }
+}
+
+.image-only-bubble {
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+
+  .message-footer {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    padding: 4px 8px;
+    background: rgba(0,0,0,0.3);
+    backdrop-filter: blur(4px);
+    border-radius: 10px;
+    margin-top: 0;
+
+    .message-time {
+      color: white;
+    }
+  }
+
+  .message-sender {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 2px 8px;
+    background: rgba(0,0,0,0.3);
+    backdrop-filter: blur(4px);
+    border-radius: 10px;
+    color: white;
+    z-index: 10;
+  }
 }
 
 .image-attachment {
   .image-container {
     position: relative;
     cursor: pointer;
-    border-radius: 12px;
+    border-radius: 14px;
     overflow: hidden;
-    max-width: 320px;
+    max-width: 380px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    background: #f0f2f5;
 
     &:hover {
       .image-overlay {
         opacity: 1;
+      }
+
+      .attachment-image {
+        transform: scale(1.02);
       }
     }
   }
 }
 
 .attachment-image {
-  max-width: 320px;
+  max-width: 380px;
   min-width: 200px;
-  border-radius: 12px;
-  transition: transform 0.3s ease;
+  border-radius: 14px;
+  transition: transform 0.4s ease;
+  display: block;
 }
 
 .image-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
   transition: opacity 0.3s ease;
-  border-radius: 12px;
+  border-radius: 14px;
+  z-index: 5;
 }
 
 .image-loading {
@@ -1950,7 +2718,7 @@ onUnmounted(() => {
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .video-attachment {
@@ -2165,6 +2933,23 @@ onUnmounted(() => {
     border-color: white;
     transform: scale(1.1);
   }
+}
+
+.audio-bubble {
+  min-width: 260px;
+  background: white;
+  padding: 12px !important;
+  border-radius: 18px !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+}
+
+.body--dark .audio-bubble {
+  background: #2c2c2c !important;
+}
+
+.user-message .audio-bubble {
+  background-color: #0084ff !important;
+  color: white;
 }
 
 // Animations
