@@ -110,10 +110,10 @@
       </button>
 
       <!-- Link a Registro (opcional) -->
-      <div v-if="showRegisterLink" class="register-link-container">
+      <!-- <div v-if="showRegisterLink" class="register-link-container">
         <span class="register-text">¿No tienes cuenta? </span>
         <router-link to="/register" class="register-link">Crear cuenta</router-link>
-      </div>
+      </div> -->
     </q-form>
   </div>
 </template>

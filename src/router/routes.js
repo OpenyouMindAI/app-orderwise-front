@@ -514,11 +514,11 @@ const routes = [
     name: 'Login',
     component: () => import('pages/LoginPage.vue')
   },
-  {
-    path: '/register',
-    name: 'Register',
-    component: () => import('pages/RegisterPage.vue')
-  },
+  // {
+  //   path: '/register',
+  //   name: 'Register',
+  //   component: () => import('pages/RegisterPage.vue')
+  // },
   {
     path: '/reset-password/:token',
     name: 'ResetPassword',
