@@ -1,6 +1,6 @@
 <template>
   <div>
-    <q-dialog v-model="showDialog" persistent :maximized="isMobile" transition-show="slide-up" transition-hide="slide-down">
+    <q-dialog v-model="showDialog" persistent :maximized="isMobile" transition-show="slide-up" transition-hide="slide-down" no-focus-restore>
       <q-card flat class="modern-pricing" :dark="$q.dark.isActive">
         <!-- Close Button -->
         <q-btn
@@ -350,7 +350,7 @@
     </q-dialog>
 
     <!-- Cancel Confirmation Dialog -->
-    <q-dialog v-model="showCancelDialog">
+    <q-dialog v-model="showCancelDialog" no-focus-restore>
       <q-card class="cancel-dialog">
         <q-card-section class="cancel-header">
           <q-icon name="warning_amber" size="48px" color="warning" />
@@ -957,6 +957,7 @@ export default {
         localStorage.setItem('mp_preference_id', response.data.preference_id)
         localStorage.setItem('mp_plan_id', plan.id)
         localStorage.setItem('mp_plan_name', plan.name)
+        localStorage.setItem('mp_business_type_id', route.query.business_type_id || store.userSession?.company_session?.business_type?.id || '')
 
         notify('Redirigiendo a Mercado Pago...', 'info', 'payment')
 

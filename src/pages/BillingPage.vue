@@ -165,8 +165,8 @@
                   ref="barcode"
                   style="width: 100% !important; max-width: none !important;"
                   @keyup.enter="processBarcode(barcode)"
-                  @focus="scanner = false"
-                  @blur="scanner = true"
+                  @update:model-value="handleBarcodeInput"
+                  @blur="handleBarcodeBlur"
                   :class="$q.screen.lt.md ? 'compact-input' : ''"
                 />
               </div>
@@ -1828,7 +1828,7 @@ export default {
 
       currentCashierSession: null,
 
-      scanner: false,
+      scanner: true,
 
       // Cash Box System
       showCashBoxDialog: false,
@@ -2201,6 +2201,21 @@ export default {
        * @type {String}
        */
       barcode: null,
+      /**
+       * Timer para auto-procesar códigos cuando el lector no envía Enter.
+       * @type {number|null}
+       */
+      barcodeInputTimer: null,
+      /**
+       * Evita doble procesamiento del mismo código en ráfagas del lector.
+       * @type {string|null}
+       */
+      lastProcessedBarcode: null,
+      /**
+       * Estado para evitar carreras mientras se procesa un código.
+       * @type {boolean}
+       */
+      processingBarcode: false,
       /**
        * Channel
        * @type {Object}
@@ -3483,6 +3498,39 @@ export default {
       }
     },
     /**
+     * Maneja el input del código para soportar lectores que no envían Enter.
+     * Si detecta una ráfaga de caracteres y hay una pequeña pausa, procesa el código automáticamente.
+     * @param {string} value valor actual del input código
+     */
+    handleBarcodeInput (value) {
+      const nextValue = (value || '').toString().trim()
+
+      if (this.barcodeInputTimer) {
+        clearTimeout(this.barcodeInputTimer)
+        this.barcodeInputTimer = null
+      }
+
+      if (!nextValue || nextValue.length < 5 || this.processingBarcode) {
+        return
+      }
+
+      this.barcodeInputTimer = setTimeout(() => {
+        if (this.barcode && this.barcode.toString().trim() === nextValue && this.lastProcessedBarcode !== nextValue) {
+          this.processBarcode(nextValue)
+        }
+      }, 180)
+    },
+    /**
+     * Al salir del input, intenta procesar el código pendiente y reactiva el scanner global.
+     */
+    handleBarcodeBlur () {
+      this.scanner = true
+      const currentValue = (this.barcode || '').toString().trim()
+      if (currentValue && currentValue.length >= 5 && this.lastProcessedBarcode !== currentValue) {
+        this.processBarcode(currentValue)
+      }
+    },
+    /**
      * Select category
      * @param {String} value Value filter
      * @param {Callback} update update options
@@ -3589,10 +3637,19 @@ export default {
      */
     async processBarcode (barcode) {
       try {
-        if (!barcode) return
+        const normalizedBarcode = (barcode || '').toString().trim()
+        if (!normalizedBarcode || this.processingBarcode) return
 
-        if (typeof barcode !== 'string' || barcode.length < 13) {
-          this.getOneProduct(barcode)
+        this.processingBarcode = true
+
+        if (this.barcodeInputTimer) {
+          clearTimeout(this.barcodeInputTimer)
+          this.barcodeInputTimer = null
+        }
+
+        if (typeof normalizedBarcode !== 'string' || normalizedBarcode.length < 13) {
+          await this.getOneProduct(normalizedBarcode)
+          this.lastProcessedBarcode = normalizedBarcode
           return
         }
 
@@ -3611,7 +3668,7 @@ export default {
           prefixes = BALANZA_PREFIXES
         }
 
-        const prefix = barcode.substring(0, prefixLength)
+        const prefix = normalizedBarcode.substring(0, prefixLength)
 
         if (prefixes.includes(prefix)) {
           // Posiciones dinámicas
@@ -3619,14 +3676,15 @@ export default {
           const pluEnd = pluStart + 4
           const variableStart = pluEnd
 
-          const pluRaw = barcode.substring(pluStart, pluEnd)
-          const variablePart = barcode.substring(variableStart, 12)
+          const pluRaw = normalizedBarcode.substring(pluStart, pluEnd)
+          const variablePart = normalizedBarcode.substring(variableStart, 12)
 
           const plu = parseInt(pluRaw, 10).toString() // quita ceros a la izquierda
 
           if (!/^\d+$/.test(variablePart)) {
             notify('Formato inválido en importe/peso', 'negative', 'warning')
-            this.getOneProduct(barcode)
+            await this.getOneProduct(normalizedBarcode)
+            this.lastProcessedBarcode = normalizedBarcode
             return
           }
 
@@ -3634,7 +3692,8 @@ export default {
           const product = await this.getProduct(plu)
           if (!product) {
             notify('Producto no encontrado', 'negative', 'warning')
-            this.getOneProduct(barcode)
+            await this.getOneProduct(normalizedBarcode)
+            this.lastProcessedBarcode = normalizedBarcode
             return
           }
 
@@ -3642,14 +3701,15 @@ export default {
 
           if (isNaN(importe) || importe <= 0) {
             notify('Importe inválido', 'negative', 'warning')
-            this.getOneProduct(barcode)
+            await this.getOneProduct(normalizedBarcode)
+            this.lastProcessedBarcode = normalizedBarcode
             return
           }
 
           this.quantity = importe
 
           this.validateProduct(product, false)
-
+          this.lastProcessedBarcode = normalizedBarcode
           this.barcode = null
           this.$nextTick(() => {
             this.$refs.barcode?.focus()
@@ -3658,17 +3718,21 @@ export default {
         }
 
         // No es balanza
-        await this.getOneProduct(barcode)
+        await this.getOneProduct(normalizedBarcode)
+        this.lastProcessedBarcode = normalizedBarcode
         this.$nextTick(() => {
           this.$refs.barcode?.focus()
         })
       } catch (error) {
         console.error('Error procesando código de balanza:', error)
         notify('Error procesando producto', 'negative', 'warning')
-        await this.getOneProduct(barcode)
+        await this.getOneProduct(normalizedBarcode)
+        this.lastProcessedBarcode = normalizedBarcode
         this.$nextTick(() => {
           this.$refs.barcode?.focus()
         })
+      } finally {
+        this.processingBarcode = false
       }
     },
     /**

@@ -270,9 +270,10 @@ body.body--dark .text-label {
    SCROLL BEHAVIOR
    ============================================ */
 @media (prefers-reduced-motion: no-preference) {
-  html {
-    scroll-behavior: smooth;
-  }
+  /* Disable smooth behavior to prevent jumps on restoration */
+html {
+  scroll-behavior: auto !important;
+}
 }
 
 /* Hide scrollbar but keep functionality */
