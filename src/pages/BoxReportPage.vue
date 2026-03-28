@@ -1843,7 +1843,8 @@ export default {
         ok: { label: 'Eliminar', color: 'negative', unelevated: true },
         cancel: { label: 'Cancelar', flat: true }
       }).onOk(() => {
-        this.$api.delete(`cashflows/${cashflow.id}`)
+        this.$api.delete(`cashflow/${cashflow.id}`)
+
           .then(() => {
             this.cashFlowDetails(cashflow)
             this.getCashflowTotals()

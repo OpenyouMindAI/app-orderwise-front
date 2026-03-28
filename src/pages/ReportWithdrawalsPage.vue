@@ -1379,7 +1379,6 @@ export default {
       return daysData.value.length > 0
     })
 
-
     const dayColumns = [
       {
         name: 'day',
@@ -1867,12 +1866,17 @@ export default {
      * @param {Object} withdrawal - Objeto arqueo a eliminar
      */
     const confirmDeleteWithdrawal = (withdrawal) => {
+      // Quitar el foco del botón antes de abrir el diálogo para evitar que
+      // el navegador haga scroll-into-view al restaurar el foco al cerrarlo
+      document.activeElement?.blur()
+
       $q.dialog({
         title: 'Eliminar arqueo',
         message: `¿Estás seguro de eliminar el arqueo de <b>${formatCurrency(withdrawal.amount)}</b>?<br>Esta acción no se puede deshacer.`,
         html: true,
         ok: { label: 'Eliminar', color: 'negative', unelevated: true },
-        cancel: { label: 'Cancelar', flat: true }
+        cancel: { label: 'Cancelar', flat: true },
+        noFocusRestore: true
       }).onOk(() => {
         deleteWithdrawal(withdrawal)
       })
@@ -1888,23 +1892,45 @@ export default {
       try {
         await api.delete(`cashflow/${withdrawal.id}`)
 
-        // Remover del estado local sin recargar
+        // Remover del estado local y recalcular totales del día afectado
         for (const day of daysData.value) {
           if (!day.cashboxes) continue
+          let found = false
           for (const cashbox of day.cashboxes) {
             if (!cashbox.withdrawals) continue
             const idx = cashbox.withdrawals.findIndex(w => w.id === withdrawal.id)
             if (idx >= 0) {
               cashbox.withdrawals.splice(idx, 1)
+              found = true
               break
             }
+          }
+          if (found) {
+            // Recalcular counted_amount del día tras la eliminación
+            let totalCounted = 0
+            day.cashboxes.forEach(cb => {
+              if (cb.withdrawals && Array.isArray(cb.withdrawals)) {
+                cb.withdrawals.forEach(w => {
+                  totalCounted += Number(w.actual_amount || 0)
+                })
+              }
+            })
+            day.counted_amount = totalCounted
+            break
+          }
+        }
+
+        // Actualizar totalesAmount localmente sin recargar el DOM
+        const deletedAmount = Number(withdrawal.actual_amount || withdrawal.amount || 0)
+        if (totalsAmount.value && deletedAmount > 0) {
+          totalsAmount.value = {
+            ...totalsAmount.value,
+            sum_amount: (Number(totalsAmount.value.sum_amount) || 0) - deletedAmount,
+            difference_report: (Number(totalsAmount.value.difference_report) || 0) - deletedAmount
           }
         }
 
         $q.notify({ type: 'positive', message: 'Arqueo eliminado correctamente', position: 'top', timeout: 2000 })
-
-        // Recargar para actualizar diferencias
-        await loadWithdrawals()
       } catch (error) {
         $q.notify({
           type: 'negative',
