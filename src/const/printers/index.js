@@ -64,6 +64,7 @@ export const commandPrint = async (data, printer = null) => {
 export const ticketPrint = async (data, printer = null) => {
   try {
     const { device, user, companyConfig, branchOffice } = await getConfig()
+
     if (!companyConfig?.other?.directPrint) {
       await sendTicket(data, user, branchOffice)
       return

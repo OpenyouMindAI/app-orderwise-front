@@ -1,30 +1,46 @@
 import { formatDate, formatNumber, notify } from '../../mixins'
-import { header } from '../common'
+import { authentication } from 'src/stores/module-authentication'
 import { api } from 'src/boot/axios'
+
+const addressFormat = (address) => {
+  if (typeof address === 'string') return address.toUpperCase()
+  return address?.formattedAddress?.toUpperCase() || ''
+}
+
+const buildHeader = (invoice, lineWidth) => {
+  const store = authentication()
+  const company = invoice?.company || store?.userSession?.company_session || {}
+  return `Razon social: ${company?.name || ''}\n` +
+    `Direccion: ${addressFormat(company?.address)}\n` +
+    `C.U.I.T: ${company?.document_number || ''}\n` +
+    '-'.repeat(lineWidth) + '\n'
+}
 
 function separatorLine (length = 29) {
   return '-'.repeat(length) + '\n'
 }
 
 const getStructureQr = async (data, fields) => {
-  if (!data.billing) {
+  if (!data.billing || !fields) {
     return JSON.stringify({
-      cliente: data.client.name,
-      fecha: formatDate(data.date, 'YYYY-MM-DD'),
+      cliente: data.client?.name || '',
+      fecha: formatDate(data.created_at, 'YYYY-MM-DD'),
       total: data.total
     })
   }
+  const store = authentication()
+  const company = data?.company || store?.userSession?.company_session || {}
   const docQr = {
     ver: 1,
-    fecha: formatDate(data.date, 'YYYY-MM-DD'),
-    cuit: Number(data.company.document_number),
+    fecha: formatDate(data.created_at, 'YYYY-MM-DD'),
+    cuit: Number(company?.document_number || 0),
     ptoVta: fields.point_of_sale,
-    tipoCmp: fields.voucher_type.Id,
+    tipoCmp: fields.voucher_type?.Id,
     nroCmp: fields.cbte_hasta,
     importe: data.total,
     moneda: 'PES',
-    tipoDocRec: data?.client?.document_type?.Id,
-    nroDocRec: Number(data?.client?.document_number),
+    tipoDocRec: data?.client?.document_type?.Id || 99,
+    nroDocRec: Number(data?.client?.document_number || 0),
     tipoCodAut: 'E',
     ctz: 1,
     codAut: Number(fields.cae)
@@ -41,11 +57,11 @@ export async function printTicketUsb (invoice, config) {
   try {
     await printer.setPaperWidth({ width: lineWidth })
     await printer.text({
-      text: header(invoice, lineWidth),
+      text: buildHeader(invoice, lineWidth),
       align: 'left'
     })
 
-    if (invoice.billing) {
+    if (invoice.billing && invoice.electronic_invoice?.fields) {
       await printer.text({
         text: `${invoice.electronic_invoice.fields.voucher_type.Desc}`,
         align: 'center',
@@ -68,8 +84,8 @@ export async function printTicketUsb (invoice, config) {
 
     let detail = `Nro Comp.: ${invoice.code}\n` +
       `CLIENTE: ${invoice.client?.name || '-'}\n` +
-      `FECHA: ${invoice.date}\n` +
-      `HORA: ${invoice.hour}\n` +
+      `FECHA: ${formatDate(invoice.created_at, 'DD/MM/YYYY')}\n` +
+      `HORA: ${formatDate(invoice.created_at, 'HH:mm:ss')}\n` +
       `TIPO: ${invoice.invoice_type?.name || 'Ticket'}\n` +
       separatorLine(lineWidth) +
       'Cant./Precio Unit'.padEnd(lineWidth - 7) + 'IMPORTE\n' +
@@ -127,7 +143,7 @@ export async function printTicketUsb (invoice, config) {
     })
 
     // Detalles de factura electrónica
-    if (invoice.billing) {
+    if (invoice.billing && invoice.electronic_invoice?.fields) {
       const invoiceDetail = `Cae: ${invoice.electronic_invoice.fields.cae}\n` +
         `Vto: ${formatDate(invoice.electronic_invoice.fields.caef_ch_vto, 'DD/MM/YYYY')}`
 
@@ -179,7 +195,7 @@ export async function printCommandUsb (invoice, config) {
 
     // 1. Encabezado
     await printer.text({
-      text: header(invoice, lineWidth),
+      text: buildHeader(invoice, lineWidth),
       align: 'left'
     })
 
@@ -188,8 +204,8 @@ export async function printCommandUsb (invoice, config) {
       `CLIENTE: ${invoice.client?.name || '-'}\n` +
       `TELEFONO: ${invoice.client?.phone_number || '-'}\n` +
       `TIPO DE SERVICIO: ${invoice.type_of_service?.name || '-'}\n` +
-      `FECHA: ${invoice.date}\n` +
-      `HORA: ${invoice.hour}\n` +
+      `FECHA: ${formatDate(invoice.created_at, 'DD/MM/YYYY')}\n` +
+      `HORA: ${formatDate(invoice.created_at, 'HH:mm:ss')}\n` +
       `TIPO: ${invoice.invoice_type?.name || 'Ticket'}\n` +
       separatorLine(lineWidth) +
       'Descripcion         quantity\n' +

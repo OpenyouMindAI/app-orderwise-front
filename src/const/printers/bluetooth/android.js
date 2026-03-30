@@ -1,6 +1,7 @@
 import { CapacitorThermalPrinter } from 'capacitor-thermal-printer'
 import { formatDate, formatNumber } from '../../mixins'
 import { setQrImage } from '../common'
+import { authentication } from 'src/stores/module-authentication'
 
 function separatorLine (length = 29) {
   return '-'.repeat(length) + '\n'
@@ -14,9 +15,11 @@ const addressFormat = (address) => {
 }
 
 const header = (invoice, lineWidth) => {
-  return `Razon social: ${invoice?.company?.name}\n` +
-    `Direccion: ${addressFormat(invoice?.company?.address)}\n` +
-    `C.U.I.T: ${invoice?.company?.document_number}\n` +
+  const store = authentication()
+  const company = invoice?.company || store?.userSession?.company_session || {}
+  return `Razon social: ${company?.name || ''}\n` +
+    `Direccion: ${addressFormat(company?.address)}\n` +
+    `C.U.I.T: ${company?.document_number || ''}\n` +
     separatorLine(lineWidth)
 }
 
@@ -25,7 +28,7 @@ export async function printCommand (invoice, config) {
   let detail = `NRO: ${invoice.code}\n` +
     `CLIENTE: ${invoice.client?.name || '-'}\n` +
     `TIPO DE SERVICIO: ${invoice.type_of_service?.name || '-'}\n` +
-    `FECHA: ${invoice.date} ${invoice.hour}\n` +
+    `FECHA: ${formatDate(invoice.created_at, 'DD/MM/YYYY')} ${formatDate(invoice.created_at, 'HH:mm:ss')}\n` +
     `TIPO: ${invoice.invoice_type?.name || 'Ticket'}\n` +
     separatorLine(lineWidth) +
     'Descripcion         quantity\n' +
@@ -112,8 +115,8 @@ export async function printTicket (invoice, config) {
   const lineWidth = config?.size?.value || 29
   let detail = `NRO: ${invoice.code}\n` +
     `CLIENTE: ${invoice.client?.name || '-'}\n` +
-    `FECHA: ${invoice.date}\n` +
-    `HORA: ${invoice.hour}\n` +
+    `FECHA: ${formatDate(invoice.created_at, 'DD/MM/YYYY')}\n` +
+    `HORA: ${formatDate(invoice.created_at, 'HH:mm:ss')}\n` +
     `TIPO: ${invoice.invoice_type?.name || 'Ticket'}\n` +
     separatorLine(lineWidth) +
     'Cant./Precio Unit   IMPORTE\n' +
@@ -122,9 +125,9 @@ export async function printTicket (invoice, config) {
 
   let voucherType = ''
   let numberVoucher = ''
-  if (invoice.billing) {
-    voucherType += `${invoice.electronic_invoice.fields.voucher_type.Desc} \n`
-    numberVoucher += `Codigo: ${invoice.electronic_invoice.fields.voucher_type.Id} \n`
+  if (invoice.billing && invoice.electronic_invoice?.fields) {
+    voucherType += `${invoice.electronic_invoice.fields.voucher_type?.Desc || ''} \n`
+    numberVoucher += `Codigo: ${invoice.electronic_invoice.fields.voucher_type?.Id || ''} \n`
     numberVoucher += `Nro: 000${invoice.electronic_invoice.fields.point_of_sale}-000${invoice.electronic_invoice.fields.cbte_hasta} \n`
   }
 
@@ -171,7 +174,7 @@ export async function printTicket (invoice, config) {
     separatorLine(lineWidth)
 
   let invoiceDetail = ''
-  if (invoice.billing) {
+  if (invoice.billing && invoice.electronic_invoice?.fields) {
     invoiceDetail += `Cae: ${invoice.electronic_invoice.fields.cae}\n`
     invoiceDetail += `Vto: ${formatDate(invoice.electronic_invoice.fields.caef_ch_vto, 'DD/MM/YYYY')}\n`
   }
