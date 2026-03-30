@@ -150,24 +150,17 @@
             <q-tooltip>Escanear QR</q-tooltip>
           </q-btn>
 
-          <!-- Soporte Chat -->
+          <!-- AI Assistant -->
           <q-btn
             v-if="userSession"
             flat
             dense
             round
-            icon="chat"
+            icon="auto_awesome"
             @click="handleChatButtonClick"
             class="support-chat-toggle-btn"
           >
-            <q-badge
-              v-if="totalSupportUnread > 0"
-              color="red"
-              floating
-            >
-              {{ totalSupportUnread }}
-            </q-badge>
-            <q-tooltip>Chat de Soporte</q-tooltip>
+            <q-tooltip>Asistente IA</q-tooltip>
           </q-btn>
 
           <!-- Herramientas -->
@@ -449,6 +442,26 @@
                       </q-item-section>
                     </q-item>
 
+                    <!-- Ayuda y Soporte Técnico -->
+                    <q-item
+                      v-ripple
+                      clickable
+                      dense
+                      class="profile-action-item-compact"
+                      @click="$router.push({ name: 'HelpCenter' })"
+                      v-close-popup
+                    >
+                      <q-item-section avatar class="min-width-auto">
+                        <div class="action-icon-wrapper">
+                          <q-icon name="help_outline" color="primary" size="20px" />
+                        </div>
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label class="text-body2 text-weight-medium">Ayuda y Soporte Técnico</q-item-label>
+                        <q-item-label caption class="text-caption action-caption">Guías, tutoriales y soporte</q-item-label>
+                      </q-item-section>
+                    </q-item>
+
                     <!-- Subscription Plans (Solo para root o super_admin) -->
                     <q-item
                       v-if="isRootOrSuperAdmin()"
@@ -693,10 +706,9 @@
       @back="showOtpVerification = false; showCreateCompanyDialog = true"
     />
 
-    <!-- Global Support Chat Bubble -->
-    <SupportChatBubble
-      v-if="$route.name !== 'Support' && $route.name !== 'AdminSupport'"
-      ref="supportChat"
+    <!-- Global AI Assistant Bubble -->
+    <AiAssistantBubble
+      ref="aiAssistant"
     />
 
     <SupportNotificationToast
@@ -763,7 +775,7 @@ import { mapState, mapActions } from 'pinia'
 import { logo, notify, loading } from 'src/const/mixins'
 import eventBus from 'src/utils/eventBus'
 import { darkModeStore } from '../stores/darkModeStore'
-import { MultiDisplayManager } from 'multi-display-manager'
+// import { MultiDisplayManager } from 'multi-display-manager' // NOT BUILT
 import { copyToClipboard } from 'quasar'
 import { useRouter } from 'vue-router'
 import BottomNav from 'src/components/Navigation/BottomNav.vue'
@@ -779,7 +791,7 @@ import {
 import { useDemoPersuasion } from 'src/composables/useDemoPersuasion'
 import { useCompanySetup } from 'src/composables/useCompanySetup'
 import ProPlanPromoBanner from 'src/components/ProPlanPromoBanner.vue'
-import SupportChatBubble from 'src/components/SupportChatBubble.vue'
+import AiAssistantBubble from 'src/components/HelpCenter/AiAssistantBubble.vue'
 import SupportNotificationToast from 'src/components/SupportNotificationToast.vue'
 
 export default {
@@ -798,7 +810,7 @@ export default {
     IntegrationDynamic,
     BottomNav,
     ProPlanPromoBanner,
-    SupportChatBubble,
+    AiAssistantBubble,
     SupportNotificationToast
   },
   data () {
@@ -1207,17 +1219,19 @@ export default {
   },
 
   mounted () {
-    this.$echo
-      .private('App.Models.User.' + this.userSession.id)
-      .notification((notification) => {
-        this.setNotification(notification)
-      })
-
-    if (this.userSession?.id) {
-      this.$echo.private(`support.user.${this.userSession.id}`)
-        .listen('.message.sent', (data) => {
-          this.handleGlobalSupportMessage(data)
+    if (this.$echo) {
+      this.$echo
+        .private('App.Models.User.' + this.userSession.id)
+        .notification((notification) => {
+          this.setNotification(notification)
         })
+
+      if (this.userSession?.id) {
+        this.$echo.private(`support.user.${this.userSession.id}`)
+          .listen('.message.sent', (data) => {
+            this.handleGlobalSupportMessage(data)
+          })
+      }
     }
 
     // Listen for subscription updates
@@ -1898,10 +1912,9 @@ export default {
     async screen () {
       try {
         loading(true)
-        const url = `${import.meta.env.VITE_APP_URL}/verifying/${encodeURIComponent(this.token_type)}/${encodeURIComponent(this.access_token)}/${this.expires_In}/InvoiceDetails`
-        await MultiDisplayManager.showOnSecondScreen({
-          url
-        })
+        // MultiDisplayManager disabled for local dev
+        // const url = `${import.meta.env.VITE_APP_URL}/verifying/...`
+        // await MultiDisplayManager.showOnSecondScreen({ url })
       } catch (error) {
         alert(error.message)
       } finally {
@@ -1909,13 +1922,9 @@ export default {
       }
     },
     async closeScreen () {
-      // Obtener estado
-      const status = await MultiDisplayManager.getSecondScreenStatus()
-      alert(status.message, status.isShowing)
-      if (status.isShowing) {
-        // Cerrar pantalla
-        await MultiDisplayManager.closeSecondScreen()
-      }
+      // MultiDisplayManager disabled for local dev
+      // const status = await MultiDisplayManager.getSecondScreenStatus()
+      // if (status.isShowing) { await MultiDisplayManager.closeSecondScreen() }
     },
     ucwords (data) {
       return data
@@ -2458,8 +2467,8 @@ export default {
     testToast () {
       this.toastData = {
         avatar: 'https://cdn.quasar.dev/img/avatar2.jpg',
-        name: 'Palma (Soporte)',
-        message: '¡Hola! ¿En qué puedo ayudarte hoy con tu pedido?'
+        name: 'Asistente QBITS',
+        message: '¡Hola! ¿En qué puedo ayudarte hoy?'
       }
       this.$nextTick(() => {
         this.$refs.supportToast?.show()
@@ -2469,20 +2478,7 @@ export default {
      * Handle chat button click based on screen size
      */
     handleChatButtonClick () {
-      if (this.$q.screen.xs) {
-        this.$router.push('/support')
-      } else {
-        this.$refs.supportChat?.toggleMiniChat()
-      }
-    },
-    /**
-     * Handle support click from the Facebook card in the drawer
-     */
-    handleSupportClick () {
-      console.log('Support card clicked', this.$refs.supportChat)
-      if (this.$refs.supportChat) {
-        this.$refs.supportChat.toggleMiniChat()
-      }
+      this.$refs.aiAssistant?.toggle()
     },
     /**
      * Logout map actions

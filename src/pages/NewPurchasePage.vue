@@ -181,7 +181,7 @@
               <!-- FAB para configuraciones adicionales -->
               <q-fab
                 color="primary"
-                icon="tune"
+                :icon="centerFabOpen ? 'expand_less' : 'expand_more'"
                 type="button"
                 direction="down"
                 padding="sm"
@@ -470,198 +470,6 @@
               </div>
             </div>
 
-            <div class="col-12 q-col-gutter-xs q-mt-md row" :class="{ 'articles-section-hidden': productsFullscreen }">
-              <div class="col-12">
-                <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
-              </div>
-              <div class="col-12">
-                <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
-              </div>
-              <div class="col-12">
-                <q-card flat bordered class="q-mt-md" style="border-radius: 14px; overflow: hidden;">
-                  <q-card-section class="q-pb-sm">
-                    <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center justify-between">
-                      <div class="flex items-center">
-                        <q-icon name="attachment" class="q-mr-sm" />
-                        Archivos Adjuntos
-                      </div>
-                      <q-btn
-                        v-if="purchaseFiles.length > 0"
-                        round
-                        color="primary"
-                        text-color="white"
-                        icon="add"
-                        size="sm"
-                        unelevated
-                        @click="openFileDialog"
-                      >
-                        <q-tooltip>Agregar mis archivos</q-tooltip>
-                      </q-btn>
-                    </div>
-
-                    <!-- AI Analysis CTA for Mobile -->
-                    <q-card
-                      flat
-                      class="q-mb-md cursor-pointer"
-                      style="border-radius: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); overflow: hidden;"
-                      @click="triggerAiAnalysis"
-                    >
-                      <q-card-section class="q-pa-md text-center text-white">
-                        <q-spinner-dots v-if="analyzingInvoice" color="white" size="2rem" />
-                        <div v-else>
-                          <q-icon name="auto_awesome" size="2.5rem" class="q-mb-xs" />
-                          <div class="text-subtitle1 text-weight-bold">Analizar Factura con IA</div>
-                          <div class="text-caption" style="opacity: 0.85">Sube o toma una foto de la factura y la IA la procesará automáticamente</div>
-                          <div class="row justify-center q-gutter-sm q-mt-sm">
-                            <q-btn
-                              unelevated
-                              color="white"
-                              text-color="deep-purple"
-                              icon="photo_library"
-                              label="Galería"
-                              size="sm"
-                              no-caps
-                              style="border-radius: 20px"
-                              @click.stop="openAiFileDialog"
-                            />
-                            <q-btn
-                              v-if="$q.platform.is.nativeMobile"
-                              unelevated
-                              color="white"
-                              text-color="deep-purple"
-                              icon="photo_camera"
-                              label="Cámara"
-                              size="sm"
-                              no-caps
-                              style="border-radius: 20px"
-                              @click.stop="captureAndAnalyze"
-                            />
-                          </div>
-                        </div>
-                      </q-card-section>
-                    </q-card>
-                    <input ref="aiFileInput" type="file" accept="image/*" style="display: none" @change="handleAiFileSelect" />
-
-                    <!-- Standard upload area -->
-                    <div
-                      v-if="purchaseFiles.length === 0"
-                      class="upload-zone"
-                      :class="{ 'upload-zone-active': isDragOverPurchase, 'q-dark': $q.dark.isActive }"
-                      @dragenter.prevent="isDragOverPurchase = true"
-                      @dragover.prevent="isDragOverPurchase = true"
-                      @dragleave.prevent="isDragOverPurchase = false"
-                      @drop.prevent="handlePurchaseFileDrop"
-                      @click="openFileDialog"
-                    >
-                      <div class="upload-content">
-                        <q-icon name="cloud_upload" size="24px" color="primary" class="q-mb-xs" />
-                        <div class="upload-text">Arrastra archivos aquí</div>
-                        <q-btn color="primary" label="SELECCIONAR" unelevated size="xs" class="q-mt-xs upload-btn" @click.stop="openFileDialog"/>
-                      </div>
-                    </div>
-
-                    <input ref="fileInput" type="file" multiple accept="image/*,.pdf,application/pdf" style="display: none" @change="handleFileSelect" />
-
-                    <div v-if="purchaseFiles.length > 0" class="q-mt-md">
-                      <div class="text-body2 text-primary q-mb-sm">Archivos adjuntos ({{ purchaseFiles.length }})</div>
-                      <file-component :files="purchaseFiles" @delete:files="handleDeletePurchaseFiles"/>
-                    </div>
-                  </q-card-section>
-                </q-card>
-              </div>
-
-              <!-- Impuestos y Descuentos -->
-              <div class="col-12">
-                <q-card style="border-radius: 10px;" class="shadow-1">
-                  <q-card-section class="q-pa-sm">
-                    <div class="text-subtitle2 text-weight-medium q-mb-sm">Impuestos y Descuentos</div>
-
-                    <!-- Botones para agregar -->
-                    <div class="row q-col-gutter-xs q-mb-sm">
-                      <div class="col-6">
-                        <q-btn
-                          icon="add"
-                          label="Impuesto"
-                          color="orange"
-                          dense
-                          unelevated
-                          class="full-width"
-                          @click="dialogAddTax = true"
-                        >
-                          <q-badge v-if="taxes.length > 0" color="red" floating>{{ taxes.length }}</q-badge>
-                        </q-btn>
-                      </div>
-                      <div class="col-6">
-                        <q-btn
-                          icon="add"
-                          label="Descuento"
-                          color="teal"
-                          dense
-                          unelevated
-                          class="full-width"
-                          @click="dialogAddDiscount = true"
-                        >
-                          <q-badge v-if="discounts.length > 0" color="red" floating>{{ discounts.length }}</q-badge>
-                        </q-btn>
-                      </div>
-                    </div>
-
-                    <!-- Resumen -->
-                    <q-list separator bordered style="border-radius: 10px;">
-                      <q-item dense>
-                        <q-item-section>Subtotal</q-item-section>
-                        <q-item-section side v-if="coin">{{ coin.symbol }} {{ formatNumber(totalBill) }}</q-item-section>
-                      </q-item>
-
-                      <q-item dense v-if="taxes.length > 0" clickable @click="dialogViewTaxes = true">
-                        <q-item-section>
-                          <q-item-label>Impuestos (+)</q-item-label>
-                          <q-item-label caption>{{ taxes.length }} impuesto(s)</q-item-label>
-                        </q-item-section>
-                        <q-item-section side class="text-orange">
-                          {{ coin?.symbol }} {{ formatNumber(totalTaxes) }}
-                        </q-item-section>
-                        <q-item-section side>
-                          <q-icon name="chevron_right" size="xs" />
-                        </q-item-section>
-                      </q-item>
-
-                      <q-item dense v-if="discounts.length > 0" clickable @click="dialogViewDiscounts = true">
-                        <q-item-section>
-                          <q-item-label>Descuentos (-)</q-item-label>
-                          <q-item-label caption>{{ discounts.length }} descuento(s)</q-item-label>
-                        </q-item-section>
-                        <q-item-section side class="text-teal">
-                          {{ coin?.symbol }} {{ formatNumber(totalDiscounts) }}
-                        </q-item-section>
-                        <q-item-section side>
-                          <q-icon name="chevron_right" size="xs" />
-                        </q-item-section>
-                      </q-item>
-
-                      <q-separator v-if="taxes.length > 0 || discounts.length > 0" />
-
-                      <q-item dense v-if="taxes.length > 0 || discounts.length > 0">
-                        <q-item-section><strong>Total</strong></q-item-section>
-                        <q-item-section side v-if="coin">
-                          <strong>{{ coin.symbol }} {{ formatNumber(totalBill + totalTaxes - totalDiscounts) }}</strong>
-                        </q-item-section>
-                      </q-item>
-
-                      <q-item dense>
-                        <q-item-section>Monto pagado</q-item-section>
-                        <q-item-section class="text-positive" side v-if="coin">{{ coin.symbol }} {{ formatNumber(totalPayment) }}</q-item-section>
-                      </q-item>
-
-                      <q-item dense>
-                        <q-item-section>Por pagar</q-item-section>
-                        <q-item-section side v-if="coin">{{ coin.symbol }} {{ formatNumber(pendingPayment) }}</q-item-section>
-                      </q-item>
-                    </q-list>
-                  </q-card-section>
-                </q-card>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -759,6 +567,107 @@
                     </div>
                   </template>
             </div>
+          </div>
+        </div>
+
+        <!-- Extras: Fecha, Archivos, IA, Impuestos (abajo del catálogo en mobile) -->
+        <div class="purchase-extras-section">
+          <div class="row q-col-gutter-xs">
+              <div class="col-12">
+                <q-input type="datetime-local" dense filled v-model="deliveryDate" label="Fecha de entrega" />
+              </div>
+              <div class="col-12">
+                <q-input type="textarea" filled v-model="invoiceDescription" label="Descripción" autogrow />
+              </div>
+              <!-- Impuestos y Descuentos -->
+              <div class="col-12">
+                <q-card style="border-radius: 10px;" class="shadow-1">
+                  <q-card-section class="q-pa-sm">
+                    <div class="text-subtitle2 text-weight-medium q-mb-sm">Impuestos y Descuentos</div>
+
+                    <div class="row q-col-gutter-xs q-mb-sm">
+                      <div class="col-6">
+                        <q-btn
+                          icon="add"
+                          label="Impuesto"
+                          color="orange"
+                          dense
+                          unelevated
+                          class="full-width"
+                          @click="dialogAddTax = true"
+                        >
+                          <q-badge v-if="taxes.length > 0" color="red" floating>{{ taxes.length }}</q-badge>
+                        </q-btn>
+                      </div>
+                      <div class="col-6">
+                        <q-btn
+                          icon="add"
+                          label="Descuento"
+                          color="teal"
+                          dense
+                          unelevated
+                          class="full-width"
+                          @click="dialogAddDiscount = true"
+                        >
+                          <q-badge v-if="discounts.length > 0" color="red" floating>{{ discounts.length }}</q-badge>
+                        </q-btn>
+                      </div>
+                    </div>
+
+                    <q-list separator bordered style="border-radius: 10px;">
+                      <q-item dense>
+                        <q-item-section>Subtotal</q-item-section>
+                        <q-item-section side v-if="coin">{{ coin.symbol }} {{ formatNumber(totalBill) }}</q-item-section>
+                      </q-item>
+
+                      <q-item dense v-if="taxes.length > 0" clickable @click="dialogViewTaxes = true">
+                        <q-item-section>
+                          <q-item-label>Impuestos (+)</q-item-label>
+                          <q-item-label caption>{{ taxes.length }} impuesto(s)</q-item-label>
+                        </q-item-section>
+                        <q-item-section side class="text-orange">
+                          {{ coin?.symbol }} {{ formatNumber(totalTaxes) }}
+                        </q-item-section>
+                        <q-item-section side>
+                          <q-icon name="chevron_right" size="xs" />
+                        </q-item-section>
+                      </q-item>
+
+                      <q-item dense v-if="discounts.length > 0" clickable @click="dialogViewDiscounts = true">
+                        <q-item-section>
+                          <q-item-label>Descuentos (-)</q-item-label>
+                          <q-item-label caption>{{ discounts.length }} descuento(s)</q-item-label>
+                        </q-item-section>
+                        <q-item-section side class="text-teal">
+                          {{ coin?.symbol }} {{ formatNumber(totalDiscounts) }}
+                        </q-item-section>
+                        <q-item-section side>
+                          <q-icon name="chevron_right" size="xs" />
+                        </q-item-section>
+                      </q-item>
+
+                      <q-separator v-if="taxes.length > 0 || discounts.length > 0" />
+
+                      <q-item dense v-if="taxes.length > 0 || discounts.length > 0">
+                        <q-item-section><strong>Total</strong></q-item-section>
+                        <q-item-section side v-if="coin">
+                          <strong>{{ coin.symbol }} {{ formatNumber(totalBill + totalTaxes - totalDiscounts) }}</strong>
+                        </q-item-section>
+                      </q-item>
+
+                      <q-item dense>
+                        <q-item-section>Monto pagado</q-item-section>
+                        <q-item-section class="text-positive" side v-if="coin">{{ coin.symbol }} {{ formatNumber(totalPayment) }}</q-item-section>
+                      </q-item>
+
+                      <q-item dense>
+                        <q-item-section>Por pagar</q-item-section>
+                        <q-item-section side v-if="coin">{{ coin.symbol }} {{ formatNumber(pendingPayment) }}</q-item-section>
+                      </q-item>
+                    </q-list>
+                  </q-card-section>
+                </q-card>
+              </div>
           </div>
         </div>
       </div>
@@ -4275,6 +4184,11 @@ export default {
   display: grid;
   grid-template-columns: calc(58.333% - 0.5rem) calc(41.666% - 0.5rem);
   gap: 1rem;
+}
+
+.purchase-extras-section {
+  grid-column: 1 / -1;
+  padding: 0.5rem;
 }
 
 /* Responsive: Móvil no aplica altura fija */
