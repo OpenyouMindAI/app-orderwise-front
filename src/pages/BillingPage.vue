@@ -1679,7 +1679,7 @@
           </q-card-section>
           <q-card-section class="q-pb-xs">
             <div class="text-subtitle1 text-center">
-              {{  productQuantity.name }} x {{ productQuantity.unit_of_measure.acronym }}
+              {{  productQuantity.name }} x {{ productQuantity.unit_of_measure?.acronym || 'UND' }}
             </div>
           </q-card-section>
           <q-card-section class="flex q-col-gutter-sm justify-between items-center">
@@ -1769,6 +1769,7 @@ import { useCommandStore } from 'src/stores/command'
 import { useTourStore } from 'src/stores/tourStore'
 import { usePaymentNotifier } from 'src/boot/payment-notifier'
 import { commandPrint, ticketPrint } from 'src/const/printers'
+import { previewTicket } from 'src/const/printers/preview/ticket'
 import TransferMpDialog from 'src/components/Billing/TransferMpDialog.vue'
 import BarcodeScanner from 'src/components/Billing/ScannerComponent.vue'
 import PaymentModal from 'src/components/PaymentModal.vue'
@@ -1895,6 +1896,7 @@ export default {
        * @type {Boolean}
        */
       invoicePrinter: false,
+      sharingInvoice: false,
       /**
        * Open cash box
        * @type {Boolean}
@@ -3835,6 +3837,19 @@ export default {
       this.payments = payments
       // tableClose is now handled internally by PaymentModal
       switch (action) {
+        case 'share':
+        case 'share-native':
+          this.saveAndShare('native')
+          break
+        case 'share-whatsapp':
+          this.saveAndShare('whatsapp')
+          break
+        case 'share-email':
+          this.saveAndShare('email')
+          break
+        case 'share-download':
+          this.saveAndShare('download')
+          break
         case 'invoice':
           this.savePrintInvoice()
           break
@@ -4371,6 +4386,134 @@ export default {
       this.invoicePrinter = false
       this.withoutPrint = false
     },
+
+    /**
+     * Save invoice and then share via native share
+     */
+    async saveAndShare (method = 'native') {
+      this.loadingBilling = true
+      try {
+        const params = this.setModelInvoice()
+        if (!params) { this.loadingBilling = false; return }
+
+        let res
+        if (this.$route.query.id) {
+          res = await this.$api.put(`invoices/${this.$route.query.id}`, params)
+        } else {
+          res = await this.$api.post('invoices', params)
+        }
+
+        const invoiceId = res.data.data?.id
+        if (invoiceId && this.invoiceFiles.length > 0 && this.typeOfService?.code === 5) {
+          await this.uploadInvoiceFiles(invoiceId)
+        }
+
+        await this.shareInvoice(res.data.data, method)
+
+        this.dialogPayment = false
+        if (!this.tableClose) {
+          setTimeout(() => this.clear(), 500)
+        }
+        this.reloadProducts()
+      } catch (error) {
+        notify(error.message, 'negative', 'warning')
+      } finally {
+        this.loadingBilling = false
+      }
+    },
+
+    /**
+     * Share invoice via native share sheet (WhatsApp, email, etc.)
+     */
+    async shareInvoice (data, method = 'native') {
+      this.sharingInvoice = true
+      try {
+        const invoice = await this.getInvoiceOneRequest(data.id)
+        if (!invoice) {
+          notify('Error al obtener la factura', 'negative', 'warning')
+          return
+        }
+
+        const { company_session: companySession } = this.userSession
+        const branchOffice = this.branchOffices?.find(b => b.id === invoice.branch_office_id) || null
+        const doc = await previewTicket(invoice, this.userSession, branchOffice)
+        const pdfBlob = doc.output('blob')
+
+        const code = invoice.code || invoice.electronic_invoice?.fields?.cbte_hasta || Date.now()
+        const fileName = `Comprobante-${code}.pdf`
+        const companyName = companySession?.name || ''
+        const clientName = invoice.client?.name || 'Cliente'
+        const total = invoice.total || this.totalBill || 0
+
+        // Helper: download the PDF
+        const downloadPdf = () => {
+          const url = URL.createObjectURL(pdfBlob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = fileName
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          setTimeout(() => URL.revokeObjectURL(url), 5000)
+        }
+
+        switch (method) {
+          case 'native': {
+            // Try native share (works on mobile with file)
+            let shared = false
+            if (navigator.share) {
+              try {
+                const file = new File([pdfBlob], fileName, { type: 'application/pdf' })
+                const shareData = { title: `Comprobante ${companyName}`, text: `Comprobante de compra - ${companyName}`, files: [file] }
+                if (navigator.canShare && navigator.canShare(shareData)) {
+                  await navigator.share(shareData)
+                  shared = true
+                }
+              } catch (e) {
+                if (e.name === 'AbortError') { shared = true }
+              }
+            }
+            if (!shared) {
+              downloadPdf()
+              notify('PDF descargado', 'info', 'download')
+            }
+            break
+          }
+
+          case 'whatsapp': {
+            // Download PDF + open WhatsApp Web
+            downloadPdf()
+            const msg = encodeURIComponent(`Hola! Te envío tu comprobante de compra de *${companyName}* por *$${new Intl.NumberFormat('es-AR').format(total)}*. El PDF está adjunto 📎`)
+            window.open(`https://web.whatsapp.com/send?text=${msg}`, '_blank')
+            notify('PDF descargado. Adjuntalo en WhatsApp.', 'positive', 'chat')
+            break
+          }
+
+          case 'email': {
+            // Download PDF + open email client
+            downloadPdf()
+            const subject = encodeURIComponent(`Comprobante de compra - ${companyName}`)
+            const body = encodeURIComponent(`Hola ${clientName},\n\nTe adjunto tu comprobante de compra de ${companyName} por $${new Intl.NumberFormat('es-AR').format(total)}.\n\nGracias por tu compra!\n\n${companyName}`)
+            window.open(`mailto:?subject=${subject}&body=${body}`, '_self')
+            notify('PDF descargado. Adjuntalo en el email.', 'positive', 'email')
+            break
+          }
+
+          case 'download':
+          default: {
+            downloadPdf()
+            notify('PDF descargado', 'positive', 'download')
+            break
+          }
+        }
+      } catch (err) {
+        console.error('Share error:', err)
+        notify('No se pudo compartir', 'negative', 'warning')
+      } finally {
+        this.sharingInvoice = false
+      }
+    },
+
     /**
      * Set invoice model
      * @returns {Object}
@@ -6693,5 +6836,25 @@ export default {
     max-width: 100vw !important;
     max-height: 100vh !important;
   }
+}
+
+/* Share button — modern minimal style */
+.share-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.3px;
+  padding: 6px 20px !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+.share-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.45);
+}
+.share-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(102, 126, 234, 0.25);
 }
 </style>

@@ -619,6 +619,15 @@
                   @click="printInvoiceA4"
                 />
                 <q-btn
+                  class="share-btn full-width"
+                  unelevated
+                  no-caps
+                  :icon="sharingInvoice ? undefined : 'ios_share'"
+                  :loading="sharingInvoice"
+                  label="Compartir"
+                  @click="shareInvoice(invoice)"
+                />
+                <q-btn
                   class="full-width"
                   icon="send"
                   color="positive"
@@ -887,6 +896,7 @@ import { formatNumber, loading, notify } from 'src/const/mixins'
 import { status } from 'src/const/invoice'
 import { getDownload } from 'src/const/services'
 import { commandPrint, invoicePrint, ticketPrint } from 'src/const/printers'
+import { previewTicket } from 'src/const/printers/preview/ticket'
 import ImageGalleryComponent from 'src/components/ImageGalleryComponent.vue'
 
 export default {
@@ -946,6 +956,7 @@ export default {
       errorMessage: '',
       errorTitle: 'Error al generar factura electrónica',
       printers: [],
+      sharingInvoice: false,
       /**
        * Taxe translate
        * @type {Object}
@@ -1603,6 +1614,55 @@ export default {
         notify(error.message, 'negative', 'warning')
       }
     },
+
+    /**
+     * Share invoice via native share sheet
+     */
+    async shareInvoice (invoice) {
+      this.sharingInvoice = true
+      try {
+        const branchOffice = null
+        const doc = await previewTicket(invoice, this.userSession, branchOffice)
+        const pdfBlob = doc.output('blob')
+
+        const code = invoice.code || invoice.electronic_invoice?.fields?.cbte_hasta || Date.now()
+        const fileName = `Comprobante-${code}.pdf`
+        const companyName = this.userSession?.company_session?.name || ''
+
+        let shared = false
+        if (navigator.share) {
+          try {
+            const file = new File([pdfBlob], fileName, { type: 'application/pdf' })
+            const shareData = { title: `Comprobante ${companyName}`, text: `Comprobante de compra - ${companyName}`, files: [file] }
+            if (navigator.canShare && navigator.canShare(shareData)) {
+              await navigator.share(shareData)
+              shared = true
+            }
+          } catch (shareErr) {
+            if (shareErr.name === 'AbortError') shared = true
+            else console.warn('Share failed:', shareErr)
+          }
+        }
+
+        if (!shared) {
+          const url = URL.createObjectURL(pdfBlob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = fileName
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          setTimeout(() => URL.revokeObjectURL(url), 5000)
+          notify('PDF descargado', 'info', 'download')
+        }
+      } catch (err) {
+        console.error('Share error:', err)
+        notify('No se pudo compartir', 'negative', 'warning')
+      } finally {
+        this.sharingInvoice = false
+      }
+    },
+
     /**
      * Close all modals
      */
@@ -2046,5 +2106,22 @@ export default {
   :deep(.q-table__top .q-input) {
     flex: 1;
   }
+}
+
+.share-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.3px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+.share-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.45);
+}
+.share-btn:active {
+  transform: translateY(0);
 }
 </style>
