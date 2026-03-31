@@ -754,12 +754,21 @@
       </div>
     </transition>
 
+    <!-- PedidosYa Order Popup -->
+    <PedidosYaOrderPopup
+      v-model:show="showPeyaPopup"
+      :order="peyaOrder"
+      :loading="peyaLoading"
+      @accept="acceptPeyaOrder"
+      @reject="rejectPeyaOrder"
+    />
   </q-layout>
 </template>
 
 <script>
 import { api, apiArca } from 'src/boot/axios'
 import NotificationComponent from 'src/components/NotificationComponent.vue'
+import PedidosYaOrderPopup from 'src/components/PedidosYaOrderPopup.vue'
 import FloatingThemeSelector from 'src/components/ThemeSelector/FloatingThemeSelector.vue'
 import SubscriptionPlansDialog from 'src/components/SubscriptionPlansDialog.vue'
 import SubscriptionExpirationBanner from 'src/components/SubscriptionExpirationBanner.vue'
@@ -798,6 +807,7 @@ export default {
   name: 'MainLayout',
   components: {
     NotificationComponent,
+    PedidosYaOrderPopup,
     FloatingThemeSelector,
     SubscriptionPlansDialog,
     SubscriptionExpirationBanner,
@@ -828,6 +838,12 @@ export default {
       selectedIntegrationSlug: null,
       numberOfNotifications: [],
       notifications: [],
+      // PedidosYa
+      peyaOrder: null,
+      showPeyaPopup: false,
+      peyaLoading: false,
+      peyaPollInterval: null,
+      lastPeyaCheck: null,
       labelDrown: null,
       dataMenu: [],
       active: true,
@@ -1292,6 +1308,7 @@ export default {
   beforeUnmount () {
     this.stopDemoReminder()
     this.stopDemoPersuasion()
+    this.stopPeyaPolling()
     document.removeEventListener('click', this.handleGlobalClick)
   },
   unmounted () {
@@ -1304,6 +1321,7 @@ export default {
     this.loadingPage()
     this.checkMultipleScreens()
     this.loadSubscriptionInfo()
+    this.startPeyaPolling()
   },
   methods: {
     /**
@@ -2487,7 +2505,72 @@ export default {
     /**
      * Dark mode map actions
      */
-    ...mapActions(darkModeStore, ['setDarkMode'])
+    ...mapActions(darkModeStore, ['setDarkMode']),
+
+    // ── PedidosYa Order Polling ──────────────────────────────────────
+    startPeyaPolling () {
+      this.checkPeyaOrders()
+      this.peyaPollInterval = setInterval(() => this.checkPeyaOrders(), 20000) // Every 20s
+    },
+    stopPeyaPolling () {
+      if (this.peyaPollInterval) {
+        clearInterval(this.peyaPollInterval)
+        this.peyaPollInterval = null
+      }
+    },
+    async checkPeyaOrders () {
+      try {
+        const { data } = await api.get('notifications', { params: { unread: true } })
+        const notifications = data.data || data || []
+        const peyaNotif = notifications.find(n =>
+          n.data?.type === 'pedidosya_order' && !n.read_at
+        )
+        if (peyaNotif && (!this.lastPeyaCheck || peyaNotif.id !== this.lastPeyaCheck)) {
+          this.lastPeyaCheck = peyaNotif.id
+          this.peyaOrder = peyaNotif.data
+          this.showPeyaPopup = true
+          // Also refresh notification badge
+          this.getDataNotification()
+        }
+      } catch (e) {
+        // Silent fail
+      }
+    },
+    async acceptPeyaOrder (order) {
+      this.peyaLoading = true
+      try {
+        await api.post(`peya/orders/${order.invoice_id}/accept`)
+        this.showPeyaPopup = false
+        this.peyaOrder = null
+        this.$q.notify({ message: '✅ Pedido PedidosYa aceptado', color: 'positive', icon: 'check_circle' })
+        // Mark notification as read
+        if (this.lastPeyaCheck) {
+          api.put(`notifications/${this.lastPeyaCheck}`).catch(() => {})
+        }
+        this.getDataNotification()
+      } catch (e) {
+        this.$q.notify({ message: 'Error al aceptar pedido', color: 'negative', icon: 'warning' })
+      } finally {
+        this.peyaLoading = false
+      }
+    },
+    async rejectPeyaOrder (order) {
+      this.peyaLoading = true
+      try {
+        await api.post(`peya/orders/${order.invoice_id}/reject`)
+        this.showPeyaPopup = false
+        this.peyaOrder = null
+        this.$q.notify({ message: 'Pedido rechazado', color: 'warning', icon: 'cancel' })
+        if (this.lastPeyaCheck) {
+          api.put(`notifications/${this.lastPeyaCheck}`).catch(() => {})
+        }
+        this.getDataNotification()
+      } catch (e) {
+        this.$q.notify({ message: 'Error al rechazar pedido', color: 'negative', icon: 'warning' })
+      } finally {
+        this.peyaLoading = false
+      }
+    }
   }
 }
 </script>
