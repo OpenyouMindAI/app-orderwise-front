@@ -172,6 +172,12 @@ const routes = [
         component: () => import('pages/CompanyConfigPage.vue')
       },
       {
+        path: 'fiscal',
+        name: 'FiscalConfig',
+        meta: { requiresAuth: true },
+        component: () => import('pages/FiscalConfigPage.vue')
+      },
+      {
         path: 'delivery-persons',
         name: 'DeliveryPerson',
         meta: { requiresAuth: true },
