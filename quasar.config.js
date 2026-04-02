@@ -57,12 +57,12 @@ export default configure(function (/* ctx */) {
       'i18n',
       'axios',
       'authorization',
-      'session-tracking',
-      'VueHtmlToPaper',
-      'pusher',
-      'payment-notifier',
-      'statusbar',
-      'pixel'
+      // 'session-tracking', // needs pusher
+      // 'VueHtmlToPaper',
+      // 'pusher',
+      // 'payment-notifier',
+      // 'statusbar',
+      // 'pixel'
     ],
 
     css: [
@@ -93,7 +93,26 @@ export default configure(function (/* ctx */) {
 
     devServer: {
       port: 3000,
-      open: false
+      open: false,
+      hmr: { overlay: false },
+      proxy: {
+        '/api': {
+          target: 'http://localhost:8002',
+          changeOrigin: true,
+        },
+        '/sanctum': {
+          target: 'http://localhost:8002',
+          changeOrigin: true,
+        },
+        '/broadcasting': {
+          target: 'http://localhost:8002',
+          changeOrigin: true,
+        },
+        '/storage': {
+          target: 'http://localhost:8002',
+          changeOrigin: true,
+        }
+      }
     },
 
     framework: {

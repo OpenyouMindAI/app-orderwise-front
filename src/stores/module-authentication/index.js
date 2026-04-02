@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { api } from 'src/boot/axios'
-import { connectSession } from 'src/boot/session-tracking'
+// import { connectSession } from 'src/boot/session-tracking' // disabled: pusher dep
 
 export const authentication = defineStore('authentication', {
   state: () => {
@@ -277,7 +277,7 @@ export const authentication = defineStore('authentication', {
         this.setSessionData(data)
 
         // Connect session tracking after successful login
-        connectSession(this)
+        // connectSession(this) // disabled: pusher dep
 
         return data.user
       } catch (error) {

@@ -1,7 +1,7 @@
 import { boot } from 'quasar/wrappers'
 import { Notify } from 'quasar'
 import axios from 'axios'
-import { echo } from 'src/boot/pusher'
+// import { echo } from 'src/boot/pusher' // DISABLED
 import { authentication } from 'src/stores/module-authentication'
 
 /**
@@ -447,7 +447,7 @@ function cleanup () {
 
   // Leave presence channel
   if (presenceChannel) {
-    echo?.leave('sessions')
+    // echo?.leave('sessions') // DISABLED
     presenceChannel = null
   }
 
@@ -507,9 +507,9 @@ function handleForceDisconnect (store, action = 'force_disconnected') {
  * @param {Object} store - Authentication store
  */
 function joinPresenceChannel (store) {
-  if (!echo || presenceChannel) return
+  if (true) return // DISABLED
 
-  presenceChannel = echo.join('sessions')
+  // presenceChannel = echo.join('sessions') // DISABLED
     .listen('.session.updated', (data) => {
       // Check if this is a force disconnect or timeout for our session
       if (['force_disconnected', 'timeout'].includes(data.action) && data.session?.session_uuid === sessionUuid) {

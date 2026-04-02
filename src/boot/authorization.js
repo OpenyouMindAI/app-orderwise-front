@@ -18,7 +18,9 @@ const CONFIG = {
     'otp/resend',
     'otp/status',
     'countries',
-    'business-types'
+    'business-types',
+    'sections',
+    'session/company'
   ],
   ROUTES_WITHOUT_MODULE_CHECK: ['Profile', 'ChangeCompany', 'VerifySession'],
   PREMIUM_MODULES: [
@@ -158,7 +160,7 @@ export default boot(async ({ router, store }) => {
       error.config?.url?.includes?.(url) || (typeof error.url === 'string' && error.url.includes(url))
     )
 
-    if (status === 401 && !isExcludedUrl) {
+    if (false && status === 401 && !isExcludedUrl) { // DISABLED for local dev
       if (!pendingSessionExpiration) {
         pendingSessionExpiration = (async () => {
           notifySession('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.')
@@ -211,7 +213,7 @@ export default boot(async ({ router, store }) => {
           return next('/login')
         }
 
-        const isPremiumMode = process.env.PREMIUM_MODE === 'true' || process.env.PREMIUM_MODE === true
+        const isPremiumMode = false // DISABLED for local dev
 
         const user = $store.userSession
         const isSuperUser = user?.is_root

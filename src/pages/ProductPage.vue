@@ -569,6 +569,8 @@
           :aliquot-types="aliquotTypes"
           :is-edit="true"
           :loading="visible"
+          :has-mercado-libre="hasMercadoLibre"
+          :marketplace-data="product.marketplace_data || null"
           @save="data => { product = data; saveEdit() }"
           @cancel="closeModal"
           @filter-categories="filterCategories"
@@ -598,6 +600,8 @@
           :aliquot-types="aliquotTypes"
           :is-edit="false"
           :loading="visible"
+          :has-mercado-libre="hasMercadoLibre"
+          :marketplace-data="null"
           @save="data => { product = data; saveProduct() }"
           @cancel="closeModal"
           @filter-categories="filterCategories"
@@ -1641,6 +1645,8 @@ export default {
         product_type: 'PRODUCT',
         base_quantity: 1
       },
+      // MercadoLibre integration
+      hasMercadoLibre: false,
       categories: [],
       aliquotTypes: [],
       filter: '',
@@ -1843,6 +1849,7 @@ export default {
   created () {
     this.getCategories()
     this.getMeasurementUnits()
+    this.checkMercadoLibreIntegration()
   },
   methods: {
     formatNumber,
@@ -1868,6 +1875,38 @@ export default {
     },
     goToCategories () {
       this.$router.push({ name: 'Category' })
+    },
+
+    /**
+     * Check if the company has MercadoLibre integration configured and active.
+     */
+    async checkMercadoLibreIntegration () {
+      try {
+        const { data } = await this.$api.get('company-integrations')
+        this.hasMercadoLibre = data.some(
+          ci => ci.integration?.slug === 'mercado-libre' && ci.is_active && ci.credentials_configured
+        )
+      } catch (e) {
+        this.hasMercadoLibre = false
+      }
+    },
+
+    /**
+     * Save (or update) marketplace data for a product.
+     * @param {number} productId
+     * @param {Object} marketplaceData
+     */
+    async saveMarketplaceData (productId, marketplaceData) {
+      if (!marketplaceData || !this.hasMercadoLibre) return
+      try {
+        // Try update first, fall back to create
+        await this.$api.post(`products/${productId}/marketplace-data`, {
+          ...marketplaceData,
+          marketplace: 'mercadolibre'
+        })
+      } catch (e) {
+        console.warn('Could not save marketplace data', e)
+      }
     },
     /**
      * Toggle multiple selection mode
@@ -2614,6 +2653,7 @@ export default {
      */
     saveProduct () {
       this.visible = true
+      const marketplaceData = this.product.marketplace_data || null
       this.$api.post('products', this.modelData(this.product))
         .then(({ data }) => {
           this.getProducts()
@@ -2630,6 +2670,11 @@ export default {
           // Si es una receta y tiene ingredientes temporales, guardarlos ahora
           if (this.tempRecipeIngredients && this.tempRecipeIngredients.length > 0) {
             this.saveRecipeIngredients(data.id)
+          }
+
+          // Save MercadoLibre data if integration is active
+          if (marketplaceData && this.hasMercadoLibre) {
+            this.saveMarketplaceData(data.id, marketplaceData)
           }
 
           this.trackDemoAction(true)
@@ -2670,13 +2715,27 @@ export default {
       this.unitOfMeasure = this.product.unit_of_measure
       this.addonsProducts = this.product.addons || []
       this.priceLists = this.product.product_price_lists || []
+
+      // Load marketplace data if ML integration is active
+      if (this.hasMercadoLibre) {
+        this.$api.get(`products/${row.id}/marketplace-data`)
+          .then(({ data }) => {
+            const mlEntry = data.find(d => d.marketplace === 'mercadolibre')
+            this.product = { ...this.product, marketplace_data: mlEntry || null }
+          })
+          .catch(() => {
+            this.product = { ...this.product, marketplace_data: null }
+          })
+      }
     },
     /**
      * Save edit
      */
     saveEdit () {
       this.visible = true
-      this.$api.post(`products/${this.product.id}`, this.modelData(this.product, true))
+      const productId = this.product.id
+      const marketplaceData = this.product.marketplace_data || null
+      this.$api.post(`products/${productId}`, this.modelData(this.product, true))
         .then(({ data }) => {
           this.getProducts()
           this.openEditProduct = false
@@ -2688,6 +2747,11 @@ export default {
             icon: 'check_circle',
             color: 'positive'
           })
+
+          // Save MercadoLibre data if integration is active
+          if (marketplaceData && this.hasMercadoLibre) {
+            this.saveMarketplaceData(productId, marketplaceData)
+          }
         })
         .catch(err => {
           this.visible = false

@@ -63,6 +63,7 @@
             :src="integration.logo_url"
             class="integration-logo"
             :alt="integration.name"
+            fit="contain"
           />
           <div v-else class="integration-logo-placeholder">
             <q-icon name="extension" size="64px" color="white" />
@@ -1079,7 +1080,7 @@ onMounted(() => {
 
 .integrations-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 24px;
   animation: fadeIn 0.6s ease-out 0.2s both;
 }
@@ -1089,6 +1090,9 @@ onMounted(() => {
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 2px solid transparent;
+  display: flex;
+  flex-direction: column;
+  height: 380px;
 
   &:hover {
     transform: translateY(-8px);
@@ -1101,11 +1105,11 @@ onMounted(() => {
 }
 
 .card-header {
-  padding: 5px 5px;
+  padding: 16px;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 140px;
+  height: 160px;
   position: relative;
   overflow: hidden;
 
@@ -1122,8 +1126,9 @@ onMounted(() => {
 }
 
 .integration-logo {
-  width: 400px;
-  max-width: 80%;
+  width: 80%;
+  max-width: 260px;
+  height: 120px;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
   position: relative;
   z-index: 1;
@@ -1160,10 +1165,16 @@ onMounted(() => {
   font-weight: 600;
 }
 
+.integration-card .q-card__section {
+  flex: 1;
+  overflow: hidden;
+}
+
 .card-actions {
   padding: 16px;
   background: #f9fafb;
   border-top: 1px solid #e5e7eb;
+  margin-top: auto;
 }
 
 .config-dialog {

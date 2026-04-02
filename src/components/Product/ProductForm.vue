@@ -12,6 +12,14 @@
       <q-tab name="stock" label="Stock" v-if="isEdit && !product.is_bundle" />
       <q-tab name="product" label="Combo / Pack" v-if="product.is_bundle" />
       <q-tab name="recipe" label="Receta (Ingredientes)" v-if="isRecipeType && !isProduct" />
+      <q-tab name="mercadolibre" v-if="hasMercadoLibre">
+        <template v-slot:default>
+          <div class="flex items-center q-gutter-xs">
+            <q-icon name="storefront" size="xs" />
+            <span>MercadoLibre</span>
+          </div>
+        </template>
+      </q-tab>
     </q-tabs>
 
     <q-separator />
@@ -441,6 +449,175 @@
       <q-tab-panel name="recipe" v-if="isRecipeType && !isProduct">
         <recipe-product :product="product" @update:ingredients="onRecipeUpdate" />
       </q-tab-panel>
+
+      <!-- MercadoLibre tab – only visible when integration is active -->
+      <q-tab-panel name="mercadolibre" v-if="hasMercadoLibre">
+        <div class="row q-col-gutter-md">
+
+          <!-- Identificación -->
+          <div class="col-12">
+            <q-card flat bordered class="q-pa-md q-mb-md">
+              <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                <q-icon name="badge" class="q-mr-sm" />
+                Identificación
+              </div>
+              <div class="row q-col-gutter-md">
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-xs-12">
+                  <q-input filled dense v-model="mlData.sku" label="SKU (Seller SKU)" hide-bottom-space />
+                </div>
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-xs-12">
+                  <q-input filled dense v-model="mlData.gtin" label="GTIN / EAN / UPC" hide-bottom-space />
+                </div>
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-xs-12">
+                  <q-input filled dense v-model="mlData.brand" label="Marca" hide-bottom-space />
+                </div>
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-xs-12">
+                  <q-input filled dense v-model="mlData.model" label="Modelo" hide-bottom-space />
+                </div>
+              </div>
+            </q-card>
+          </div>
+
+          <!-- Publicación -->
+          <div class="col-12">
+            <q-card flat bordered class="q-pa-md q-mb-md">
+              <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                <q-icon name="publish" class="q-mr-sm" />
+                Publicación
+              </div>
+              <div class="row q-col-gutter-md">
+                <div class="col-xl-8 col-lg-8 col-md-8 col-sm-8 col-xs-12">
+                  <q-input filled dense v-model="mlData.ml_title" label="Título en ML (puede diferir del nombre del producto)" hide-bottom-space />
+                </div>
+                <div class="col-xl-4 col-lg-4 col-md-4 col-sm-4 col-xs-12">
+                  <q-input filled dense v-model="mlData.ml_category_id" label="Categoría ML (ej. MLA109027)" hide-bottom-space />
+                </div>
+                <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-12">
+                  <q-select
+                    filled dense
+                    v-model="mlData.item_condition"
+                    :options="mlConditionOptions"
+                    label="Condición"
+                    emit-value map-options
+                    hide-bottom-space
+                  />
+                </div>
+                <div class="col-xl-4 col-lg-4 col-md-4 col-sm-6 col-xs-12">
+                  <q-select
+                    filled dense
+                    v-model="mlData.listing_type"
+                    :options="mlListingTypeOptions"
+                    label="Tipo de publicación"
+                    emit-value map-options
+                    hide-bottom-space
+                  />
+                </div>
+                <div class="col-12">
+                  <q-input
+                    filled dense
+                    v-model="mlData.ml_description"
+                    type="textarea"
+                    autogrow
+                    label="Descripción larga (HTML soportado)"
+                    hide-bottom-space
+                  />
+                </div>
+              </div>
+            </q-card>
+          </div>
+
+          <!-- Envío -->
+          <div class="col-12">
+            <q-card flat bordered class="q-pa-md q-mb-md">
+              <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                <q-icon name="local_shipping" class="q-mr-sm" />
+                Envío y dimensiones
+              </div>
+              <div class="row q-col-gutter-md">
+                <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-12">
+                  <q-input filled dense v-model.number="mlData.weight_kg" type="number" step="0.001" min="0" label="Peso (kg)" hide-bottom-space />
+                </div>
+                <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-12">
+                  <q-input filled dense v-model.number="mlData.height_cm" type="number" step="0.01" min="0" label="Alto (cm)" hide-bottom-space />
+                </div>
+                <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-12">
+                  <q-input filled dense v-model.number="mlData.width_cm" type="number" step="0.01" min="0" label="Ancho (cm)" hide-bottom-space />
+                </div>
+                <div class="col-xl-3 col-lg-3 col-md-3 col-sm-6 col-xs-12">
+                  <q-input filled dense v-model.number="mlData.length_cm" type="number" step="0.01" min="0" label="Largo (cm)" hide-bottom-space />
+                </div>
+                <div class="col-12">
+                  <q-toggle
+                    v-model="mlData.free_shipping"
+                    label="Envío gratis"
+                    color="positive"
+                    :true-value="true"
+                    :false-value="false"
+                  />
+                </div>
+              </div>
+            </q-card>
+          </div>
+
+          <!-- Garantía -->
+          <div class="col-12">
+            <q-card flat bordered class="q-pa-md q-mb-md">
+              <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                <q-icon name="verified_user" class="q-mr-sm" />
+                Garantía
+              </div>
+              <div class="row q-col-gutter-md">
+                <div class="col-12">
+                  <q-input filled dense v-model="mlData.warranty_text" label="Texto de garantía (ej. Garantía del fabricante 12 meses)" hide-bottom-space />
+                </div>
+              </div>
+            </q-card>
+          </div>
+
+          <!-- Estado (sólo lectura) -->
+          <div class="col-12" v-if="isEdit">
+            <q-card flat bordered class="q-pa-md q-mb-md">
+              <div class="text-subtitle1 text-primary q-mb-md text-bold flex items-center">
+                <q-icon name="info" class="q-mr-sm" />
+                Estado en MercadoLibre
+              </div>
+              <div class="row q-col-gutter-md items-center">
+                <div class="col-auto">
+                  <q-badge
+                    :color="mlStatusColor(mlData.ml_status)"
+                    :label="mlData.ml_status || 'draft'"
+                    class="text-capitalize q-pa-xs"
+                    style="font-size: 0.85rem"
+                  />
+                </div>
+                <div class="col-xl-3 col-lg-3 col-md-4 col-sm-6 col-xs-12">
+                  <q-input filled dense readonly v-model="mlData.ml_item_id" label="ML Item ID" hide-bottom-space>
+                    <template v-slot:hint>Asignado por ML al publicar</template>
+                  </q-input>
+                </div>
+                <div class="col-xl-5 col-lg-5 col-md-4 col-sm-6 col-xs-12">
+                  <q-input filled dense readonly v-model="mlData.ml_permalink" label="Permalink" hide-bottom-space>
+                    <template v-slot:append>
+                      <q-btn
+                        v-if="mlData.ml_permalink"
+                        icon="open_in_new"
+                        flat round dense
+                        :href="mlData.ml_permalink"
+                        target="_blank"
+                        type="a"
+                      />
+                    </template>
+                  </q-input>
+                </div>
+                <div class="col-xl-3 col-lg-3 col-md-4 col-sm-6 col-xs-12">
+                  <q-input filled dense readonly :model-value="mlData.last_synced_at ? new Date(mlData.last_synced_at).toLocaleString() : 'Nunca'" label="Última sincronización" hide-bottom-space />
+                </div>
+              </div>
+            </q-card>
+          </div>
+
+        </div>
+      </q-tab-panel>
     </q-tab-panels>
 
     <q-card-actions align="right" class="q-pa-md q-gutter-sm">
@@ -495,6 +672,14 @@ export default {
     tab: {
       type: String,
       default: 'basicData'
+    },
+    hasMercadoLibre: {
+      type: Boolean,
+      default: false
+    },
+    marketplaceData: {
+      type: Object,
+      default: null
     }
   },
   data () {
@@ -512,7 +697,44 @@ export default {
       isUpdatingFromPrice: false,
       isUpdatingFromCost: false,
       isDragOver: false,
-      tempRecipeIngredients: []
+      tempRecipeIngredients: [],
+      // MercadoLibre
+      mlData: {
+        marketplace: 'mercadolibre',
+        sku: null,
+        gtin: null,
+        brand: null,
+        model: null,
+        item_condition: null,
+        ml_category_id: null,
+        listing_type: null,
+        ml_title: null,
+        ml_description: null,
+        weight_kg: null,
+        height_cm: null,
+        width_cm: null,
+        length_cm: null,
+        free_shipping: false,
+        warranty_text: null,
+        ml_status: 'draft',
+        ml_item_id: null,
+        ml_permalink: null,
+        last_synced_at: null,
+        ...(this.marketplaceData || {})
+      },
+      mlConditionOptions: [
+        { label: 'Nuevo', value: 'new' },
+        { label: 'Usado', value: 'used' },
+        { label: 'Reacondicionado', value: 'refurbished' }
+      ],
+      mlListingTypeOptions: [
+        { label: 'Gratis', value: 'free' },
+        { label: 'Bronce', value: 'bronze' },
+        { label: 'Plata', value: 'silver' },
+        { label: 'Oro Especial', value: 'gold_special' },
+        { label: 'Oro Pro', value: 'gold_pro' },
+        { label: 'Oro Premium', value: 'gold_premium' }
+      ]
     }
   },
   computed: {
@@ -547,6 +769,12 @@ export default {
           this.initializeProfitPercentage()
         }
       }
+    },
+    marketplaceData: {
+      handler (newVal) {
+        this.mlData = this.buildMlData(newVal)
+      },
+      deep: true
     }
   },
   created () {
@@ -757,12 +985,50 @@ export default {
       }
     },
 
+    buildMlData (data) {
+      return {
+        marketplace: 'mercadolibre',
+        sku: null,
+        gtin: null,
+        brand: null,
+        model: null,
+        item_condition: null,
+        ml_category_id: null,
+        listing_type: null,
+        ml_title: null,
+        ml_description: null,
+        weight_kg: null,
+        height_cm: null,
+        width_cm: null,
+        length_cm: null,
+        free_shipping: false,
+        warranty_text: null,
+        ml_status: 'draft',
+        ml_item_id: null,
+        ml_permalink: null,
+        last_synced_at: null,
+        ...(data || {})
+      }
+    },
+
+    mlStatusColor (status) {
+      const colors = {
+        draft: 'grey',
+        pending: 'orange',
+        active: 'positive',
+        paused: 'warning',
+        closed: 'negative'
+      }
+      return colors[status] || 'grey'
+    },
+
     onSave () {
       const payload = {
         ...this.product,
         price_lists: this.priceLists,
         addons: this.addonsProducts,
-        recipe_ingredients: this.tempRecipeIngredients
+        recipe_ingredients: this.tempRecipeIngredients,
+        marketplace_data: this.hasMercadoLibre ? this.mlData : null
       }
       this.$emit('save', payload)
     }

@@ -607,7 +607,9 @@ export const modelFormData = (data, put = false) => {
  * Controla el loading global
  */
 export const loading = (val, options = {}) => {
-  val ? Loading.show(options) : Loading.hide()
+  // Disabled for local dev - prevents UI blocking on API errors
+  if (val) { console.log('[loading] show suppressed'); return; }
+  Loading.hide()
 }
 
 /**
